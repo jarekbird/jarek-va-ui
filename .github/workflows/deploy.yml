@@ -55,12 +55,18 @@ jobs:
             
             # Load DOMAIN_NAME from .env file if it exists
             echo "Checking for .env file..."
-            ENV_FILE_EXISTS=false
-            if [ -f ".env" ]; then
-              ENV_FILE_EXISTS=true
-              echo ".env file found"
+            # Use test command with || true to avoid set -e exit on false
+            if test -f ".env" || true; then
+              if test -f ".env"; then
+                echo ".env file found"
+                ENV_FILE_EXISTS=true
+              else
+                echo ".env file not found"
+                ENV_FILE_EXISTS=false
+              fi
             else
               echo ".env file not found"
+              ENV_FILE_EXISTS=false
             fi
             
             if [ "$ENV_FILE_EXISTS" = "true" ]; then
