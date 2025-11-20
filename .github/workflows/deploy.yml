@@ -55,17 +55,26 @@ jobs:
             
             # Load DOMAIN_NAME from .env file if it exists
             echo "Checking for .env file..."
+            ENV_FILE_EXISTS=false
             if [ -f ".env" ]; then
-              echo ".env file found, loading environment variables..."
+              ENV_FILE_EXISTS=true
+              echo ".env file found"
+            else
+              echo ".env file not found"
+            fi
+            
+            if [ "$ENV_FILE_EXISTS" = "true" ]; then
+              echo "Loading environment variables from .env file..."
               set -a  # Automatically export all variables
-              if source .env; then
+              if source .env 2>&1; then
                 set +a  # Stop automatically exporting
+                echo "Successfully loaded .env file"
                 echo "DOMAIN_NAME loaded: ${DOMAIN_NAME:-not set}"
               else
                 set +a  # Stop automatically exporting even on error
                 echo "Error: Failed to source .env file"
                 echo "Contents of .env file (first 10 lines):"
-                head -10 .env || true
+                head -10 .env 2>&1 || true
                 exit 1
               fi
             else
