@@ -56,14 +56,22 @@ jobs:
             # Load DOMAIN_NAME from .env file if it exists
             echo "Checking for .env file..."
             if [ -f ".env" ]; then
-              echo "Loading environment variables from .env file..."
+              echo ".env file found, loading environment variables..."
               set -a  # Automatically export all variables
-              source .env || { echo "Error: Failed to source .env file"; exit 1; }
-              set +a  # Stop automatically exporting
-              echo "DOMAIN_NAME loaded: ${DOMAIN_NAME:-not set}"
+              if source .env; then
+                set +a  # Stop automatically exporting
+                echo "DOMAIN_NAME loaded: ${DOMAIN_NAME:-not set}"
+              else
+                set +a  # Stop automatically exporting even on error
+                echo "Error: Failed to source .env file"
+                echo "Contents of .env file (first 10 lines):"
+                head -10 .env || true
+                exit 1
+              fi
             else
               echo "Warning: .env file not found, DOMAIN_NAME may not be set"
             fi
+            echo "Environment variable check completed"
             
             # Build the container first
             echo "Building Docker container..."
