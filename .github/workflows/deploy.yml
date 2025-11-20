@@ -34,10 +34,22 @@ jobs:
             # Navigate to jarek-va-ui directory
             cd jarek-va-ui || { echo "Directory jarek-va-ui not found"; exit 1; }
             
+            echo "Current directory: $(pwd)"
+            echo "Listing files in current directory:"
+            ls -la || true
+            
             # Update code
+            echo "Updating code from git..."
             git fetch origin || { echo "Git fetch failed"; exit 1; }
             BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "main")
+            echo "Current branch: $BRANCH"
             git reset --hard origin/$BRANCH || { echo "Git reset failed"; exit 1; }
+            
+            # Verify docker-compose.yml exists
+            if [ ! -f "docker-compose.yml" ]; then
+              echo "Error: docker-compose.yml not found in $(pwd)"
+              exit 1
+            fi
             
             # Load DOMAIN_NAME from .env file if it exists
             if [ -f ".env" ]; then
@@ -51,14 +63,24 @@ jobs:
             fi
             
             # Build the container first
+            echo "Building Docker container..."
             docker compose build jarek-va-ui || { echo "Docker build failed"; exit 1; }
             
             # Force recreate container with DOMAIN_NAME from environment
+            echo "Starting Docker container..."
             DOMAIN_NAME=${DOMAIN_NAME:-} docker compose up -d --force-recreate jarek-va-ui || { echo "Docker up failed"; exit 1; }
             
             # Wait a few seconds for the service to start
             echo "Waiting for service to start..."
             sleep 10
+            
+            # Verify the container is running
+            if docker compose ps jarek-va-ui | grep -q "Up"; then
+              echo "Container is running successfully"
+            else
+              echo "Warning: Container may not be running properly"
+              docker compose ps jarek-va-ui || true
+            fi
             
             echo "Deployment completed successfully"
           script_stop: true
