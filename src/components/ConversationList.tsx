@@ -23,7 +23,9 @@ export const ConversationList: React.FC<ConversationListProps> = ({
       {sortedConversations.map((conv) => (
         <li
           key={conv.conversationId}
-          className={activeConversationId === conv.conversationId ? 'active' : ''}
+          className={
+            activeConversationId === conv.conversationId ? 'active' : ''
+          }
           onClick={() => onSelectConversation(conv.conversationId)}
         >
           <div className="conversation-meta">
@@ -37,4 +39,3 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     </ul>
   );
 };
-

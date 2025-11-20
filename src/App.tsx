@@ -11,9 +11,9 @@ const App: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] =
     useState<Conversation | null>(null);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(
-    null
-  );
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,4 +84,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-

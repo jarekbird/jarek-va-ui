@@ -1,0 +1,66 @@
+name: Deploy jarek-va-ui
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            set -e
+            
+            # Initialize Docker resources (network and volumes) if they don't exist
+            echo "Initializing Docker resources..."
+            
+            # Create network if it doesn't exist
+            if ! docker network ls | grep -q "virtual-assistant-network"; then
+              echo "Creating virtual-assistant-network..."
+              docker network create virtual-assistant-network || true
+            fi
+            
+            # Navigate to jarek-va-ui directory
+            cd jarek-va-ui || { echo "Directory jarek-va-ui not found"; exit 1; }
+            
+            # Update code
+            git fetch origin || { echo "Git fetch failed"; exit 1; }
+            BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "main")
+            git reset --hard origin/$BRANCH || { echo "Git reset failed"; exit 1; }
+            
+            # Load DOMAIN_NAME from .env file if it exists
+            if [ -f ".env" ]; then
+              echo "Loading environment variables from .env file..."
+              set -a  # Automatically export all variables
+              source .env
+              set +a  # Stop automatically exporting
+              echo "DOMAIN_NAME loaded: ${DOMAIN_NAME:-not set}"
+            else
+              echo "Warning: .env file not found, DOMAIN_NAME may not be set"
+            fi
+            
+            # Build the container first
+            docker compose build jarek-va-ui || { echo "Docker build failed"; exit 1; }
+            
+            # Force recreate container with DOMAIN_NAME from environment
+            DOMAIN_NAME=${DOMAIN_NAME:-} docker compose up -d --force-recreate jarek-va-ui || { echo "Docker up failed"; exit 1; }
+            
+            # Wait a few seconds for the service to start
+            echo "Waiting for service to start..."
+            sleep 10
+            
+            echo "Deployment completed successfully"
+          script_stop: true
+          debug: true
+

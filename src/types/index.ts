@@ -10,4 +10,3 @@ export interface Conversation {
   createdAt: string;
   lastAccessedAt: string;
 }
-

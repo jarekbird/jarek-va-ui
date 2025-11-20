@@ -31,4 +31,3 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
     </div>
   );
 };
-
