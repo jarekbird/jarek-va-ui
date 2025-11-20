@@ -64,11 +64,23 @@ jobs:
             
             # Build the container first
             echo "Building Docker container..."
-            docker compose build jarek-va-ui || { echo "Docker build failed"; exit 1; }
+            if ! docker compose build jarek-va-ui; then
+              echo "Docker build failed"
+              echo "Docker build logs:"
+              docker compose build jarek-va-ui 2>&1 || true
+              exit 1
+            fi
             
             # Force recreate container with DOMAIN_NAME from environment
             echo "Starting Docker container..."
-            DOMAIN_NAME=${DOMAIN_NAME:-} docker compose up -d --force-recreate jarek-va-ui || { echo "Docker up failed"; exit 1; }
+            if ! DOMAIN_NAME=${DOMAIN_NAME:-} docker compose up -d --force-recreate jarek-va-ui; then
+              echo "Docker up failed"
+              echo "Docker compose logs:"
+              docker compose logs jarek-va-ui 2>&1 || true
+              echo "Docker compose ps:"
+              docker compose ps 2>&1 || true
+              exit 1
+            fi
             
             # Wait a few seconds for the service to start
             echo "Waiting for service to start..."
