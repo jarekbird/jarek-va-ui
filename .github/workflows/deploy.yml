@@ -46,16 +46,19 @@ jobs:
             git reset --hard origin/$BRANCH || { echo "Git reset failed"; exit 1; }
             
             # Verify docker-compose.yml exists
+            echo "Checking for docker-compose.yml..."
             if [ ! -f "docker-compose.yml" ]; then
               echo "Error: docker-compose.yml not found in $(pwd)"
               exit 1
             fi
+            echo "✓ docker-compose.yml found"
             
             # Load DOMAIN_NAME from .env file if it exists
+            echo "Checking for .env file..."
             if [ -f ".env" ]; then
               echo "Loading environment variables from .env file..."
               set -a  # Automatically export all variables
-              source .env
+              source .env || { echo "Error: Failed to source .env file"; exit 1; }
               set +a  # Stop automatically exporting
               echo "DOMAIN_NAME loaded: ${DOMAIN_NAME:-not set}"
             else
