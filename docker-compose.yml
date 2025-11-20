@@ -1,0 +1,44 @@
+services:
+  # jarek-va-ui React frontend application service
+  jarek-va-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jarek-va-ui
+    restart: unless-stopped
+    # Remove port mapping - Traefik will route traffic
+    # ports:
+    #   - "3002:80"
+    networks:
+      - virtual-assistant-network
+    # Note: Traefik service is defined in jarek-va/docker-compose.yml
+    # This service connects to it via the shared network
+    labels:
+      - "traefik.enable=true"
+      # Path-based routing - accessible at /conversations/* on the same domain
+      # Priority ensures this router is evaluated before the general Rails app router
+      - "traefik.http.routers.jarek-va-ui.priority=10"
+      - "traefik.http.routers.jarek-va-ui.rule=Host(`${DOMAIN_NAME:-localhost}`) && PathPrefix(`/conversations`)"
+      - "traefik.http.routers.jarek-va-ui.entrypoints=websecure"
+      - "traefik.http.routers.jarek-va-ui.tls.certresolver=letsencrypt"
+      - "traefik.http.services.jarek-va-ui.loadbalancer.server.port=80"
+      # Strip /conversations prefix before forwarding to the service
+      - "traefik.http.middlewares.jarek-va-ui-stripprefix.stripprefix.prefixes=/conversations"
+      # Security headers middleware
+      - "traefik.http.middlewares.jarek-va-ui-headers.headers.sslredirect=true"
+      - "traefik.http.middlewares.jarek-va-ui-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.jarek-va-ui-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.jarek-va-ui-headers.headers.stsPreload=true"
+      # Apply both strip prefix and security headers
+      - "traefik.http.routers.jarek-va-ui.middlewares=jarek-va-ui-stripprefix,jarek-va-ui-headers"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  virtual-assistant-network:
+    external: true
+
