@@ -12,7 +12,10 @@ describe('ErrorMessage', () => {
   it('has the correct CSS class', () => {
     const { container } = render(<ErrorMessage message="Error" />);
     const errorDiv = container.querySelector('.error-message');
-    expect(errorDiv).toBeInTheDocument();
+    expect(errorDiv).not.toBeNull();
+    if (errorDiv) {
+      expect(errorDiv).toBeInTheDocument();
+    }
   });
 
   it('displays different error messages', () => {

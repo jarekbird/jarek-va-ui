@@ -29,6 +29,10 @@ describe('conversations API', () => {
 
       (mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
+        headers: {
+          get: (name: string) =>
+            name === 'content-type' ? 'application/json' : null,
+        },
         json: async () => mockConversations,
       });
 
@@ -40,7 +44,13 @@ describe('conversations API', () => {
     it('throws an error when fetch fails', async () => {
       (mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
+        status: 500,
         statusText: 'Internal Server Error',
+        headers: {
+          get: (name: string) =>
+            name === 'content-type' ? 'application/json' : null,
+        },
+        json: async () => ({}), // Empty object so it falls back to statusText
       });
 
       await expect(listConversations()).rejects.toThrow(
@@ -51,6 +61,10 @@ describe('conversations API', () => {
     it('uses default API base URL when environment variable is not set', async () => {
       (mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
+        headers: {
+          get: (name: string) =>
+            name === 'content-type' ? 'application/json' : null,
+        },
         json: async () => [],
       });
 
@@ -77,6 +91,10 @@ describe('conversations API', () => {
 
       (mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
+        headers: {
+          get: (name: string) =>
+            name === 'content-type' ? 'application/json' : null,
+        },
         json: async () => mockConversation,
       });
 
@@ -89,6 +107,11 @@ describe('conversations API', () => {
       (mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 404,
+        headers: {
+          get: (name: string) =>
+            name === 'content-type' ? 'application/json' : null,
+        },
+        json: async () => ({ error: 'Not found' }),
       });
 
       await expect(getConversationById('nonexistent')).rejects.toThrow(
@@ -101,6 +124,11 @@ describe('conversations API', () => {
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
+        headers: {
+          get: (name: string) =>
+            name === 'content-type' ? 'application/json' : null,
+        },
+        json: async () => ({}), // Empty object so it falls back to statusText
       });
 
       await expect(getConversationById('conv-1')).rejects.toThrow(

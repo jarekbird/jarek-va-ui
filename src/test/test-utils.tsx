@@ -1,5 +1,6 @@
 import React, { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 
 /**
  * Custom render function that wraps components with any providers
@@ -7,7 +8,9 @@ import { render, RenderOptions } from '@testing-library/react';
  */
 // eslint-disable-next-line react-refresh/only-export-components
 const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
-  return <>{children}</>;
+  // Use MemoryRouter in tests without basename for simplicity
+  // Components that need routing will work with routes relative to "/"
+  return <MemoryRouter initialEntries={['/']}>{children}</MemoryRouter>;
 };
 
 const customRender = (

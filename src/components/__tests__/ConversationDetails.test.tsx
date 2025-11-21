@@ -52,8 +52,14 @@ describe('ConversationDetails', () => {
     const userMessage = container.querySelector('.message.user');
     const assistantMessage = container.querySelector('.message.assistant');
 
-    expect(userMessage).toBeInTheDocument();
-    expect(assistantMessage).toBeInTheDocument();
+    expect(userMessage).not.toBeNull();
+    expect(assistantMessage).not.toBeNull();
+    if (userMessage) {
+      expect(userMessage).toBeInTheDocument();
+    }
+    if (assistantMessage) {
+      expect(assistantMessage).toBeInTheDocument();
+    }
   });
 
   it('renders timestamps', () => {

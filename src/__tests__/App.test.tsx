@@ -60,7 +60,10 @@ describe('App', () => {
 
     const { container } = render(<App />);
     const spinner = container.querySelector('.loading-spinner');
-    expect(spinner).toBeInTheDocument();
+    expect(spinner).not.toBeNull();
+    if (spinner) {
+      expect(spinner).toBeInTheDocument();
+    }
   });
 
   it('displays error message when loading conversations fails', async () => {
@@ -114,9 +117,10 @@ describe('App', () => {
       expect(screen.getByText(/conv-1/i)).toBeInTheDocument();
     });
 
-    const conv1Item = screen.getByText(/conv-1/i).closest('li');
-    if (conv1Item) {
-      await user.click(conv1Item);
+    // Find the link for conv-1 and click it
+    const conv1Link = screen.getByText(/conv-1/i).closest('a');
+    if (conv1Link) {
+      await user.click(conv1Link);
 
       await waitFor(() => {
         expect(conversationsAPI.getConversationById).toHaveBeenCalledWith(
@@ -144,9 +148,10 @@ describe('App', () => {
       expect(screen.getByText(/conv-1/i)).toBeInTheDocument();
     });
 
-    const conv1Item = screen.getByText(/conv-1/i).closest('li');
-    if (conv1Item) {
-      await user.click(conv1Item);
+    // Find the link for conv-1 and click it
+    const conv1Link = screen.getByText(/conv-1/i).closest('a');
+    if (conv1Link) {
+      await user.click(conv1Link);
 
       await waitFor(() => {
         expect(screen.getByText(errorMessage)).toBeInTheDocument();

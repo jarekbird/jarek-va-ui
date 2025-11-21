@@ -34,18 +34,32 @@ describe('ConversationList', () => {
     expect(screen.getByText(/conv-2/i)).toBeInTheDocument();
   });
 
-  it('sorts conversations by lastAccessedAt (newest first)', () => {
+  it('sorts conversations by createdAt (newest first)', () => {
     const onSelect = vi.fn();
+    const conversationsWithDifferentCreatedAt: Conversation[] = [
+      {
+        conversationId: 'conv-1',
+        messages: [],
+        createdAt: '2025-01-01T00:00:00Z',
+        lastAccessedAt: '2025-01-02T00:00:00Z',
+      },
+      {
+        conversationId: 'conv-2',
+        messages: [],
+        createdAt: '2025-01-03T00:00:00Z',
+        lastAccessedAt: '2025-01-01T00:00:00Z',
+      },
+    ];
     render(
       <ConversationList
-        conversations={mockConversations}
+        conversations={conversationsWithDifferentCreatedAt}
         activeConversationId={null}
         onSelectConversation={onSelect}
       />
     );
 
     const items = screen.getAllByText(/conv-/i);
-    // conv-2 should be first (lastAccessedAt: 2025-01-03)
+    // conv-2 should be first (createdAt: 2025-01-03)
     expect(items[0]).toHaveTextContent('conv-2');
     expect(items[1]).toHaveTextContent('conv-1');
   });
@@ -61,9 +75,10 @@ describe('ConversationList', () => {
       />
     );
 
-    const firstItem = screen.getByText(/conv-2/i).closest('li');
-    if (firstItem) {
-      await user.click(firstItem);
+    // Click the Link component, not the li
+    const link = screen.getByText(/conv-2/i).closest('a');
+    if (link) {
+      await user.click(link);
       expect(onSelect).toHaveBeenCalledWith('conv-2');
     }
   });
@@ -79,8 +94,11 @@ describe('ConversationList', () => {
     );
 
     const activeItem = container.querySelector('li.active');
-    expect(activeItem).toBeInTheDocument();
-    expect(activeItem).toHaveTextContent('conv-1');
+    expect(activeItem).not.toBeNull();
+    if (activeItem) {
+      expect(activeItem).toBeInTheDocument();
+      expect(activeItem).toHaveTextContent('conv-1');
+    }
   });
 
   it('renders empty list when no conversations', () => {
@@ -94,7 +112,10 @@ describe('ConversationList', () => {
     );
 
     const list = container.querySelector('.conversation-list');
-    expect(list).toBeInTheDocument();
-    expect(list?.children.length).toBe(0);
+    expect(list).not.toBeNull();
+    if (list) {
+      expect(list).toBeInTheDocument();
+      expect(list.children.length).toBe(0);
+    }
   });
 });
