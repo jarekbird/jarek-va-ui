@@ -10,3 +10,14 @@ export interface Conversation {
   createdAt: string;
   lastAccessedAt: string;
 }
+
+export interface Task {
+  id: number;
+  prompt: string;
+  status: number;
+  status_label: 'ready' | 'complete' | 'archived' | 'backlogged' | 'unknown';
+  createdat: string | null;
+  updatedat: string | null;
+  order: number;
+  uuid: string | null;
+}
