@@ -15,10 +15,11 @@ services:
     # This service connects to it via the shared network
     labels:
       - "traefik.enable=true"
-      # Path-based routing - accessible at /conversations/* on the same domain
+      # Path-based routing - accessible at /conversations/*, /tasks, and /task/* on the same domain
       # Priority ensures this router is evaluated before the general Rails app router
+      # Exclude /api/* paths explicitly - these are handled by Rails (API routes)
       - "traefik.http.routers.jarek-va-ui.priority=10"
-      - "traefik.http.routers.jarek-va-ui.rule=Host(`${DOMAIN_NAME:-localhost}`) && PathPrefix(`/conversations`)"
+      - "traefik.http.routers.jarek-va-ui.rule=Host(`${DOMAIN_NAME:-localhost}`) && (PathPrefix(`/conversations`) || (PathPrefix(`/tasks`) && !PathPrefix(`/api`)) || (PathPrefix(`/task`) && !PathPrefix(`/api`)))"
       - "traefik.http.routers.jarek-va-ui.entrypoints=websecure"
       - "traefik.http.routers.jarek-va-ui.tls.certresolver=letsencrypt"
       - "traefik.http.services.jarek-va-ui.loadbalancer.server.port=80"

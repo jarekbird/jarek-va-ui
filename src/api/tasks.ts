@@ -3,7 +3,7 @@ import type { Task } from '../types';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 export async function listTasks(): Promise<Task[]> {
-  const response = await fetch(`${API_BASE_URL}/tasks`);
+  const response = await fetch(`${API_BASE_URL}/api/tasks`);
 
   // Check if response is actually JSON before parsing
   const contentType = response.headers.get('content-type');
@@ -27,7 +27,7 @@ export async function listTasks(): Promise<Task[]> {
 }
 
 export async function getTaskById(taskId: number): Promise<Task> {
-  const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`);
+  const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`);
 
   // Check if response is actually JSON before parsing
   const contentType = response.headers.get('content-type');
