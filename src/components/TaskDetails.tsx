@@ -215,3 +215,4 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({ task }) => {
     </div>
   );
 };
+

@@ -14,8 +14,8 @@ globalThis.fetch = mockFetch as unknown as typeof fetch;
 describe('agent-conversations API', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset environment variable
-    delete import.meta.env.VITE_ELEVENLABS_AGENT_URL;
+    // Reset environment variable - unstub to use default
+    vi.unstubAllEnvs();
   });
 
   afterEach(() => {
@@ -65,7 +65,7 @@ describe('agent-conversations API', () => {
     });
 
     it('uses custom base URL when VITE_ELEVENLABS_AGENT_URL is set', async () => {
-      import.meta.env.VITE_ELEVENLABS_AGENT_URL = 'http://localhost:3004';
+      vi.stubEnv('VITE_ELEVENLABS_AGENT_URL', 'http://localhost:3004');
 
       (mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
@@ -227,4 +227,5 @@ describe('agent-conversations API', () => {
     });
   });
 });
+
 

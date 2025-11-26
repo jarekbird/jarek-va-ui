@@ -1,5 +1,6 @@
 import React from 'react';
 import type { AgentConversation } from '../types/agent-conversation';
+import { sendAgentMessage, getAgentConversation } from '../api/agent-conversations';
 
 interface AgentConversationDetailsProps {
   conversation: AgentConversation | null;
@@ -37,28 +38,44 @@ export const AgentConversationDetails: React.FC<AgentConversationDetailsProps> =
       const messageToSend = message.trim();
       setMessage('');
 
-      // TODO: Implement backend API call to send message
-      // For now, this is stubbed - just add to local state
+      // Optimistically update UI
       const userMessage = {
         role: 'user' as const,
         content: messageToSend,
         timestamp: new Date().toISOString(),
         source: 'text' as const,
       };
-      const updatedConversation: AgentConversation = {
+      const optimisticConversation: AgentConversation = {
         ...conversation,
         messages: [...conversation.messages, userMessage],
         lastAccessedAt: new Date().toISOString(),
       };
       if (onConversationUpdate) {
-        onConversationUpdate(updatedConversation);
+        onConversationUpdate(optimisticConversation);
       }
 
-      // Simulate sending (remove this when backend is ready)
-      setTimeout(() => {
+      try {
+        // Send message to backend
+        await sendAgentMessage(conversation.conversationId, {
+          role: 'user',
+          content: messageToSend,
+          source: 'text',
+        });
+
+        // Fetch updated conversation to get any server-side updates
+        const updatedConversation = await getAgentConversation(conversation.conversationId);
+        if (onConversationUpdate) {
+          onConversationUpdate(updatedConversation);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to send message');
+        // Revert optimistic update on error
+        if (onConversationUpdate) {
+          onConversationUpdate(conversation);
+        }
+      } finally {
         setIsSending(false);
-        setError('Backend not yet implemented - message not sent');
-      }, 500);
+      }
     };
 
     if (!conversation) {
@@ -106,7 +123,7 @@ export const AgentConversationDetails: React.FC<AgentConversationDetailsProps> =
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type your message... (Backend not yet implemented)"
+              placeholder="Type your message..."
               className="message-input"
               rows={3}
               disabled={isSending}
@@ -129,4 +146,5 @@ export const AgentConversationDetails: React.FC<AgentConversationDetailsProps> =
       </div>
     );
   };
+
 

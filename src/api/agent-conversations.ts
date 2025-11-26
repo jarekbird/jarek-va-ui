@@ -150,3 +150,73 @@ export async function createAgentConversation(
   return response.json();
 }
 
+/**
+ * Request body for sending a message to an agent conversation.
+ */
+export interface SendAgentMessageRequest {
+  /**
+   * Role of the message sender (user or assistant)
+   */
+  role: 'user' | 'assistant';
+  
+  /**
+   * Content of the message
+   */
+  content: string;
+  
+  /**
+   * Optional source of the message (voice or text)
+   */
+  source?: 'voice' | 'text';
+}
+
+/**
+ * Response from sending a message to an agent conversation.
+ */
+export interface SendAgentMessageResponse {
+  success: boolean;
+  conversationId?: string;
+  message?: string;
+  error?: string;
+}
+
+/**
+ * Send a message to an agent conversation.
+ * @param conversationId - The ID of the conversation to send the message to
+ * @param request - The message request with role, content, and optional source
+ * @returns Promise resolving to the send response
+ * @throws Error if the API request fails
+ */
+export async function sendAgentMessage(
+  conversationId: string,
+  request: SendAgentMessageRequest
+): Promise<SendAgentMessageResponse> {
+  const baseUrl = getAgentApiBaseUrl();
+  const response = await fetch(`${baseUrl}/${conversationId}/message`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  // Check if response is actually JSON before parsing
+  const contentType = response.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await response.text();
+    throw new Error(
+      `Expected JSON but received ${contentType}. Response: ${text.substring(0, 200)}`
+    );
+  }
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ error: response.statusText }));
+    throw new Error(
+      errorData.error || `Failed to send message: ${response.statusText}`
+    );
+  }
+
+  return response.json();
+}
