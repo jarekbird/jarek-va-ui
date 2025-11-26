@@ -188,7 +188,7 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
     <div className="conversation-details">
       <h2>Note Session ID: {conversation.conversationId}</h2>
       {repository && (
-        <div style={{ marginBottom: '1rem' }}>
+        <div className="repository-file-browser-container">
           <RepositoryFileBrowser
             repository={repository}
             files={fileTree}

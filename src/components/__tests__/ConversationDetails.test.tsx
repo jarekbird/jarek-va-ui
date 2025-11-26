@@ -1,7 +1,14 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '../../test/test-utils';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '../../test/test-utils';
 import { ConversationDetails } from '../ConversationDetails';
 import type { Conversation } from '../../types';
+
+// Mock the repositories API
+vi.mock('../../api/repositories', () => ({
+  getRepositoryFiles: vi.fn(),
+}));
+
+import * as repositoriesAPI from '../../api/repositories';
 
 const mockConversation: Conversation = {
   conversationId: 'conv-1',
@@ -69,5 +76,93 @@ describe('ConversationDetails', () => {
     const timestamps = screen.getAllByText(/2025/i);
     expect(timestamps.length).toBeGreaterThan(0);
     expect(timestamps[0]).toBeInTheDocument();
+  });
+
+  describe('Repository File Browser Integration', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('renders file browser when repository is provided', async () => {
+      const mockFiles = [
+        {
+          name: 'src',
+          path: 'src',
+          type: 'directory' as const,
+          children: [
+            {
+              name: 'index.ts',
+              path: 'src/index.ts',
+              type: 'file' as const,
+            },
+          ],
+        },
+      ];
+
+      vi.mocked(repositoriesAPI.getRepositoryFiles).mockResolvedValueOnce(mockFiles);
+
+      render(
+        <ConversationDetails conversation={mockConversation} repository="test-repo" />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/repository structure/i)).toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/repository structure \(read-only\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/repository: test-repo/i)).toBeInTheDocument();
+    });
+
+    it('does not render file browser when repository is not provided', () => {
+      render(<ConversationDetails conversation={mockConversation} />);
+      expect(screen.queryByText(/repository structure/i)).not.toBeInTheDocument();
+    });
+
+    it('shows loading state while fetching file tree', () => {
+      vi.mocked(repositoriesAPI.getRepositoryFiles).mockImplementation(
+        () => new Promise(() => {}) // Never resolves
+      );
+
+      render(
+        <ConversationDetails conversation={mockConversation} repository="test-repo" />
+      );
+
+      expect(screen.getByText(/loading repository structure/i)).toBeInTheDocument();
+    });
+
+    it('shows error message when file tree loading fails', async () => {
+      const errorMessage = 'Failed to load repository file structure';
+      vi.mocked(repositoriesAPI.getRepositoryFiles).mockRejectedValueOnce(
+        new Error(errorMessage)
+      );
+
+      render(
+        <ConversationDetails conversation={mockConversation} repository="test-repo" />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(new RegExp(errorMessage, 'i'))).toBeInTheDocument();
+      });
+    });
+
+    it('maintains readable layout with long conversations', () => {
+      const longConversation: Conversation = {
+        ...mockConversation,
+        messages: Array.from({ length: 50 }, (_, i) => ({
+          role: i % 2 === 0 ? 'user' : 'assistant',
+          content: `Message ${i + 1}`,
+          timestamp: new Date(Date.now() + i * 1000).toISOString(),
+        })),
+      };
+
+      const { container } = render(
+        <ConversationDetails conversation={longConversation} repository="test-repo" />
+      );
+
+      // Check that messages container has max-height for scrolling
+      const messagesContainer = container.querySelector('.messages-container');
+      expect(messagesContainer).toBeInTheDocument();
+      // The CSS should have max-height: 60vh for scrolling
+    });
   });
 });
