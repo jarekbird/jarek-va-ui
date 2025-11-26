@@ -137,14 +137,46 @@ export const AgentConversationDetails: React.FC<AgentConversationDetailsProps> =
       return null;
     }
 
+    const createdAt = new Date(conversation.createdAt);
+    const lastAccessedAt = new Date(conversation.lastAccessedAt);
+    const messageCount = conversation.messages.length;
+    const userMessageCount = conversation.messages.filter(m => m.role === 'user').length;
+    const assistantMessageCount = conversation.messages.filter(m => m.role === 'assistant').length;
+
     return (
       <div className="conversation-details">
-        <h2>Agent Conversation ID: {conversation.conversationId}</h2>
-        {conversation.agentId && (
-          <p style={{ color: '#7f8c8d', marginTop: '0.5rem' }}>
-            Agent ID: {conversation.agentId}
-          </p>
-        )}
+        <div className="conversation-header">
+          <h2>Agent Conversation</h2>
+          <div className="conversation-metadata">
+            <div className="metadata-item">
+              <strong>ID:</strong> <code>{conversation.conversationId}</code>
+            </div>
+            {conversation.agentId && (
+              <div className="metadata-item">
+                <strong>Agent ID:</strong> {conversation.agentId}
+              </div>
+            )}
+            <div className="metadata-item">
+              <strong>Created:</strong> {createdAt.toLocaleString()}
+            </div>
+            <div className="metadata-item">
+              <strong>Last Accessed:</strong> {lastAccessedAt.toLocaleString()}
+            </div>
+            <div className="metadata-item">
+              <strong>Messages:</strong> {messageCount} total ({userMessageCount} user, {assistantMessageCount} assistant)
+            </div>
+            {conversation.metadata && Object.keys(conversation.metadata).length > 0 && (
+              <details className="metadata-details">
+                <summary style={{ cursor: 'pointer', marginTop: '10px' }}>
+                  <strong>Additional Metadata</strong>
+                </summary>
+                <pre style={{ marginTop: '10px', fontSize: '0.9em' }}>
+                  {JSON.stringify(conversation.metadata, null, 2)}
+                </pre>
+              </details>
+            )}
+          </div>
+        </div>
         <div className="messages-container">
           {conversation.messages.map((msg, index) => {
             const timestamp = new Date(msg.timestamp);
