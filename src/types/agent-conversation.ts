@@ -8,22 +8,28 @@
  * Message role in an agent conversation.
  * 'user' - Message from the user
  * 'assistant' - Message from the agent/assistant
+ * 'system' - System message
+ * 'tool' - Tool execution message
  */
-export type AgentMessageRole = 'user' | 'assistant';
+export type AgentMessageRole = 'user' | 'assistant' | 'system' | 'tool';
 
 /**
  * Source of the message in an agent conversation.
  * 'voice' - Message originated from voice input/output
  * 'text' - Message originated from text input/output
+ * 'user_input' - User input (legacy)
+ * 'agent_response' - Agent response (legacy)
+ * 'tool_output' - Tool output (legacy)
+ * 'system_event' - System event (legacy)
  */
-export type AgentMessageSource = 'voice' | 'text';
+export type AgentMessageSource = 'voice' | 'text' | 'user_input' | 'agent_response' | 'tool_output' | 'system_event';
 
 /**
  * Individual message in an agent conversation.
  */
 export interface AgentMessage {
   /**
-   * Role of the message sender (user or assistant)
+   * Role of the message sender (user, assistant, system, or tool)
    */
   role: AgentMessageRole;
   
@@ -38,7 +44,7 @@ export interface AgentMessage {
   timestamp: string;
   
   /**
-   * Source of the message (voice or text)
+   * Source of the message (voice, text, etc.)
    * Optional for backward compatibility
    */
   source?: AgentMessageSource;
@@ -47,6 +53,21 @@ export interface AgentMessage {
    * Optional message ID for tracking individual messages
    */
   messageId?: string;
+  
+  /**
+   * Optional tool name if this is a tool message
+   */
+  toolName?: string;
+  
+  /**
+   * Optional tool arguments if this is a tool message
+   */
+  toolArgs?: Record<string, unknown>;
+  
+  /**
+   * Optional tool output if this is a tool message
+   */
+  toolOutput?: string;
 }
 
 /**

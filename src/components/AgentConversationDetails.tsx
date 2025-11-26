@@ -146,30 +146,58 @@ export const AgentConversationDetails: React.FC<AgentConversationDetailsProps> =
           </p>
         )}
         <div className="messages-container">
-          {conversation.messages.map((msg, index) => (
-            <div key={index} className={`message ${msg.role}`}>
-              <div className="message-role">
-                {msg.role}
-                {msg.source && (
-                  <span
-                    style={{
-                      fontSize: '0.8em',
-                      marginLeft: '0.5rem',
-                      color: '#7f8c8d',
-                    }}
-                  >
-                    ({msg.source})
-                  </span>
+          {conversation.messages.map((msg, index) => {
+            const timestamp = new Date(msg.timestamp);
+            const isRecent = Date.now() - timestamp.getTime() < 60000; // Less than 1 minute ago
+            const timeDisplay = isRecent
+              ? 'Just now'
+              : timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const dateDisplay = timestamp.toLocaleDateString();
+
+            return (
+              <div key={msg.messageId || index} className={`message ${msg.role}`}>
+                <div className="message-header">
+                  <div className="message-role">
+                    {msg.role === 'user' ? '👤 You' : msg.role === 'assistant' ? '🤖 Assistant' : msg.role === 'tool' ? '🔧 Tool' : '⚙️ System'}
+                    {msg.source && (
+                      <span className="message-source">
+                        {msg.source === 'voice' ? '🎤' : msg.source === 'text' ? '⌨️' : ''} {msg.source}
+                      </span>
+                    )}
+                  </div>
+                  <div className="message-timestamp">
+                    {timeDisplay} {dateDisplay !== new Date().toLocaleDateString() && `• ${dateDisplay}`}
+                  </div>
+                </div>
+                {msg.toolName && (
+                  <div className="message-tool-info">
+                    <strong>Tool:</strong> {msg.toolName}
+                    {msg.toolArgs && Object.keys(msg.toolArgs).length > 0 && (
+                      <details style={{ marginTop: '5px' }}>
+                        <summary style={{ cursor: 'pointer', fontSize: '0.9em' }}>Arguments</summary>
+                        <pre style={{ fontSize: '0.8em', marginTop: '5px' }}>
+                          {JSON.stringify(msg.toolArgs, null, 2)}
+                        </pre>
+                      </details>
+                    )}
+                  </div>
+                )}
+                <div className="message-content">
+                  {msg.content.includes('\n') || msg.content.length > 100 ? (
+                    <pre>{msg.content}</pre>
+                  ) : (
+                    <div>{msg.content}</div>
+                  )}
+                </div>
+                {msg.toolOutput && (
+                  <div className="message-tool-output">
+                    <strong>Output:</strong>
+                    <pre>{msg.toolOutput}</pre>
+                  </div>
                 )}
               </div>
-              <div className="message-content">
-                <pre>{msg.content}</pre>
-              </div>
-              <div className="message-timestamp">
-                {new Date(msg.timestamp).toLocaleString()}
-              </div>
-            </div>
-          ))}
+            );
+          })}
           <div ref={messagesEndRef} />
         </div>
         <form onSubmit={handleSubmit} className="message-form">

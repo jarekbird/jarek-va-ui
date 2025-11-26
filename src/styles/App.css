@@ -183,10 +183,68 @@ h1 {
   border: 1px solid #d0d0d0;
 }
 
+.message.tool {
+  background-color: #fff3cd;
+  color: #856404;
+  text-align: left;
+  margin-right: 20%;
+  border: 1px solid #ffc107;
+}
+
+.message.system {
+  background-color: #e7f3ff;
+  color: #004085;
+  text-align: center;
+  margin-left: 10%;
+  margin-right: 10%;
+  border: 1px solid #b3d7ff;
+  font-style: italic;
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
 .message-role {
   font-weight: bold;
-  margin-bottom: 5px;
   text-transform: capitalize;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.message-source {
+  font-size: 0.8em;
+  color: #7f8c8d;
+  font-weight: normal;
+  text-transform: capitalize;
+}
+
+.message-tool-info {
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  padding: 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+}
+
+.message-tool-output {
+  background-color: #d1ecf1;
+  border: 1px solid #0dcaf0;
+  padding: 8px;
+  border-radius: 4px;
+  margin-top: 8px;
+  font-size: 0.9em;
+}
+
+.message-tool-output pre {
+  margin-top: 5px;
+  background-color: transparent;
+  padding: 0;
 }
 
 .message-content pre {
@@ -202,10 +260,9 @@ h1 {
 }
 
 .message-timestamp {
-  font-size: 0.7em;
+  font-size: 0.75em;
   color: #95a5a6;
-  margin-top: 5px;
-  display: block;
+  white-space: nowrap;
 }
 
 .error-message {
