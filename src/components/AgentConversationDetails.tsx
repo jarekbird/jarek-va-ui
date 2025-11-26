@@ -143,10 +143,47 @@ export const AgentConversationDetails: React.FC<AgentConversationDetailsProps> =
     const userMessageCount = conversation.messages.filter(m => m.role === 'user').length;
     const assistantMessageCount = conversation.messages.filter(m => m.role === 'assistant').length;
 
+    const handleExport = () => {
+      const exportData = {
+        conversationId: conversation.conversationId,
+        agentId: conversation.agentId,
+        createdAt: conversation.createdAt,
+        lastAccessedAt: conversation.lastAccessedAt,
+        metadata: conversation.metadata,
+        messages: conversation.messages,
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `agent-conversation-${conversation.conversationId}-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+
     return (
       <div className="conversation-details">
         <div className="conversation-header">
-          <h2>Agent Conversation</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2>Agent Conversation</h2>
+            <button
+              onClick={handleExport}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#27ae60',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.9em',
+              }}
+            >
+              📥 Export
+            </button>
+          </div>
           <div className="conversation-metadata">
             <div className="metadata-item">
               <strong>ID:</strong> <code>{conversation.conversationId}</code>
