@@ -269,6 +269,16 @@ h1 {
   text-transform: capitalize;
 }
 
+.message-status {
+  font-size: 0.8em;
+  color: #27ae60;
+  margin-left: 5px;
+}
+
+.message-status.tool-status {
+  color: #f39c12;
+}
+
 .message-tool-info {
   background-color: #fff3cd;
   border: 1px solid #ffc107;

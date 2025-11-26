@@ -196,6 +196,16 @@ export const AgentConversationDetails: React.FC<AgentConversationDetailsProps> =
                         {msg.source === 'voice' ? '🎤' : msg.source === 'text' ? '⌨️' : ''} {msg.source}
                       </span>
                     )}
+                    {msg.role === 'user' && (
+                      <span className="message-status" title="Message sent">
+                        ✓
+                      </span>
+                    )}
+                    {msg.role === 'assistant' && msg.toolName && (
+                      <span className="message-status tool-status" title="Tool execution">
+                        🔧
+                      </span>
+                    )}
                   </div>
                   <div className="message-timestamp">
                     {timeDisplay} {dateDisplay !== new Date().toLocaleDateString() && `• ${dateDisplay}`}
