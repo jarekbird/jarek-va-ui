@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ConversationList } from './ConversationList';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
+import { Navigation } from './Navigation';
 import { listConversations, createConversation } from '../api/conversations';
 import type { Conversation } from '../types';
 
@@ -78,6 +79,7 @@ export const ConversationListView: React.FC = () => {
 
   return (
     <div className="container">
+      <Navigation />
       <div className="header-with-button">
         <h1>Note Taking History</h1>
         <button

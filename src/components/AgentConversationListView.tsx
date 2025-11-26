@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { AgentConversationList } from './AgentConversationList';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
+import { Navigation } from './Navigation';
 import {
   listAgentConversations,
   createAgentConversation,
@@ -85,6 +86,7 @@ export const AgentConversationListView: React.FC = () => {
 
   return (
     <div className="container">
+      <Navigation />
       <div className="header-with-button">
         <h1>Agent Conversations</h1>
         <button

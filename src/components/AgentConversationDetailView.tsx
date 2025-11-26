@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { AgentConversationDetails } from './AgentConversationDetails';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
+import { Navigation } from './Navigation';
 import { getAgentConversation } from '../api/agent-conversations';
 import type { AgentConversation } from '../types/agent-conversation';
 
@@ -40,6 +41,7 @@ export const AgentConversationDetailView: React.FC = () => {
 
   return (
     <div className="container">
+      <Navigation />
       <div style={{ marginBottom: '1rem' }}>
         <Link
           to="/agent-conversations"

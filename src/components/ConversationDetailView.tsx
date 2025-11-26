@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ConversationDetails } from './ConversationDetails';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
+import { Navigation } from './Navigation';
 import { getConversationById } from '../api/conversations';
 import type { Conversation } from '../types';
 
@@ -40,6 +41,7 @@ export const ConversationDetailView: React.FC = () => {
 
   return (
     <div className="container">
+      <Navigation />
       <div style={{ marginBottom: '1rem' }}>
         <Link to="/" style={{ color: '#3498db', textDecoration: 'none' }}>
           ← Back to Note Taking History
