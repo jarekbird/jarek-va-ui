@@ -1,15 +1,24 @@
 import React from 'react';
 import type { Conversation } from '../types';
 import { sendMessage, getConversationById } from '../api/conversations';
+import { RepositoryFileBrowser } from './RepositoryFileBrowser';
+import { getRepositoryFiles } from '../api/repositories';
+import type { FileNode } from '../types/file-tree';
 
 interface ConversationDetailsProps {
   conversation: Conversation | null;
   onConversationUpdate?: (conversation: Conversation) => void;
+  /**
+   * Optional repository identifier for the file browser.
+   * If not provided, the file browser will not be displayed.
+   */
+  repository?: string;
 }
 
 export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
   conversation,
   onConversationUpdate,
+  repository,
 }) => {
   const [message, setMessage] = React.useState<string>('');
   const [isSending, setIsSending] = React.useState<boolean>(false);
@@ -18,6 +27,11 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const pollingIntervalRef = React.useRef<number | null>(null);
   const lastMessageCountRef = React.useRef<number>(0);
+  
+  // File browser state
+  const [fileTree, setFileTree] = React.useState<FileNode[]>([]);
+  const [fileTreeLoading, setFileTreeLoading] = React.useState<boolean>(false);
+  const [fileTreeError, setFileTreeError] = React.useState<string | null>(null);
 
   // Update last message count when conversation changes
   React.useEffect(() => {
@@ -25,6 +39,34 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
       lastMessageCountRef.current = conversation.messages.length;
     }
   }, [conversation]);
+
+  // Load file tree when repository is provided
+  React.useEffect(() => {
+    if (repository) {
+      loadFileTree(repository);
+    } else {
+      setFileTree([]);
+      setFileTreeError(null);
+    }
+  }, [repository]);
+
+  const loadFileTree = async (repo: string) => {
+    try {
+      setFileTreeLoading(true);
+      setFileTreeError(null);
+      const files = await getRepositoryFiles(repo);
+      setFileTree(files);
+    } catch (err) {
+      setFileTreeError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to load repository file structure'
+      );
+      setFileTree([]);
+    } finally {
+      setFileTreeLoading(false);
+    }
+  };
 
   // Scroll to bottom when messages change
   React.useEffect(() => {
@@ -145,6 +187,16 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
   return (
     <div className="conversation-details">
       <h2>Note Session ID: {conversation.conversationId}</h2>
+      {repository && (
+        <div style={{ marginBottom: '1rem' }}>
+          <RepositoryFileBrowser
+            repository={repository}
+            files={fileTree}
+            loading={fileTreeLoading}
+            error={fileTreeError}
+          />
+        </div>
+      )}
       <div className="messages-container">
         {conversation.messages.map((msg, index) => (
           <div key={index} className={`message ${msg.role}`}>
