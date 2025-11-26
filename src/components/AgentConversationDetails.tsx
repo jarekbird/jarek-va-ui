@@ -17,7 +17,10 @@ export const AgentConversationDetails: React.FC<AgentConversationDetailsProps> =
     const [message, setMessage] = React.useState<string>('');
     const [isSending, setIsSending] = React.useState<boolean>(false);
     const [error, setError] = React.useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
     const messagesEndRef = React.useRef<HTMLDivElement>(null);
+    const errorTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    const successTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Scroll to bottom when messages change
     React.useEffect(() => {
@@ -25,6 +28,40 @@ export const AgentConversationDetails: React.FC<AgentConversationDetailsProps> =
         messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
       }
     }, [conversation]);
+
+    // Auto-dismiss error messages after 5 seconds
+    React.useEffect(() => {
+      if (error) {
+        if (errorTimeoutRef.current) {
+          clearTimeout(errorTimeoutRef.current);
+        }
+        errorTimeoutRef.current = setTimeout(() => {
+          setError(null);
+        }, 5000);
+      }
+      return () => {
+        if (errorTimeoutRef.current) {
+          clearTimeout(errorTimeoutRef.current);
+        }
+      };
+    }, [error]);
+
+    // Auto-dismiss success messages after 3 seconds
+    React.useEffect(() => {
+      if (successMessage) {
+        if (successTimeoutRef.current) {
+          clearTimeout(successTimeoutRef.current);
+        }
+        successTimeoutRef.current = setTimeout(() => {
+          setSuccessMessage(null);
+        }, 3000);
+      }
+      return () => {
+        if (successTimeoutRef.current) {
+          clearTimeout(successTimeoutRef.current);
+        }
+      };
+    }, [successMessage]);
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -67,8 +104,26 @@ export const AgentConversationDetails: React.FC<AgentConversationDetailsProps> =
         if (onConversationUpdate) {
           onConversationUpdate(updatedConversation);
         }
+        
+        // Show success message
+        setSuccessMessage('Message sent successfully');
+        setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to send message');
+        // Provide more specific error messages
+        let errorMessage = 'Failed to send message';
+        if (err instanceof Error) {
+          if (err.message.includes('fetch') || err.message.includes('network')) {
+            errorMessage = 'Network error: Please check your connection and try again';
+          } else if (err.message.includes('404')) {
+            errorMessage = 'Conversation not found. Please refresh the page.';
+          } else if (err.message.includes('500')) {
+            errorMessage = 'Server error: Please try again in a moment';
+          } else {
+            errorMessage = err.message;
+          }
+        }
+        setError(errorMessage);
+        setSuccessMessage(null);
         // Revert optimistic update on error
         if (onConversationUpdate) {
           onConversationUpdate(conversation);
@@ -118,7 +173,31 @@ export const AgentConversationDetails: React.FC<AgentConversationDetailsProps> =
           <div ref={messagesEndRef} />
         </div>
         <form onSubmit={handleSubmit} className="message-form">
-          {error && <div className="error-message">{error}</div>}
+          {error && (
+            <div className="error-message" role="alert">
+              {error}
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                style={{
+                  marginLeft: '10px',
+                  background: 'none',
+                  border: 'none',
+                  color: 'inherit',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                }}
+                aria-label="Dismiss error"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+          {successMessage && (
+            <div className="success-message" role="status">
+              {successMessage}
+            </div>
+          )}
           <div className="message-input-container">
             <textarea
               value={message}

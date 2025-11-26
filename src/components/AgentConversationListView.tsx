@@ -31,11 +31,19 @@ export const AgentConversationListView: React.FC = () => {
       const data = await listAgentConversations();
       setConversations(data);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'An error occurred while loading agent conversations'
-      );
+      let errorMessage = 'An error occurred while loading agent conversations';
+      if (err instanceof Error) {
+        if (err.message.includes('fetch') || err.message.includes('network')) {
+          errorMessage = 'Network error: Please check your connection and try again';
+        } else if (err.message.includes('404')) {
+          errorMessage = 'Service not found. Please check if the backend is running.';
+        } else if (err.message.includes('500')) {
+          errorMessage = 'Server error: Please try again in a moment';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -98,7 +106,27 @@ export const AgentConversationListView: React.FC = () => {
         </button>
       </div>
       {loading && conversations.length === 0 && <LoadingSpinner />}
-      {error && <ErrorMessage message={error} />}
+      {error && (
+        <div>
+          <ErrorMessage message={error} />
+          <div style={{ textAlign: 'center', marginTop: '10px' }}>
+            <button
+              onClick={loadConversations}
+              className="retry-button"
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#3498db',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
       {!loading && conversations.length > 0 && (
         <AgentConversationList
           conversations={conversations}
