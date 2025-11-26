@@ -24,6 +24,12 @@ export const Navigation: React.FC = () => {
         Agent Conversations
       </Link>
       <Link
+        to="/agent-config"
+        className={`nav-link ${isActive('/agent-config') ? 'active' : ''}`}
+      >
+        Agent Config
+      </Link>
+      <Link
         to="/tasks"
         className={`nav-link ${isActive('/tasks') ? 'active' : ''}`}
       >

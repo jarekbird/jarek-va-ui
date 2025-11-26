@@ -206,6 +206,68 @@ h1 {
   overflow-x: auto;
 }
 
+.config-section {
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.config-section h2 {
+  margin-bottom: 15px;
+  color: #2c3e50;
+  font-size: 1.5em;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 15px;
+}
+
+.config-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px;
+  background-color: #fff;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+}
+
+.config-item strong {
+  color: #2c3e50;
+  font-size: 0.9em;
+}
+
+.config-item code {
+  background-color: #e9ecef;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 0.9em;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+}
+
+.health-status {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.health-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background-color: #fff;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+}
+
+.health-item strong {
+  color: #2c3e50;
+}
+
 .message {
   margin-bottom: 15px;
   padding: 10px 15px;
