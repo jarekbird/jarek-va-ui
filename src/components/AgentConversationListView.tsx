@@ -21,19 +21,31 @@ export const AgentConversationListView: React.FC = () => {
   const [filterAgentId, setFilterAgentId] = React.useState<string>('');
   const [sortBy, setSortBy] = React.useState<'created' | 'lastAccessed' | 'messageCount'>('lastAccessed');
   const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('desc');
+  const [page, setPage] = React.useState<number>(1);
+  const [pageSize] = React.useState<number>(20);
+  const [totalCount, setTotalCount] = React.useState<number>(0);
   const location = useLocation();
   const navigate = useNavigate();
 
   React.useEffect(() => {
     loadConversations();
-  }, []);
+  }, [page, sortBy, sortOrder]);
 
   const loadConversations = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await listAgentConversations();
-      setConversations(data);
+      const offset = (page - 1) * pageSize;
+      // Map frontend sortBy values to backend sortBy values
+      const backendSortBy = sortBy === 'created' ? 'createdAt' : sortBy === 'lastAccessed' ? 'lastAccessedAt' : 'messageCount';
+      const response = await listAgentConversations({ 
+        limit: pageSize, 
+        offset,
+        sortBy: backendSortBy,
+        sortOrder,
+      });
+      setConversations(response.conversations);
+      setTotalCount(response.pagination.total);
     } catch (err) {
       let errorMessage = 'An error occurred while loading agent conversations';
       if (err instanceof Error) {
@@ -97,26 +109,9 @@ export const AgentConversationListView: React.FC = () => {
       });
     }
 
-    // Sort conversations
-    const sorted = [...filtered].sort((a, b) => {
-      let comparison = 0;
-      
-      switch (sortBy) {
-        case 'created':
-          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-          break;
-        case 'lastAccessed':
-          comparison = new Date(a.lastAccessedAt).getTime() - new Date(b.lastAccessedAt).getTime();
-          break;
-        case 'messageCount':
-          comparison = a.messages.length - b.messages.length;
-          break;
-      }
-      
-      return sortOrder === 'asc' ? comparison : -comparison;
-    });
-
-    return sorted;
+    // Sorting is now handled by the backend, so we just return filtered results
+    // The backend will return conversations already sorted according to sortBy and sortOrder
+    return filtered;
   }, [conversations, searchQuery, filterAgentId, sortBy, sortOrder]);
 
   // Get unique agent IDs for filter dropdown
@@ -278,11 +273,13 @@ export const AgentConversationListView: React.FC = () => {
               <option value="asc">Oldest First</option>
             </select>
           </div>
-          {(searchQuery || filterAgentId) && (
-            <div style={{ fontSize: '0.9em', color: '#7f8c8d', alignSelf: 'flex-end', paddingBottom: '8px' }}>
-              Showing {filteredAndSortedConversations.length} of {conversations.length} conversations
-            </div>
-          )}
+          <div style={{ fontSize: '0.9em', color: '#7f8c8d', alignSelf: 'flex-end', paddingBottom: '8px' }}>
+            {searchQuery || filterAgentId ? (
+              <>Showing {filteredAndSortedConversations.length} of {conversations.length} conversations</>
+            ) : (
+              <>Showing {conversations.length} of {totalCount} conversations</>
+            )}
+          </div>
         </div>
       </div>
       {loading && conversations.length === 0 && <LoadingSpinner />}
@@ -323,6 +320,51 @@ export const AgentConversationListView: React.FC = () => {
         <p style={{ textAlign: 'center', color: '#7f8c8d' }}>
           No conversations match your search criteria.
         </p>
+      )}
+      
+      {/* Pagination controls */}
+      {!loading && !error && totalCount > pageSize && !searchQuery && !filterAgentId && (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          gap: '10px', 
+          marginTop: '20px',
+          paddingTop: '20px',
+          borderTop: '1px solid #ecf0f1'
+        }}>
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: page === 1 ? '#ecf0f1' : '#3498db',
+              color: page === 1 ? '#95a5a6' : 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: page === 1 ? 'not-allowed' : 'pointer',
+            }}
+          >
+            Previous
+          </button>
+          <span style={{ color: '#2c3e50' }}>
+            Page {page} of {Math.ceil(totalCount / pageSize)}
+          </span>
+          <button
+            onClick={() => setPage(p => Math.min(Math.ceil(totalCount / pageSize), p + 1))}
+            disabled={page >= Math.ceil(totalCount / pageSize)}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: page >= Math.ceil(totalCount / pageSize) ? '#ecf0f1' : '#3498db',
+              color: page >= Math.ceil(totalCount / pageSize) ? '#95a5a6' : 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: page >= Math.ceil(totalCount / pageSize) ? 'not-allowed' : 'pointer',
+            }}
+          >
+            Next
+          </button>
+        </div>
       )}
     </div>
   );

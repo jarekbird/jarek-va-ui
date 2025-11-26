@@ -20,13 +20,67 @@ const getAgentApiBaseUrl = (): string => {
 };
 
 /**
- * List all agent conversations.
- * @returns Promise resolving to an array of agent conversations
+ * Pagination options for listing agent conversations.
+ */
+export interface ListAgentConversationsOptions {
+  /**
+   * Maximum number of conversations to return
+   */
+  limit?: number;
+  /**
+   * Number of conversations to skip
+   */
+  offset?: number;
+  /**
+   * Field to sort by
+   */
+  sortBy?: 'createdAt' | 'lastAccessedAt' | 'messageCount';
+  /**
+   * Sort order
+   */
+  sortOrder?: 'asc' | 'desc';
+}
+
+/**
+ * Response from listing agent conversations with pagination.
+ */
+export interface ListAgentConversationsResponse {
+  conversations: AgentConversation[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+}
+
+/**
+ * List all agent conversations with optional pagination.
+ * @param options - Optional pagination parameters
+ * @returns Promise resolving to conversations and pagination info
  * @throws Error if the API request fails
  */
-export async function listAgentConversations(): Promise<AgentConversation[]> {
+export async function listAgentConversations(
+  options?: ListAgentConversationsOptions
+): Promise<ListAgentConversationsResponse> {
   const baseUrl = getAgentApiBaseUrl();
-  const response = await fetch(`${baseUrl}/list`);
+  const params = new URLSearchParams();
+  if (options?.limit !== undefined) {
+    params.append('limit', options.limit.toString());
+  }
+  if (options?.offset !== undefined) {
+    params.append('offset', options.offset.toString());
+  }
+  if (options?.sortBy !== undefined) {
+    params.append('sortBy', options.sortBy);
+  }
+  if (options?.sortOrder !== undefined) {
+    params.append('sortOrder', options.sortOrder);
+  }
+  const queryString = params.toString();
+  const url = `${baseUrl}/list${queryString ? `?${queryString}` : ''}`;
+  
+  const response = await fetch(url);
 
   // Check if response is actually JSON before parsing
   const contentType = response.headers.get('content-type');
