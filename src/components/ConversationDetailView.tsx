@@ -48,7 +48,10 @@ export const ConversationDetailView: React.FC = () => {
       {loading && <LoadingSpinner />}
       {error && <ErrorMessage message={error} />}
       {!loading && !error && conversation && (
-        <ConversationDetails conversation={conversation} />
+        <ConversationDetails
+          conversation={conversation}
+          onConversationUpdate={setConversation}
+        />
       )}
       {!loading && !error && !conversation && (
         <p style={{ textAlign: 'center', color: '#7f8c8d' }}>
