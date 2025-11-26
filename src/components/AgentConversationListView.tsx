@@ -19,6 +19,8 @@ export const AgentConversationListView: React.FC = () => {
   const [isCreating, setIsCreating] = React.useState<boolean>(false);
   const [searchQuery, setSearchQuery] = React.useState<string>('');
   const [filterAgentId, setFilterAgentId] = React.useState<string>('');
+  const [sortBy, setSortBy] = React.useState<'created' | 'lastAccessed' | 'messageCount'>('lastAccessed');
+  const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('desc');
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -65,8 +67,8 @@ export const AgentConversationListView: React.FC = () => {
     void conversationId; // Explicitly mark as used to satisfy linter
   };
 
-  // Filter conversations based on search query and agent ID
-  const filteredConversations = React.useMemo(() => {
+  // Filter and sort conversations
+  const filteredAndSortedConversations = React.useMemo(() => {
     let filtered = conversations;
 
     // Filter by agent ID
@@ -95,8 +97,27 @@ export const AgentConversationListView: React.FC = () => {
       });
     }
 
-    return filtered;
-  }, [conversations, searchQuery, filterAgentId]);
+    // Sort conversations
+    const sorted = [...filtered].sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'created':
+          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+        case 'lastAccessed':
+          comparison = new Date(a.lastAccessedAt).getTime() - new Date(b.lastAccessedAt).getTime();
+          break;
+        case 'messageCount':
+          comparison = a.messages.length - b.messages.length;
+          break;
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return sorted;
+  }, [conversations, searchQuery, filterAgentId, sortBy, sortOrder]);
 
   // Get unique agent IDs for filter dropdown
   const uniqueAgentIds = React.useMemo(() => {
@@ -215,11 +236,54 @@ export const AgentConversationListView: React.FC = () => {
             </div>
           )}
         </div>
-        {(searchQuery || filterAgentId) && (
-          <div style={{ marginTop: '10px', fontSize: '0.9em', color: '#7f8c8d' }}>
-            Showing {filteredConversations.length} of {conversations.length} conversations
+        <div style={{ display: 'flex', gap: '15px', alignItems: 'center', marginTop: '10px', flexWrap: 'wrap' }}>
+          <div style={{ minWidth: '150px' }}>
+            <label htmlFor="sort-by" style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em', color: '#2c3e50' }}>
+              Sort by:
+            </label>
+            <select
+              id="sort-by"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'created' | 'lastAccessed' | 'messageCount')}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '0.9em',
+              }}
+            >
+              <option value="lastAccessed">Last Accessed</option>
+              <option value="created">Created Date</option>
+              <option value="messageCount">Message Count</option>
+            </select>
           </div>
-        )}
+          <div style={{ minWidth: '120px' }}>
+            <label htmlFor="sort-order" style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em', color: '#2c3e50' }}>
+              Order:
+            </label>
+            <select
+              id="sort-order"
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '0.9em',
+              }}
+            >
+              <option value="desc">Newest First</option>
+              <option value="asc">Oldest First</option>
+            </select>
+          </div>
+          {(searchQuery || filterAgentId) && (
+            <div style={{ fontSize: '0.9em', color: '#7f8c8d', alignSelf: 'flex-end', paddingBottom: '8px' }}>
+              Showing {filteredAndSortedConversations.length} of {conversations.length} conversations
+            </div>
+          )}
+        </div>
       </div>
       {loading && conversations.length === 0 && <LoadingSpinner />}
       {error && (
@@ -243,9 +307,9 @@ export const AgentConversationListView: React.FC = () => {
           </div>
         </div>
       )}
-      {!loading && filteredConversations.length > 0 && (
+      {!loading && filteredAndSortedConversations.length > 0 && (
         <AgentConversationList
-          conversations={filteredConversations}
+          conversations={filteredAndSortedConversations}
           activeConversationId={activeConversationId}
           onSelectConversation={handleSelectConversation}
         />
@@ -255,7 +319,7 @@ export const AgentConversationListView: React.FC = () => {
           No agent conversations found.
         </p>
       )}
-      {!loading && !error && conversations.length > 0 && filteredConversations.length === 0 && (
+      {!loading && !error && conversations.length > 0 && filteredAndSortedConversations.length === 0 && (
         <p style={{ textAlign: 'center', color: '#7f8c8d' }}>
           No conversations match your search criteria.
         </p>
