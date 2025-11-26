@@ -6,9 +6,10 @@ services:
       dockerfile: Dockerfile
     container_name: jarek-va-ui
     restart: unless-stopped
-    # Remove port mapping - Traefik will route traffic
-    # ports:
-    #   - "3002:80"
+    # Port mapping for local development access
+    # Traefik will also route traffic in production
+    ports:
+      - "3002:80"
     networks:
       - virtual-assistant-network
     # Note: Traefik service is defined in jarek-va/docker-compose.yml
