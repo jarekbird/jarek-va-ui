@@ -4,6 +4,11 @@ export interface Message {
   timestamp: string;
 }
 
+/**
+ * Conversation interface for note-taking sessions.
+ * Note: The term "Conversation" is used internally for backward compatibility with the API,
+ * but these are displayed as "Note Taking History" in the UI.
+ */
 export interface Conversation {
   conversationId: string;
   messages: Message[];

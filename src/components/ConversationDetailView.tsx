@@ -42,7 +42,7 @@ export const ConversationDetailView: React.FC = () => {
     <div className="container">
       <div style={{ marginBottom: '1rem' }}>
         <Link to="/" style={{ color: '#3498db', textDecoration: 'none' }}>
-          ← Back to Conversations
+          ← Back to Note Taking History
         </Link>
       </div>
       {loading && <LoadingSpinner />}
@@ -55,7 +55,7 @@ export const ConversationDetailView: React.FC = () => {
       )}
       {!loading && !error && !conversation && (
         <p style={{ textAlign: 'center', color: '#7f8c8d' }}>
-          Conversation not found.
+          Note session not found.
         </p>
       )}
     </div>

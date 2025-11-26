@@ -144,7 +144,7 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
 
   return (
     <div className="conversation-details">
-      <h2>Conversation ID: {conversation.conversationId}</h2>
+      <h2>Note Session ID: {conversation.conversationId}</h2>
       <div className="messages-container">
         {conversation.messages.map((msg, index) => (
           <div key={index} className={`message ${msg.role}`}>

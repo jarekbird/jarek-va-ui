@@ -79,13 +79,13 @@ export const ConversationListView: React.FC = () => {
   return (
     <div className="container">
       <div className="header-with-button">
-        <h1>Conversation History</h1>
+        <h1>Note Taking History</h1>
         <button
           onClick={handleNewConversation}
           disabled={isCreating}
           className="new-conversation-button"
         >
-          {isCreating ? 'Creating...' : '+ New Conversation'}
+          {isCreating ? 'Creating...' : '+ New Note Session'}
         </button>
       </div>
       {loading && conversations.length === 0 && <LoadingSpinner />}
@@ -99,7 +99,7 @@ export const ConversationListView: React.FC = () => {
       )}
       {!loading && !error && conversations.length === 0 && (
         <p style={{ textAlign: 'center', color: '#7f8c8d' }}>
-          No conversations found.
+          No note sessions found.
         </p>
       )}
     </div>

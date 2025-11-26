@@ -37,7 +37,7 @@ describe('App', () => {
   it('renders the main heading', () => {
     vi.mocked(conversationsAPI.listConversations).mockResolvedValueOnce([]);
     render(<App />);
-    expect(screen.getByText('Conversation History')).toBeInTheDocument();
+    expect(screen.getByText('Note Taking History')).toBeInTheDocument();
   });
 
   it('loads and displays conversations on mount', async () => {
@@ -79,13 +79,13 @@ describe('App', () => {
     });
   });
 
-  it('displays "No conversations found" when list is empty', async () => {
+  it('displays "No note sessions found" when list is empty', async () => {
     vi.mocked(conversationsAPI.listConversations).mockResolvedValueOnce([]);
 
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByText(/No conversations found/i)).toBeInTheDocument();
+      expect(screen.getByText(/No note sessions found/i)).toBeInTheDocument();
     });
   });
 
