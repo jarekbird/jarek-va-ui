@@ -7,9 +7,12 @@ import { AgentConversationDetailView } from './components/AgentConversationDetai
 import { AgentConfigView } from './components/AgentConfigView';
 import { TaskListView } from './components/TaskListView';
 import { TaskDetailView } from './components/TaskDetailView';
+import { isElevenLabsEnabled } from './utils/feature-flags';
 import './styles/App.css';
 
 const App: React.FC = () => {
+  const elevenLabsEnabled = isElevenLabsEnabled();
+
   return (
     <Routes>
       <Route path="/" element={<ConversationListView />} />
@@ -17,19 +20,23 @@ const App: React.FC = () => {
         path="/conversation/:conversationId"
         element={<ConversationDetailView />}
       />
-      <Route
-        path="/agent-conversations"
-        element={<AgentConversationListView />}
-      />
-              <Route
-                path="/agent-conversation/:conversationId"
-                element={<AgentConversationDetailView />}
-              />
-              <Route
-                path="/agent-config"
-                element={<AgentConfigView />}
-              />
-              <Route path="/tasks" element={<TaskListView />} />
+      {elevenLabsEnabled && (
+        <>
+          <Route
+            path="/agent-conversations"
+            element={<AgentConversationListView />}
+          />
+          <Route
+            path="/agent-conversation/:conversationId"
+            element={<AgentConversationDetailView />}
+          />
+          <Route
+            path="/agent-config"
+            element={<AgentConfigView />}
+          />
+        </>
+      )}
+      <Route path="/tasks" element={<TaskListView />} />
       <Route path="/task/:id" element={<TaskDetailView />} />
     </Routes>
   );
