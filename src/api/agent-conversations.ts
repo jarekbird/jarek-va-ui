@@ -7,15 +7,15 @@ import type { AgentConversation } from '../types/agent-conversation';
 
 /**
  * Base URL for agent conversation API endpoints.
- * Defaults to '/agent-conversations/api' if VITE_ELEVENLABS_AGENT_URL is not set.
+ * These endpoints are served by cursor-runner, not elevenlabs-agent.
+ * Uses relative path to work with both nginx proxy and Traefik routing.
+ * 
+ * Note: VITE_ELEVENLABS_AGENT_URL is for elevenlabs-agent service endpoints
+ * (like /config, /signed-url), not for agent conversation API endpoints.
  */
 const getAgentApiBaseUrl = (): string => {
-  const agentUrl = import.meta.env.VITE_ELEVENLABS_AGENT_URL;
-  if (agentUrl) {
-    // Remove trailing slash if present
-    const baseUrl = agentUrl.replace(/\/$/, '');
-    return `${baseUrl}/agent-conversations/api`;
-  }
+  // Always use relative path - agent conversation API is served by cursor-runner
+  // Routes are at /agent-conversations/api/* (Traefik/nginx rewrites to /api/agent/*)
   return '/agent-conversations/api';
 };
 

@@ -13,9 +13,17 @@ export const Navigation: React.FC = () => {
 
   return (
     <nav className="main-navigation">
+      {elevenLabsEnabled && (
+        <Link
+          to="/dashboard"
+          className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}
+        >
+          Dashboard
+        </Link>
+      )}
       <Link
         to="/"
-        className={`nav-link ${isActive('/') && !location.pathname.startsWith('/agent-conversation') ? 'active' : ''}`}
+        className={`nav-link ${isActive('/') && !location.pathname.startsWith('/agent-conversation') && !location.pathname.startsWith('/dashboard') ? 'active' : ''}`}
       >
         Note Taking History
       </Link>

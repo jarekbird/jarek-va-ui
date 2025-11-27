@@ -77,8 +77,9 @@ describe('agent-conversations API', () => {
       });
 
       await listAgentConversations();
+      // Agent conversation API always uses relative path, served by cursor-runner
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3004/agent-conversations/api/list'
+        '/agent-conversations/api/list'
       );
     });
   });

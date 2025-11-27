@@ -10,7 +10,13 @@ import {
 } from '../api/agent-conversations';
 import type { AgentConversation } from '../types/agent-conversation';
 
-export const AgentConversationListView: React.FC = () => {
+export interface AgentConversationListViewProps {
+  onConversationSelect?: (conversationId: string) => void;
+}
+
+export const AgentConversationListView: React.FC<AgentConversationListViewProps> = ({
+  onConversationSelect,
+}) => {
   const [conversations, setConversations] = React.useState<AgentConversation[]>(
     []
   );
@@ -309,6 +315,7 @@ export const AgentConversationListView: React.FC = () => {
           conversations={filteredAndSortedConversations}
           activeConversationId={activeConversationId}
           onSelectConversation={handleSelectConversation}
+          onConversationSelect={onConversationSelect}
         />
       )}
       {!loading && !error && conversations.length === 0 && (

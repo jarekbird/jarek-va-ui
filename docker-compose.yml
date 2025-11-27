@@ -11,7 +11,7 @@ services:
         VITE_ELEVENLABS_AGENT_URL: ${VITE_ELEVENLABS_AGENT_URL:-http://localhost:3004}
         VITE_ELEVENLABS_AGENT_ID: ${VITE_ELEVENLABS_AGENT_ID:-}
         VITE_ELEVENLABS_AGENT_PUBLIC: ${VITE_ELEVENLABS_AGENT_PUBLIC:-}
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3001/conversations/api}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/conversations/api}
     container_name: jarek-va-ui
     restart: unless-stopped
     # Port mapping for local development access

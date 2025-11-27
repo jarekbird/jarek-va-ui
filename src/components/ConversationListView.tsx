@@ -7,7 +7,13 @@ import { Navigation } from './Navigation';
 import { listConversations, createConversation } from '../api/conversations';
 import type { Conversation } from '../types';
 
-export const ConversationListView: React.FC = () => {
+export interface ConversationListViewProps {
+  onConversationSelect?: (conversationId: string) => void;
+}
+
+export const ConversationListView: React.FC<ConversationListViewProps> = ({
+  onConversationSelect,
+}) => {
   const [conversations, setConversations] = React.useState<Conversation[]>([]);
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -26,7 +32,7 @@ export const ConversationListView: React.FC = () => {
       const data = await listConversations();
       setConversations(data);
     } catch (err) {
-      let errorMessage = 'An error occurred while loading conversations';
+      let errorMessage = 'An error occurred while loading note sessions';
       if (err instanceof Error) {
         if (err.message.includes('fetch') || err.message.includes('network')) {
           errorMessage = 'Network error: Please check your connection and try again';
@@ -72,13 +78,13 @@ export const ConversationListView: React.FC = () => {
         // Reload conversations list to include the new one
         await loadConversations();
       } else {
-        setError('Failed to create conversation');
+        setError('Failed to create note session');
       }
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : 'An error occurred while creating a new conversation'
+          : 'An error occurred while creating a new note session'
       );
     } finally {
       setIsCreating(false);
@@ -125,6 +131,7 @@ export const ConversationListView: React.FC = () => {
           conversations={conversations}
           activeConversationId={activeConversationId}
           onSelectConversation={handleSelectConversation}
+          onConversationSelect={onConversationSelect}
         />
       )}
       {!loading && !error && conversations.length === 0 && (

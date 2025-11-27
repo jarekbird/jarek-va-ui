@@ -10,12 +10,46 @@ This plan integrates ElevenLabs conversational agent functionality (similar to t
 2. Add ElevenLabs conversational agent with voice/text modes
 3. Add file browser for repository structure (cursor is working in)
 
+## CRITICAL: Correct Architecture
+
+### System Flow
+
+**The correct flow is:**
+1. **User (audio/text)** → **ElevenLabs Agent** (runs LLM, reasoning, conversation)
+2. **ElevenLabs Agent** → **elevenlabs-agent service** (webhook for tool calls)
+3. **elevenlabs-agent service** → **cursor-runner** (as a tool, for code execution)
+4. **cursor-runner** → **elevenlabs-agent service** (callback when task completes)
+5. **elevenlabs-agent service** → **ElevenLabs Agent** (pushes completion update)
+
+### Service Responsibilities
+
+**cursor-runner:**
+- Manages **Note Taking History** (`cursor:conversation:{conversationId}`)
+- Provides API endpoints: `/conversations/api/*`
+- Executes cursor commands (code generation)
+- **Does NOT manage agent conversations**
+- **Is called as a tool** by elevenlabs-agent when agent needs code execution
+
+**elevenlabs-agent:**
+- Manages **Agent Conversations** (`elevenlabs:conversation:{conversationId}`)
+- Provides API endpoints: `/agent-conversations/api/*`
+- Handles webhooks from ElevenLabs agent (`/agent-tools`, `/callback`)
+- Manages sessions (`elevenlabs:session:{conversationId}`)
+- Calls cursor-runner as a tool when agent needs code execution
+- Pushes updates back to ElevenLabs agent when cursor tasks complete
+
+**jarek-va-ui (Frontend):**
+- Displays both Note Taking History and Agent Conversations
+- Connects to ElevenLabs agent via WebSocket/WebRTC for voice
+- Calls `/conversations/api/*` for note-taking history (cursor-runner)
+- Calls `/agent-conversations/api/*` for agent conversations (elevenlabs-agent)
+
 ## CRITICAL: Conversation vs. Session Distinction
 
 ### Conversations (Persistent)
 
 - Conversations exist in the database because the user clicked "New Agent Conversation"
-- Stored in Redis: `elevenlabs:conversation:{conversationId}`
+- Stored in Redis: `elevenlabs:conversation:{conversationId}` (in elevenlabs-agent service)
 - **Persistent** - survive page reloads, browser restarts, etc.
 - Contain message history (voice/text messages with agent)
 - Can have multiple sessions over time (one per browser connection)
@@ -23,7 +57,7 @@ This plan integrates ElevenLabs conversational agent functionality (similar to t
 ### Sessions (Ephemeral)
 
 - Sessions are ephemeral and only exist while the WebSocket is open in the browser
-- Stored in Redis: `elevenlabs:session:{conversationId}`
+- Stored in Redis: `elevenlabs:session:{conversationId}` (in elevenlabs-agent service)
 - **Ephemeral** - only exist while the browser tab is open with active WebSocket connection
 - Contain the push-capable session payload for sending updates to the agent
 - **Cannot be replayed or reopened** - each browser connection creates a new session
@@ -56,8 +90,9 @@ This plan integrates ElevenLabs conversational agent functionality (similar to t
 - React 18 + TypeScript
 - Vite build tool
 - React Router for navigation
-- Existing conversation UI in ConversationDetails component (cursor note-taking)
+- Existing note-taking UI plus a new Dashboard view for combined agent + note-taking
 - Backend: cursor-runner (Node.js) at `/conversations/api/*` (note-taking history)
+- Backend: elevenlabs-agent (Node.js) at `/agent-conversations/api/*` (agent conversations)
 - ElevenLabs agent already configured with webhooks to jarekva.com
 - **jarek-va (Rails) is being deprecated** - webhook handling needs migration
 
@@ -66,27 +101,28 @@ This plan integrates ElevenLabs conversational agent functionality (similar to t
 #### Current State
 
 - "Conversations" are actually cursor note-taking history (user prompts → cursor responses)
-- Stored in Redis with keys: `cursor:conversation:{conversationId}`
+- Stored in Redis with keys: `cursor:conversation:{conversationId}` (in cursor-runner)
 - Used for cursor context when executing commands
 
 #### Required Changes
 
 1. **Rename "Conversations" to "Note Taking History"**
    - Update UI labels: "Conversation History" → "Note Taking History"
-   - Update API endpoints: `/conversations/api/*` → `/note-taking/api/*` (or keep routes, just rename UI)
+   - Keep API endpoints: `/conversations/api/*` (served by cursor-runner)
    - Keep backend structure the same (just rename in UI)
    - These are for cursor execution context, not conversational agent
 
 2. **Create Separate ElevenLabs Agent Conversation History**
-   - New storage: `elevenlabs:conversation:{conversationId}` in Redis
+   - **CRITICAL: Stored in elevenlabs-agent service, NOT cursor-runner**
+   - Storage: `elevenlabs:conversation:{conversationId}` in Redis (in elevenlabs-agent)
    - Separate from cursor note-taking history
    - Stores voice/text messages with ElevenLabs agent
-   - New API endpoints: `/agent-conversations/api/*`
+   - API endpoints: `/agent-conversations/api/*` (served by elevenlabs-agent)
    - New UI: "Agent Conversations" section
 
 3. **Keep Distinct**
-   - Cursor note-taking: User → Cursor (code generation context)
-   - Agent conversations: User ↔ ElevenLabs Agent (voice/text chat)
+   - Cursor note-taking: User → Cursor (code generation context) → cursor-runner
+   - Agent conversations: User ↔ ElevenLabs Agent (voice/text chat) → elevenlabs-agent
    - These serve different purposes and should not be mixed
 
 ### Where Does the Agent Run?
@@ -115,29 +151,42 @@ The agent reasoning and conversation management runs entirely on ElevenLabs' inf
    - Manages conversation state and context
 
 4. **Our Backend (elevenlabs-agent service)**
+   - **Manages agent conversations** (stored in Redis: `elevenlabs:conversation:{conversationId}`)
+   - **Provides agent conversation API endpoints** (`/agent-conversations/api/*`)
    - Receives webhook calls when agent needs to execute tools
-   - Routes tool calls to cursor-runner or other services
+   - Routes tool calls to cursor-runner (as a tool) or other services
    - Returns results to ElevenLabs agent
-   - **We do NOT run the LLM or manage conversation state**
+   - Pushes updates to agent when cursor tasks complete
+   - **We do NOT run the LLM or manage conversation state** (ElevenLabs does that)
+
+5. **cursor-runner (called as a tool)**
+   - Executes cursor commands when called by elevenlabs-agent
+   - Manages note-taking history (separate from agent conversations)
+   - Returns results via callback to elevenlabs-agent
+   - **Is NOT responsible for agent conversations**
 
 ### Integration Approach
 
-- Add voice mode toggle to existing ConversationDetails component
-- Support both text and voice modes in the same conversation
+- Create a **Dashboard** view that combines voice indicator, agent chat, and note-taking history on one page
+- Support both text and voice modes in the same **agent conversation**
 - Use ElevenLabs JS SDK (`@elevenlabs/client`) for browser-based voice connection
-- **Create elevenlabs-agent service** to handle:
+- **elevenlabs-agent service** handles:
+  - Agent conversation storage and API endpoints
   - Signed URL generation (if agent is private)
   - Webhook handling for agent tool calls (replacing jarek-va)
   - **CRITICAL**: Async tool execution - webhook returns immediately, cursor runs in background
+  - Pushing updates to agent when cursor tasks complete
 
 ### Key Architectural Principle
 
 - **ElevenLabs conversation is separate from cursor execution**
+- **Agent conversations are managed by elevenlabs-agent, NOT cursor-runner**
+- **cursor-runner is called as a tool by elevenlabs-agent**
 - Cursor calls are slow (minutes) and cannot block real-time conversation
 - Webhook must return immediately for cursor tools
 - Use `/cursor/iterate/async` endpoint (already exists, returns 200 immediately)
-- When cursor completes, update conversation history
-- Agent can check conversation for updates while continuing to chat
+- When cursor completes, elevenlabs-agent pushes update to agent
+- Agent can continue conversation while cursor runs in background
 
 ---
 
@@ -164,12 +213,12 @@ The agent reasoning and conversation management runs entirely on ElevenLabs' inf
 
 ### 0.2: Create Separate ElevenLabs Agent Conversation System
 
-**CRITICAL: Conversation vs. Session Distinction**
+**CRITICAL: Agent conversations are managed by elevenlabs-agent, NOT cursor-runner**
 
 #### Conversations (Persistent)
 
 - Conversations exist in the database because the user clicked "New Agent Conversation"
-- Stored in Redis: `elevenlabs:conversation:{conversationId}`
+- **Stored in Redis: `elevenlabs:conversation:{conversationId}` (in elevenlabs-agent service)**
 - **Persistent** - survive page reloads, browser restarts, etc.
 - Contain message history (voice/text messages with agent)
 - Can have multiple sessions over time (one per browser connection)
@@ -177,7 +226,7 @@ The agent reasoning and conversation management runs entirely on ElevenLabs' inf
 #### Sessions (Ephemeral)
 
 - Sessions are ephemeral and only exist while the WebSocket is open in the browser
-- Stored in Redis: `elevenlabs:session:{conversationId}`
+- **Stored in Redis: `elevenlabs:session:{conversationId}` (in elevenlabs-agent service)**
 - **Ephemeral** - only exist while the browser tab is open with active WebSocket connection
 - Contain the push-capable session payload for sending updates to the agent
 - **Cannot be replayed or reopened** - each browser connection creates a new session
@@ -200,20 +249,22 @@ The agent reasoning and conversation management runs entirely on ElevenLabs' inf
 - Sessions are only valid while the WebSocket is actively connected
 - If a callback tries to push to an expired session, it should fail gracefully (session no longer exists)
 
-**New files:**
+**Frontend files:**
 
 - `src/types/agent-conversation.ts` - Types for agent conversations
-- `src/api/agent-conversations.ts` - API client for agent conversations
+- `src/api/agent-conversations.ts` - API client for agent conversations (calls elevenlabs-agent)
 - `src/components/AgentConversationListView.tsx` - List of agent conversations
 - `src/components/AgentConversationDetails.tsx` - Agent conversation view (with voice controls)
 - `src/components/AgentConversationDetailView.tsx` - Wrapper for agent conversation
 
 **Backend changes (elevenlabs-agent service):**
 
-- New endpoints:
+- **CRITICAL: Agent conversations are stored and managed in elevenlabs-agent, NOT cursor-runner**
+- New endpoints in elevenlabs-agent:
   - `GET /agent-conversations/api/list` - List all agent conversations
   - `GET /agent-conversations/api/:id` - Get specific agent conversation
   - `POST /agent-conversations/api/new` - Create new agent conversation
+  - `POST /agent-conversations/api/:id/message` - Add message to agent conversation
   - **POST /agent-conversations/api/:id/session** - **CRITICAL**: Register active session (browser → backend)
     - **Purpose**: Browser POSTs session URL to backend when WebSocket connects
     - **Payload**:
@@ -229,9 +280,9 @@ The agent reasoning and conversation management runs entirely on ElevenLabs' inf
     - **TTL: 10 minutes** (sessions are ephemeral, cannot be replayed)
     - **Returns**: `{ success: true, message: "Session registered" }`
     - **Called by**: Frontend voice service when onConnect event fires
-- Store conversations in Redis: `elevenlabs:conversation:{conversationId}` (persistent, long TTL)
-- Store sessions in Redis: `elevenlabs:session:{conversationId}` (ephemeral, short TTL = 10 minutes)
-- Separate from cursor note-taking: `cursor:conversation:{conversationId}`
+- Store conversations in Redis: `elevenlabs:conversation:{conversationId}` (persistent, long TTL) - **in elevenlabs-agent**
+- Store sessions in Redis: `elevenlabs:session:{conversationId}` (ephemeral, short TTL = 10 minutes) - **in elevenlabs-agent**
+- Separate from cursor note-taking: `cursor:conversation:{conversationId}` (in cursor-runner)
 
 **Data Structure:**
 
@@ -241,15 +292,21 @@ interface AgentConversation {
   messages: AgentMessage[]; // Voice/text messages with agent
   createdAt: string;
   lastAccessedAt: string;
+  agentId?: string;
+  metadata?: Record<string, unknown>;
   // Note: Do NOT store sessionId here - sessions are ephemeral
   // Sessions are stored separately in elevenlabs:session:{conversationId}
 }
 
 interface AgentMessage {
-  role: 'user' | 'agent';
+  role: 'user' | 'assistant' | 'system' | 'tool';
   content: string;
   timestamp: string;
-  source: 'voice' | 'text'; // How message was sent/received
+  source: 'voice' | 'text' | 'tool_output' | 'system_event'; // How message was sent/received
+  toolName?: string;      // For tool messages
+  toolArgs?: Record<string, unknown>;  // For tool messages
+  toolOutput?: string;    // For tool messages
+  status?: 'pending' | 'completed' | 'failed';  // For tool messages
 }
 ```
 
@@ -355,7 +412,7 @@ This service will:
    - Listen for onError events indicating expired URL
 
 2. **Renew signed URL:**
-   - Call `GET /elevenlabs/signed-url?agentId={agentId}` to get new signed URL
+   - Call `GET /signed-url?agentId={agentId}` to get new signed URL (from elevenlabs-agent)
    - Handle renewal errors gracefully
 
 3. **Reconnect gracefully:**
@@ -479,7 +536,7 @@ This service will:
   - **Best approach**: Extract `session.config.wsUrl` or the full WS URL + token bundle from the session object
   - **Still OK**: Store the full WS URL + token bundle that the SDK returns
   - **Not recommended**: Reassembling it manually from sessionId
-  - Store this in backend Redis: `elevenlabs:session:{conversationId}` = `{ sessionPayload: {...}, wsUrl: "...", ... }`
+  - Store this in backend Redis: `elevenlabs:session:{conversationId}` = `{ sessionPayload: {...}, wsUrl: "...", ... }` (in elevenlabs-agent)
   - Backend needs this exact payload to push input_text messages when cursor completes
   - **The critical statement**: Store the raw push-capable payload, not just sessionId
   - Use conversation session's streaming endpoint to send text (see "Cursor Task Completion Message Format" section for exact format)
@@ -513,7 +570,7 @@ To enable gradual rollout and dark release (deploy code but keep feature disable
 **3. elevenlabs-agent (Service):**
 
 - Environment variable: `ELEVENLABS_AGENT_ENABLED` (default: false)
-- Check flag in webhook endpoint
+- Check flag in webhook endpoint and agent conversation API endpoints
 - When false, return 503 Service Unavailable or disable endpoints
 - Allows deploying service without enabling it
 
@@ -550,12 +607,12 @@ To enable gradual rollout and dark release (deploy code but keep feature disable
    - Can scale independently
 
 4. **Clear separation of concerns:**
-   - Agent service: Handles agent interactions, routes tool calls
-   - cursor-runner: Executes cursor commands
+   - Agent service: Handles agent interactions, routes tool calls, manages agent conversations
+   - cursor-runner: Executes cursor commands, manages note-taking history
    - Each service has single responsibility
 
 5. **Different dependencies:**
-   - Webhook needs: HTTP client, cursor-runner API access, conversation API access
+   - Webhook needs: HTTP client, cursor-runner API access, Redis for conversations/sessions
    - cursor-runner needs: cursor-cli, git, MCP servers, etc.
    - Much lighter weight for agent service
 
@@ -574,6 +631,7 @@ The key insight: **The webhook must be highly available and fast, even when curs
 - Independent scaling
 - Clearer separation of concerns
 - Ability to gracefully handle cursor-runner being unavailable
+- **Agent conversations managed separately from note-taking history**
 
 The operational overhead is minimal (it's a simple Express service), and the benefits outweigh the costs.
 
@@ -585,13 +643,16 @@ elevenlabs-agent/
 │   ├── server.ts              # Express server (stateless)
 │   ├── routes/
 │   │   ├── signed-url.ts      # GET /signed-url (for private agents)
-│   │   └── webhook.ts         # POST /agent-tools (replaces jarek-va)
+│   │   ├── webhook-routes.ts  # POST /agent-tools, POST /callback
+│   │   ├── config-routes.ts   # GET /config, GET /config/health
+│   │   └── agent-conversation-routes.ts  # Agent conversation API endpoints
 │   ├── services/
-│   │   ├── elevenlabs-api.ts  # ElevenLabs API client
-│   │   ├── cursor-client.ts   # HTTP client for cursor-runner API
-│   │   ├── tool-router.ts    # Route tool calls
-│   │   ├── session-store.ts  # Redis-based session storage (stateless)
-│   │   └── callback-queue.ts # Redis-based callback task queue (REQUIRED)
+│   │   ├── session-service.ts      # Redis-based session storage (stateless)
+│   │   ├── agent-conversation-service.ts  # Agent conversation storage (Redis)
+│   │   ├── cursor-runner-service.ts  # HTTP client for cursor-runner API
+│   │   └── callback-queue.ts  # Redis-based callback task queue (REQUIRED)
+│   ├── utils/
+│   │   └── feature-flags.ts   # Feature flag utilities
 │   └── types.ts               # TypeScript types
 ├── package.json
 ├── tsconfig.json
@@ -602,9 +663,29 @@ elevenlabs-agent/
 
 ### Endpoints
 
-1. **POST /agent-conversations/api/:id/session** (CRITICAL: Browser → Backend Session Registration)
-   - **Purpose**: Browser POSTs session URL to backend when WebSocket connects to ElevenLabs
-   - **Called by**: Frontend voice service when onConnect event fires
+**Agent Conversation API Endpoints (elevenlabs-agent):**
+
+1. **GET /agent-conversations/api/list** - List all agent conversations
+   - Query params: `limit`, `offset`, `sortBy`, `sortOrder`
+   - Returns: `{ conversations: AgentConversation[], pagination: {...} }`
+   - Served by: elevenlabs-agent
+
+2. **GET /agent-conversations/api/:id** - Get specific agent conversation
+   - Returns: `AgentConversation`
+   - Served by: elevenlabs-agent
+
+3. **POST /agent-conversations/api/new** - Create new agent conversation
+   - Body: `{ agentId?: string, metadata?: Record<string, unknown> }`
+   - Returns: `{ success: boolean, conversationId: string, conversation: AgentConversation }`
+   - Served by: elevenlabs-agent
+
+4. **POST /agent-conversations/api/:id/message** - Add message to agent conversation
+   - Body: `{ role: 'user' | 'assistant' | 'system' | 'tool', content: string, source?: string, ... }`
+   - Returns: `{ success: boolean }`
+   - Served by: elevenlabs-agent
+
+5. **POST /agent-conversations/api/:id/session** - **CRITICAL**: Register active session (browser → backend)
+   - **Purpose**: Browser POSTs session URL to backend when WebSocket connects
    - **Payload**:
      ```json
      {
@@ -617,6 +698,7 @@ elevenlabs-agent/
    - **Backend stores**: `elevenlabs:session:{conversationId}` = `{ sessionUrl, sessionPayload, wsUrl, expiresAt, agentSessionId, transport, createdAt, ttl }`
    - **TTL: 10 minutes** (sessions are ephemeral, cannot be replayed)
    - **Returns**: `{ success: true, message: "Session registered" }`
+   - **Called by**: Frontend voice service when onConnect event fires
    - **Workflow**:
      1. Browser connects to ElevenLabs agent → obtains sessionObject
      2. Browser extracts sessionUrl from sessionObject.config.wsUrl or sessionObject.wsUrl
@@ -625,7 +707,9 @@ elevenlabs-agent/
      5. Later, cursor tasks lookup: `cursor_task:{taskId}` → sessionUrl → push update
    - **Authentication**: Optional (can add later if needed)
 
-2. **GET /signed-url** (if agent is private)
+**Webhook Endpoints (elevenlabs-agent):**
+
+6. **GET /signed-url** (if agent is private)
    - Query params: `agentId` (optional, defaults to env var)
    - Uses `ELEVENLABS_API_KEY` from environment
    - Calls ElevenLabs API: `GET https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id={agentId}`
@@ -634,7 +718,7 @@ elevenlabs-agent/
    - Frontend must handle expiration and renewal (see voice service section)
    - Authentication: Optional (can add later if needed)
 
-3. **POST /agent-tools** (webhook for ElevenLabs agent)
+7. **POST /agent-tools** (webhook for ElevenLabs agent)
    - Replaces `jarek-va/app/controllers/agent_tools_controller.rb`
    - Headers: `X-EL-Secret` or `Authorization: Bearer <token>`
    - Body: `{ tool: string, args: object, conversation_id?: string }`
@@ -651,7 +735,7 @@ elevenlabs-agent/
    - Returns: `{ ok: boolean, say: string, result: object }`
    - Authentication: Validates `WEBHOOK_SECRET` (already in cursor-runner env)
 
-4. **POST /callback** (receives cursor-runner callbacks)
+8. **POST /callback** (receives cursor-runner callbacks)
    - Receives callback from cursor-runner when task completes
    - Body: `{ requestId: string, success: boolean, output?: string, error?: string, ... }`
    - Looks up callback task: `cursor_task:{requestId}` from Redis
@@ -686,6 +770,16 @@ elevenlabs-agent/
    - Marks task as complete (optional, for monitoring)
    - Returns: `{ received: true }`
    - Authentication: Validates `WEBHOOK_SECRET` (same as cursor-runner)
+
+**Config Endpoints (elevenlabs-agent):**
+
+9. **GET /config** - Get current agent configuration (non-sensitive information)
+   - Returns: `{ success: true, config: {...} }`
+   - Served by: elevenlabs-agent
+
+10. **GET /config/health** - Get health status of all dependencies
+    - Returns: `{ success: true, health: {...} }`
+    - Served by: elevenlabs-agent
 
 ### Tool Routing Strategy
 
@@ -801,7 +895,14 @@ The object returned is something like:
    - Purpose: Map conversation to active agent session for pushing updates (only valid while WebSocket is open)
    - **When session expires**: Callbacks will fail gracefully (session no longer exists, user must reconnect)
 
-2. **Callback Task Queue (REQUIRED):**
+2. **Agent Conversation Store (Persistent):**
+   - Key: `elevenlabs:conversation:{conversationId}`
+   - Value: `AgentConversation` (messages, metadata, etc.)
+   - **Persistent** - long TTL (e.g., 24 hours or longer)
+   - Purpose: Store conversation history for UI display
+   - **Managed by elevenlabs-agent service**
+
+3. **Callback Task Queue (REQUIRED):**
    - Key: `cursor_task:{taskId}` (where taskId = cursor-runner requestId)
    - Value: `{ conversationId, sessionPayload, wsUrl, pending: true, callbackUrl, createdAt, toolName, toolArgs }`
    - **CANONICAL RULE**: sessionPayload must be the **raw push-capable payload** from the session store
@@ -1060,10 +1161,11 @@ When cursor execution completes, we must explicitly send the update to the agent
 - `ELEVENLABS_AGENT_ID` - Default agent ID (optional)
 - `WEBHOOK_SECRET` - For webhook authentication
 - `CURSOR_RUNNER_URL` - URL to cursor-runner service (default: `http://cursor-runner:3001`)
-- `PORT` - Service port (default: 3003)
-- `REDIS_URL` - **REQUIRED** - For stateless session tracking and callback queue (e.g., `redis://redis:6379/0`)
+- `PORT` - Service port (default: 3004)
+- `REDIS_URL` - **REQUIRED** - For stateless session tracking, callback queue, and agent conversation storage (e.g., `redis://redis:6379/0`)
   - Used to store:
     - Active conversation sessions: `elevenlabs:session:{conversation_id}`
+    - Agent conversations: `elevenlabs:conversation:{conversationId}`
     - Callback task queue: `cursor_task:{taskId}` (REQUIRED to prevent race conditions)
   - Required for horizontal scaling (multiple service instances)
   - Required for handling tasks completing in arbitrary order
@@ -1076,11 +1178,13 @@ When cursor execution completes, we must explicitly send the update to the agent
 ### Docker Integration
 
 - Add to virtual-assistant-network
-- Traefik routing at `/elevenlabs/*` or `/agent/*`
+- Traefik routing at `/agent-conversations/api/*` (for agent conversation API)
+- Traefik routing at `/signed-url`, `/agent-tools`, `/callback` (for webhooks)
+- Traefik routing at `/config`, `/config/health` (for configuration)
 - Health check endpoint: `GET /health`
 - Lightweight service, minimal resources needed
 - **Stateless design** - can scale horizontally (multiple instances)
-- Connects to shared Redis instance for session tracking
+- Connects to shared Redis instance for session tracking, conversations, and callback queue
 
 ### Migration from jarek-va
 
@@ -1165,60 +1269,176 @@ When cursor execution completes, we must explicitly send the update to the agent
 
 ---
 
-## Step 5: Update ConversationDetails Component
+## Step 5: Create Dashboard Layout
 
-**New file:** `src/components/AgentConversationDetails.tsx`
+**CRITICAL: Dashboard-style layout with all three sections on one page**
+
+**New file:** `src/components/Dashboard.tsx`
 
 **Purpose:**
 
-- Dedicated component for ElevenLabs agent conversations
-- Separate from cursor note-taking (ConversationDetails.tsx)
-- Includes voice controls and text input
-- Shows agent conversation history
+- Single-page dashboard combining:
+  - **Upper left**: Agent voice indicator (circle that lights up when agent is talking)
+  - **Lower left**: Agent chat history
+  - **Right side**: Note taking conversation history
+- Responsive: Sections stack vertically on mobile/phone view
 
-**Changes:**
+**Layout Structure:**
 
-1. **Add voice mode state:**
-   - `const [voiceMode, setVoiceMode] = React.useState<boolean>(false)`
-   - `const [voiceConnectionStatus, setVoiceConnectionStatus] = React.useState<'disconnected' | 'connected'>('disconnected')`
-   - `const [agentMode, setAgentMode] = React.useState<'idle' | 'speaking' | 'listening'>('idle')`
+```
+Desktop/Tablet View:
+┌─────────────────────────────────────────────┐
+│  [Voice Indicator]  │  [Note Taking History] │
+│  (Upper Left)       │  (Right Side)          │
+│                     │                        │
+│  [Agent Chat]       │                        │
+│  (Lower Left)       │                        │
+└─────────────────────────────────────────────┘
 
-2. **Import and initialize voice service:**
-   - Import the voice service module
-   - Create ref to hold conversation session instance
-   - Add useEffect to clean up session on unmount
+Mobile/Phone View (Stacked):
+┌─────────────────────┐
+│ [Voice Indicator]   │
+├─────────────────────┤
+│ [Agent Chat]        │
+├─────────────────────┤
+│ [Note Taking]       │
+└─────────────────────┘
+```
 
-3. **Add voice controls UI:**
-   - **Feature flag check**: Only show voice controls if `VITE_ELEVENLABS_AGENT_ENABLED === 'true'`
-   - Toggle button: "Start Voice" / "Stop Voice" (only visible when enabled)
-   - Status indicator showing connection state and agent mode
-   - Visual indicator when mic is active (e.g., pulsing microphone icon)
-   - Disable text input when voice mode is active (or allow both)
-   - If feature disabled, voice controls are hidden completely
+**Components:**
 
-4. **Integrate voice messages with conversation:**
-   - When voice session receives onMessage events, add them to conversation
-   - Use existing onConversationUpdate callback to sync with backend
-   - Map ElevenLabs message events to existing Message type structure
-   - Store both text and voice messages in the same conversation history
+1. **VoiceIndicator Component** (`src/components/VoiceIndicator.tsx`)
+   - **Visual**: Circle with pulsing/lighting effect (like ChatGPT phone app)
+   - **States**:
+     - Idle: Static circle (gray or neutral color)
+     - Listening: Pulsing circle (blue/green, expanding/contracting)
+     - Speaking: Pulsing circle (different color, more intense animation)
+     - Connecting: Slow pulse (yellow/orange)
+     - Error: Red static or flashing
+   - **Props**:
+     - `status: 'idle' | 'listening' | 'speaking' | 'connecting' | 'error'`
+     - `onClick?: () => void` (optional - for starting/stopping voice)
+   - **Animation**: CSS animations for pulsing effect
+   - **Size**: Responsive (larger on desktop, smaller on mobile)
+
+2. **AgentChatPanel Component** (`src/components/AgentChatPanel.tsx`)
+   - Shows agent conversation history
+   - Includes text input for sending messages
+   - Voice controls (start/stop voice button)
+   - Message list with scroll
+   - **Props**:
+     - `conversationId?: string` (optional - if viewing specific conversation)
+     - `onConversationSelect?: (id: string) => void`
+     - `onMessageSend?: (message: string) => void`
+   - **Features**:
+     - List of agent conversations (if no conversation selected)
+     - Conversation details (if conversation selected)
+     - Voice controls integrated
    - **CRITICAL: Register Session on Connect**
-     - When onConnect event fires, extract sessionUrl from session object
-     - Call `registerSessionWithBackend(conversationId, sessionObject)`
-     - This POSTs to backend: `POST /agent-conversations/api/{conversationId}/session`
-     - Backend stores session for cursor task callbacks
+       - When voice connects, register session with backend
+       - POST to `POST /agent-conversations/api/{conversationId}/session`
 
-5. **Handle mode switching:**
-   - When starting voice: request mic permission, start session, disable text input (optional)
-   - When stopping voice: end session, re-enable text input
-   - Show appropriate UI states for each mode
+3. **NoteTakingPanel Component** (`src/components/NoteTakingPanel.tsx`)
+   - Shows note-taking conversation history (cursor conversations)
+   - List of conversations or conversation details
+   - **Props**:
+     - `conversationId?: string` (optional - if viewing specific conversation)
+     - `onConversationSelect?: (id: string) => void`
+   - **Features**:
+     - List of note-taking conversations (if no conversation selected)
+     - Conversation details (if conversation selected)
+     - Repository file browser (if viewing conversation details)
+
+4. **Dashboard Component** (`src/components/Dashboard.tsx`)
+   - Main container component
+   - Manages layout and responsive behavior
+   - Coordinates state between panels
+   - **Layout**:
+     - Desktop: CSS Grid or Flexbox with 2 columns
+     - Mobile: Single column, stacked
+   - **State Management**:
+     - Selected agent conversation ID
+     - Selected note-taking conversation ID
+     - Voice connection status
+     - Agent mode (idle/listening/speaking)
+
+**Implementation Details:**
+
+1. **Responsive Layout:**
+   - Use CSS Grid for desktop: `grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr;`
+   - Use Flexbox for mobile: `flex-direction: column;`
+   - Media queries for breakpoints (e.g., `@media (max-width: 768px)`)
+   - Voice indicator: `grid-area: 1 / 1` (upper left)
+   - Agent chat: `grid-area: 2 / 1` (lower left)
+   - Note taking: `grid-area: 1 / 2 / 3 / 2` (right side, spans both rows)
+
+2. **Voice Indicator Animation:**
+   - CSS keyframes for pulsing effect
+   - Different colors/animations for different states
+   - Smooth transitions between states
+   - Example CSS:
+     ```css
+     .voice-indicator {
+       width: 80px;
+       height: 80px;
+       border-radius: 50%;
+       transition: all 0.3s ease;
+     }
+     .voice-indicator.listening {
+       background: radial-gradient(circle, #4CAF50, #2E7D32);
+       animation: pulse 1.5s ease-in-out infinite;
+     }
+     .voice-indicator.speaking {
+       background: radial-gradient(circle, #2196F3, #1565C0);
+       animation: pulse 0.8s ease-in-out infinite;
+     }
+     @keyframes pulse {
+       0%, 100% { transform: scale(1); opacity: 1; }
+       50% { transform: scale(1.1); opacity: 0.8; }
+     }
+     ```
+
+3. **State Coordination:**
+   - Dashboard manages selected conversations for both panels
+   - Voice service state is shared between VoiceIndicator and AgentChatPanel
+   - Use React Context or prop drilling for state sharing
+
+4. **Routing Integration:**
+   - Dashboard can be the main route (`/dashboard` or `/`)
+   - URL params can control which conversations are selected
+   - Example: `/dashboard?agentConv=abc123&noteConv=xyz789`
+
+**Files to create:**
+
+- `src/components/Dashboard.tsx` - Main dashboard container
+- `src/components/VoiceIndicator.tsx` - Voice indicator circle component
+- `src/components/AgentChatPanel.tsx` - Agent chat panel (replaces AgentConversationDetailView)
+- `src/components/NoteTakingPanel.tsx` - Note taking panel (replaces ConversationDetailView)
+- `src/styles/Dashboard.css` - Dashboard-specific styles
+
+**Files to modify:**
+
+- `src/App.tsx` - Add dashboard route
+- `src/components/AgentConversationDetails.tsx` - Can be reused by AgentChatPanel
+- `src/components/ConversationDetails.tsx` - Can be reused by NoteTakingPanel
+- `src/styles/App.css` - Add responsive layout styles
+
+**Changes from Original Plan:**
+
+- **No separate pages** - Everything is on one dashboard
+- **Voice indicator is always visible** (when feature enabled) - not hidden in conversation details
+- **Both conversation types visible simultaneously** - side by side on desktop
+- **Responsive design** - Stacks on mobile
 
 ---
 
 ## Step 6: Update API Client
 
-**File to modify:** `src/api/conversations.ts`
+**File to modify:** `src/api/conversations.ts` (for note-taking - no changes needed, already correct)
 
-**New file:** `src/api/elevenlabs.ts`
+**New file:** `src/api/agent-conversations.ts` (for agent conversations - calls elevenlabs-agent)
+
+**New file:** `src/api/elevenlabs.ts` (for ElevenLabs-specific endpoints like signed-url)
 
 Create a new API client for ElevenLabs agent service:
 
@@ -1259,7 +1479,9 @@ export async function registerSession(
 }
 ```
 
-**Note:** Endpoints are in the separate elevenlabs-agent service, accessible via Traefik routing at `/elevenlabs/*` or `/agent/*`.
+**Note:** 
+- Agent conversation endpoints are in the separate elevenlabs-agent service, accessible via Traefik routing at `/agent-conversations/api/*`
+- ElevenLabs-specific endpoints (signed-url) are at `/signed-url` (elevenlabs-agent)
 
 **If agent is public:**
 
@@ -1329,7 +1551,7 @@ Store ElevenLabs configuration:
   - Must be string 'true' (Vite env vars are strings)
 - `VITE_ELEVENLABS_AGENT_ID` - Agent ID for public agents (optional)
 - `VITE_ELEVENLABS_AGENT_PUBLIC` - Boolean indicating if agent is public (optional)
-- `VITE_ELEVENLABS_AGENT_URL` - Base URL for ElevenLabs agent service (optional, defaults to `/elevenlabs`)
+- `VITE_ELEVENLABS_AGENT_URL` - Base URL for ElevenLabs agent service (optional, defaults to relative path `/agent-conversations/api` for agent conversations, `/elevenlabs` for signed-url)
 
 ---
 
@@ -1442,7 +1664,7 @@ Store ElevenLabs configuration:
 **Files to create/update:**
 
 - `src/services/__tests__/elevenlabs-voice.test.ts`
-- `src/components/__tests__/ConversationDetails.test.tsx` (update existing)
+- `src/components/__tests__/AgentConversationDetails.test.tsx`
 
 ---
 
@@ -1461,16 +1683,21 @@ Store ElevenLabs configuration:
 1. **Phase 0: Separate Histories & File Browser** (Step 0)
    - Rename cursor conversations to "Note Taking History" in UI
    - Create separate agent conversation system (types, API, components)
+   - **CRITICAL: Move agent conversation storage from cursor-runner to elevenlabs-agent**
+   - **CRITICAL: Move agent conversation API endpoints from cursor-runner to elevenlabs-agent**
    - Add repository file browser component
-   - Add backend endpoint for file tree (GET /repositories/api/:repository/files)
+   - Add backend endpoint for file tree (GET /repositories/api/:repository/files) in cursor-runner
    - Update routing to include agent conversations
+   - Update Traefik routing to route `/agent-conversations/api/*` to elevenlabs-agent (not cursor-runner)
    - Test separation of histories
 
-2. **Phase 1: Backend Service** (Step 3)
+2. **Phase 1: Backend Service** (Step 4)
    - Create elevenlabs-agent service structure
+   - **CRITICAL: Implement agent conversation storage in elevenlabs-agent (Redis)**
+   - **CRITICAL: Implement agent conversation API endpoints in elevenlabs-agent**
    - Implement webhook endpoint (migrate from jarek-va, use async pattern)
    - Implement signed URL endpoint (if agent is private)
-   - Add HTTP client for cursor-runner API calls
+   - Add HTTP client for cursor-runner API calls (cursor-runner is called as a tool)
    - Set up Docker configuration and Traefik routing
    - Add error handling for cursor-runner being unavailable
    - Test endpoints independently
@@ -1492,15 +1719,23 @@ Store ElevenLabs configuration:
      - Safari WebRTC quirks handling
      - Mobile background tab handling
      - Multiple tabs detection
-   - Create API client for ElevenLabs endpoints
+   - Create API client for ElevenLabs endpoints (calls elevenlabs-agent)
+   - Update agent conversation API client to call elevenlabs-agent (not cursor-runner)
    - Add feature flag check in voice service
 
 4. **Phase 3: Frontend Integration** (Steps 5, 7)
-   - Create AgentConversationDetails component (separate from note-taking)
-   - Add voice controls UI to agent conversation view
-   - Integrate with agent conversation flow
+   - **CRITICAL: Create Dashboard Layout**
+     - Create Dashboard component with three sections:
+       - Upper left: Voice indicator (circle that lights up when agent is talking)
+       - Lower left: Agent chat history
+       - Right side: Note taking conversation history
+     - Create VoiceIndicator component (pulsing circle animation)
+     - Create AgentChatPanel component (agent conversations)
+     - Create NoteTakingPanel component (note-taking conversations)
+     - Implement responsive layout (stacks on mobile)
+   - Integrate voice service with dashboard
    - Connect to elevenlabs-agent service
-   - Add file browser to note-taking detail view
+   - Add file browser to note-taking panel
 
 5. **Phase 4: Polish** (Steps 8-9)
    - Add styles
@@ -1515,7 +1750,11 @@ Store ElevenLabs configuration:
 
 ✅ **Integrated into existing React app** - No new HTML files or separate project
 
-✅ **Reuses existing conversation UI** - Voice mode is a feature, not a separate view
+✅ **Dashboard-style layout** - All three sections (voice indicator, agent chat, note-taking) on one page
+
+✅ **Responsive design** - Sections stack vertically on mobile/phone view
+
+✅ **Voice indicator always visible** - Circle that lights up when agent is talking (like ChatGPT phone app)
 
 ✅ **Separate stateless service** - elevenlabs-agent service with Redis for session tracking
 
@@ -1529,6 +1768,8 @@ Store ElevenLabs configuration:
 
 ✅ **Stateless architecture** - Uses Redis for session tracking, enables horizontal scaling
 
+✅ **Correct architecture** - Agent conversations managed by elevenlabs-agent, cursor-runner called as tool
+
 ---
 
 ## Notes
@@ -1536,10 +1777,12 @@ Store ElevenLabs configuration:
 - **Agent Configuration:**
   - Ensure your ElevenLabs agent has Server Tools configured
   - **Update webhook URL** from jarek-va endpoint to new elevenlabs-agent service
-  - Example: `https://jarekva.com/elevenlabs/agent-tools` (depending on Traefik routing)
+  - Example: `https://jarekva.com/agent-tools` (depending on Traefik routing)
 
 - **Critical Architecture Point:**
   - **ElevenLabs conversation is separate from cursor execution**
+  - **Agent conversations are managed by elevenlabs-agent, NOT cursor-runner**
+  - **cursor-runner is called as a tool by elevenlabs-agent**
   - Cursor calls are slow (minutes) and cannot block conversation
   - Webhook must return immediately for cursor tools
   - Use async execution with callbacks for cursor tasks
@@ -1553,12 +1796,12 @@ Store ElevenLabs configuration:
   - Service can gracefully handle cursor-runner being unavailable
   - Maintain same request/response format for seamless transition
   - Can run both services in parallel during migration period
+  - **CRITICAL: Agent conversations must be moved from cursor-runner to elevenlabs-agent**
 
 - **Completion Notification:**
-  - When cursor completes, update conversation history
-  - Agent can check conversation for updates
+  - When cursor completes, elevenlabs-agent pushes update to agent
+  - Agent receives update and can respond naturally
   - Frontend already polls, so users see updates automatically
-  - Consider adding explicit notification mechanism if ElevenLabs supports it
 
 - **Browser Support:** ElevenLabs SDK requires modern browsers with WebRTC support (Chrome, Firefox, Safari, Edge)
 
@@ -1573,7 +1816,7 @@ Store ElevenLabs configuration:
 
 - **Concurrent Sessions:** Consider limiting to one active voice session per browser tab/window
 
-- **Message Sync:** Voice messages should sync with backend conversation history via existing cursor-runner API
+- **Message Sync:** Voice messages should sync with backend conversation history via elevenlabs-agent API
 
 - **Network Layer Failure Handling (CRITICAL):**
   - ElevenLabs SDK is NOT robust - implement comprehensive failure handling
@@ -1587,11 +1830,23 @@ Store ElevenLabs configuration:
   - ElevenLabs agents do NOT check conversation history
   - Must explicitly push cursor completion updates to agent via conversation session
   - Use session streaming endpoint with cursor task completion message format (see "Cursor Task Completion Message Format" section)
-  - Store active session references in Redis (conversation_id → session)
+  - Store active session references in Redis (conversation_id → session) in elevenlabs-agent
   - **MUST use Redis** (not in-memory) for stateless, horizontally scalable service
   - When cursor completes, any service instance can lookup session from Redis and push update
 
 - **Network:** New service joins virtual-assistant-network for inter-service communication
+
+- **Traefik Routing:**
+  - `/conversations/api/*` → cursor-runner (note-taking history)
+  - `/agent-conversations/api/*` → elevenlabs-agent (agent conversations)
+  - `/signed-url`, `/agent-tools`, `/callback` → elevenlabs-agent (webhooks)
+  - `/config`, `/config/health` → elevenlabs-agent (configuration)
+
+- **Frontend Routing:**
+  - Dashboard route: `/dashboard` or `/` (main dashboard with all three sections)
+  - URL params can control selected conversations: `/dashboard?agentConv=abc123&noteConv=xyz789`
+  - Separate list views can still exist for navigation: `/agent-conversations` (list), `/` (note-taking list)
+  - Dashboard is the main view when feature is enabled
 
 ---
 

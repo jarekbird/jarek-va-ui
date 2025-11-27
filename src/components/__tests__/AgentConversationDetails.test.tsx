@@ -56,8 +56,9 @@ describe('AgentConversationDetails', () => {
   it('renders message roles', () => {
     render(<AgentConversationDetails conversation={mockAgentConversation} />);
     // Roles are rendered as "👤 You" and "🤖 Assistant"
-    expect(screen.getByText(/you/i)).toBeInTheDocument();
-    expect(screen.getByText(/assistant/i)).toBeInTheDocument();
+    // Use getAllByText since these appear in both messages and metadata
+    expect(screen.getAllByText(/you/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/assistant/i).length).toBeGreaterThan(0);
   });
 
   it('renders message sources', () => {

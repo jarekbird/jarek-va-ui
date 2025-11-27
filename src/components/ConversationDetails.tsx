@@ -20,6 +20,12 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
   onConversationUpdate,
   repository,
 }) => {
+  // Local copy of the conversation to ensure UI updates immediately,
+  // even if parent components don't re-render in sync.
+  const [localConversation, setLocalConversation] = React.useState<Conversation | null>(
+    conversation
+  );
+
   const [message, setMessage] = React.useState<string>('');
   const [isSending, setIsSending] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -27,18 +33,27 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const pollingIntervalRef = React.useRef<number | null>(null);
   const lastMessageCountRef = React.useRef<number>(0);
+  const conversationIdRef = React.useRef<string | null>(null);
+  const currentConversationRef = React.useRef<Conversation | null>(null);
   
   // File browser state
   const [fileTree, setFileTree] = React.useState<FileNode[]>([]);
   const [fileTreeLoading, setFileTreeLoading] = React.useState<boolean>(false);
   const [fileTreeError, setFileTreeError] = React.useState<string | null>(null);
 
-  // Update last message count when conversation changes
+  // Keep local conversation in sync when parent prop changes
   React.useEffect(() => {
-    if (conversation) {
-      lastMessageCountRef.current = conversation.messages.length;
-    }
+    setLocalConversation(conversation);
   }, [conversation]);
+
+  // Update refs when local conversation changes
+  React.useEffect(() => {
+    if (localConversation) {
+      lastMessageCountRef.current = localConversation.messages.length;
+      conversationIdRef.current = localConversation.conversationId;
+      currentConversationRef.current = localConversation;
+    }
+  }, [localConversation]);
 
   // Load file tree when repository is provided
   React.useEffect(() => {
@@ -70,53 +85,77 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
 
   // Scroll to bottom when messages change
   React.useEffect(() => {
-    if (conversation && messagesEndRef.current?.scrollIntoView) {
+    if (localConversation && messagesEndRef.current?.scrollIntoView) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [conversation]);
+  }, [localConversation]);
 
   // Start polling when sending a message
   React.useEffect(() => {
-    if (!conversation) {
+    if (!isPolling || !conversationIdRef.current) {
       return;
     }
 
-    if (isPolling && conversation.conversationId) {
-      pollingIntervalRef.current = setInterval(async () => {
-        try {
-          // Fetch updated conversation
-          const updatedConversation = await getConversationById(
-            conversation.conversationId
+    pollingIntervalRef.current = setInterval(async () => {
+      try {
+        // Use ref to get current conversation ID (doesn't depend on prop changes)
+        const conversationId = conversationIdRef.current;
+        if (!conversationId) {
+          return;
+        }
+
+        // Fetch updated conversation from server
+        const serverConversation = await getConversationById(conversationId);
+        const serverMessageCount = serverConversation.messages.length;
+        const currentLocalCount = lastMessageCountRef.current;
+
+        // Only update if server has more messages than we currently have
+        // This preserves optimistic updates (user messages) that haven't been saved yet
+        if (serverMessageCount > currentLocalCount) {
+          // Get the current local conversation to preserve any optimistic updates
+          const localConversation = currentConversationRef.current;
+          
+          // Merge: keep local messages that aren't in server yet, add new server messages
+          let mergedMessages = localConversation?.messages || [];
+          
+          // Find messages that are in server but not in local (new assistant responses)
+          const localMessageContents = new Set(
+            mergedMessages.map(m => `${m.role}:${m.content}:${m.timestamp}`)
           );
-          const currentMessageCount = updatedConversation.messages.length;
+          const newServerMessages = serverConversation.messages.filter(
+            m => !localMessageContents.has(`${m.role}:${m.content}:${m.timestamp}`)
+          );
+          
+          // Add new server messages
+          mergedMessages = [...mergedMessages, ...newServerMessages];
+          
+          const mergedConversation: Conversation = {
+            ...serverConversation,
+            messages: mergedMessages,
+          };
+          
+          lastMessageCountRef.current = mergedMessages.length;
+          if (onConversationUpdate) {
+            onConversationUpdate(mergedConversation);
+          }
 
-          // Update if there are new messages
-          if (currentMessageCount > lastMessageCountRef.current) {
-            lastMessageCountRef.current = currentMessageCount;
-            if (onConversationUpdate) {
-              onConversationUpdate(updatedConversation);
-            }
-
-            // Stop polling if we have an assistant response (last message is from assistant)
-            if (
-              updatedConversation.messages.length > 0 &&
-              updatedConversation.messages[
-                updatedConversation.messages.length - 1
-              ].role === 'assistant'
-            ) {
-              setIsPolling(false);
-              if (pollingIntervalRef.current) {
-                clearInterval(pollingIntervalRef.current);
-                pollingIntervalRef.current = null;
-              }
+          // Stop polling if we have an assistant response (last message is from assistant)
+          if (
+            mergedMessages.length > 0 &&
+            mergedMessages[mergedMessages.length - 1].role === 'assistant'
+          ) {
+            setIsPolling(false);
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
             }
           }
-        } catch (err) {
-          console.error('Error polling conversation:', err);
-          // Continue polling on error
         }
-      }, 2000); // Poll every 2 seconds
-    }
+      } catch (err) {
+        console.error('Error polling conversation:', err);
+        // Continue polling on error
+      }
+    }, 2000); // Poll every 2 seconds
 
     return () => {
       if (pollingIntervalRef.current) {
@@ -124,12 +163,12 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
         pollingIntervalRef.current = null;
       }
     };
-  }, [isPolling, conversation, onConversationUpdate]);
+  }, [isPolling, onConversationUpdate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!conversation || !message.trim() || isSending) {
+    if (!localConversation || !message.trim() || isSending) {
       return;
     }
 
@@ -145,17 +184,26 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
       timestamp: new Date().toISOString(),
     };
     const updatedConversation: Conversation = {
-      ...conversation,
-      messages: [...conversation.messages, userMessage],
+      ...localConversation,
+      messages: [...localConversation.messages, userMessage],
       lastAccessedAt: new Date().toISOString(),
     };
+    
+    // Update refs immediately to ensure they're current before polling starts
+    lastMessageCountRef.current = updatedConversation.messages.length;
+    conversationIdRef.current = updatedConversation.conversationId;
+    currentConversationRef.current = updatedConversation;
+    
+    // Update local state immediately so the UI reflects the new message
+    setLocalConversation(updatedConversation);
+
+    // Update parent component state (for list views, routing, etc.)
     if (onConversationUpdate) {
       onConversationUpdate(updatedConversation);
     }
-    lastMessageCountRef.current = updatedConversation.messages.length;
 
     try {
-      await sendMessage(conversation.conversationId, {
+      await sendMessage(localConversation.conversationId, {
         message: messageToSend,
       });
 
@@ -169,24 +217,28 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
       );
       setMessage(messageToSend); // Restore message on error
       // Remove the user message from UI on error
-      if (onConversationUpdate && conversation) {
-        onConversationUpdate(conversation);
+      if (onConversationUpdate && localConversation) {
+        onConversationUpdate(localConversation);
       }
-      if (conversation) {
-        lastMessageCountRef.current = conversation.messages.length;
+      if (localConversation) {
+        // Revert local state and refs to previous conversation
+        setLocalConversation(localConversation);
+        lastMessageCountRef.current = localConversation.messages.length;
+        conversationIdRef.current = localConversation.conversationId;
+        currentConversationRef.current = localConversation;
       }
     } finally {
       setIsSending(false);
     }
   };
 
-  if (!conversation) {
+  if (!localConversation) {
     return null;
   }
 
   return (
     <div className="conversation-details">
-      <h2>Note Session ID: {conversation.conversationId}</h2>
+      <h2>Note Session ID: {localConversation.conversationId}</h2>
       {repository && (
         <div className="repository-file-browser-container">
           <RepositoryFileBrowser
@@ -198,7 +250,7 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
         </div>
       )}
       <div className="messages-container">
-        {conversation.messages.map((msg, index) => (
+        {localConversation.messages.map((msg, index) => (
           <div key={index} className={`message ${msg.role}`}>
             <div className="message-role">{msg.role}</div>
             <div className="message-content">

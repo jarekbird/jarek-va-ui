@@ -47,7 +47,7 @@ export async function getConversationById(
 
   if (!response.ok) {
     if (response.status === 404) {
-      throw new Error('Conversation not found');
+      throw new Error('Note session not found');
     }
     const errorData = await response
       .json()

@@ -31,7 +31,7 @@ export const ConversationDetailView: React.FC = () => {
       setError(
         err instanceof Error
           ? err.message
-          : 'An error occurred while loading the conversation'
+          : 'An error occurred while loading the note session'
       );
       setConversation(null);
     } finally {

@@ -1,10 +1,16 @@
 import React from 'react';
 import type { AgentConversation } from '../types/agent-conversation';
 import { sendAgentMessage, getAgentConversation } from '../api/agent-conversations';
+import type { ElevenLabsVoiceService, ConnectionStatus, AgentMode } from '../services/elevenlabs-voice';
+import { isElevenLabsEnabled } from '../utils/feature-flags';
+import { getAgentConfig } from '../api/elevenlabs';
 
 interface AgentConversationDetailsProps {
   conversation: AgentConversation | null;
   onConversationUpdate?: (conversation: AgentConversation) => void;
+  voiceService?: ElevenLabsVoiceService | null;
+  voiceStatus?: ConnectionStatus;
+  voiceMode?: AgentMode;
 }
 
 /**
@@ -13,14 +19,68 @@ interface AgentConversationDetailsProps {
  * Provides a basic text input to send text-only messages (stubbed for now if backend not ready).
  */
 export const AgentConversationDetails: React.FC<AgentConversationDetailsProps> =
-  ({ conversation, onConversationUpdate }) => {
+  ({ conversation, onConversationUpdate, voiceService, voiceStatus, voiceMode }) => {
     const [message, setMessage] = React.useState<string>('');
     const [isSending, setIsSending] = React.useState<boolean>(false);
     const [error, setError] = React.useState<string | null>(null);
     const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
+    const [isStartingVoice, setIsStartingVoice] = React.useState<boolean>(false);
+    const [agentId, setAgentId] = React.useState<string | null>(null);
     const messagesEndRef = React.useRef<HTMLDivElement>(null);
     const errorTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const successTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Load agent ID from config on mount
+    React.useEffect(() => {
+      if (isElevenLabsEnabled()) {
+        getAgentConfig()
+          .then((config) => {
+            if (config.agentId) {
+              setAgentId(config.agentId);
+            }
+          })
+          .catch((err) => {
+            console.warn('Failed to load agent config:', err);
+          });
+      }
+    }, []);
+
+    // Wire voice service message handler
+    React.useEffect(() => {
+      if (!voiceService || !conversation || !onConversationUpdate) {
+        return;
+      }
+
+      const handleVoiceMessage = async (messageContent: string) => {
+        try {
+          // Send voice message to backend
+          await sendAgentMessage(conversation.conversationId, {
+            role: 'user',
+            content: messageContent,
+            source: 'voice',
+          });
+
+          // Refresh conversation to get updated messages
+          const updatedConversation = await getAgentConversation(conversation.conversationId);
+          onConversationUpdate(updatedConversation);
+        } catch (err) {
+          console.error('Failed to save voice message:', err);
+        }
+      };
+
+      // Configure voice service to handle messages
+      voiceService.configure({
+        onMessage: handleVoiceMessage,
+        conversationId: conversation.conversationId,
+      });
+
+      return () => {
+        // Cleanup: remove message handler
+        voiceService.configure({
+          onMessage: undefined,
+        });
+      };
+    }, [voiceService, conversation, onConversationUpdate]);
 
     // Scroll to bottom when messages change
     React.useEffect(() => {
@@ -164,6 +224,33 @@ export const AgentConversationDetails: React.FC<AgentConversationDetailsProps> =
       URL.revokeObjectURL(url);
     };
 
+    const handleStartVoice = async () => {
+      if (!voiceService || !agentId || !conversation) {
+        setError('Voice service or agent ID not available');
+        return;
+      }
+
+      setIsStartingVoice(true);
+      setError(null);
+
+      try {
+        await voiceService.startVoiceSession(agentId, conversation.conversationId);
+        setSuccessMessage('Voice session started');
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to start voice session';
+        setError(errorMessage);
+      } finally {
+        setIsStartingVoice(false);
+      }
+    };
+
+    const handleStopVoice = () => {
+      if (voiceService) {
+        voiceService.endVoiceSession();
+        setSuccessMessage('Voice session ended');
+      }
+    };
+
     return (
       <div className="conversation-details">
         <div className="conversation-header">
@@ -279,6 +366,69 @@ export const AgentConversationDetails: React.FC<AgentConversationDetailsProps> =
           })}
           <div ref={messagesEndRef} />
         </div>
+        {isElevenLabsEnabled() && voiceService && (
+          <div className="voice-controls" style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+              <strong>Voice Session:</strong>
+              <span style={{ 
+                padding: '0.25rem 0.75rem', 
+                borderRadius: '4px',
+                backgroundColor: voiceStatus === 'connected' ? '#10b981' : voiceStatus === 'connecting' || voiceStatus === 'reconnecting' ? '#3b82f6' : voiceStatus === 'error' ? '#ef4444' : '#9ca3af',
+                color: 'white',
+                fontSize: '0.875rem',
+                fontWeight: '500'
+              }}>
+                {voiceStatus === 'connected' ? 'Connected' : voiceStatus === 'connecting' ? 'Connecting...' : voiceStatus === 'reconnecting' ? 'Reconnecting...' : voiceStatus === 'error' ? 'Error' : 'Disconnected'}
+              </span>
+              {voiceStatus === 'connected' && voiceMode && (
+                <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                  Mode: {voiceMode}
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {voiceStatus === 'disconnected' || voiceStatus === 'error' ? (
+                <button
+                  type="button"
+                  onClick={handleStartVoice}
+                  disabled={isStartingVoice || !agentId}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: isStartingVoice || !agentId ? 'not-allowed' : 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    opacity: isStartingVoice || !agentId ? 0.6 : 1,
+                  }}
+                  aria-label="Start voice session"
+                >
+                  {isStartingVoice ? 'Starting...' : '🎤 Start Voice'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleStopVoice}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                  }}
+                  aria-label="Stop voice session"
+                >
+                  🛑 Stop Voice
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="message-form">
           {error && (
             <div className="error-message" role="alert">

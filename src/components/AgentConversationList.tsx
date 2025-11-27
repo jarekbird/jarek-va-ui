@@ -6,12 +6,14 @@ interface AgentConversationListProps {
   conversations: AgentConversation[];
   activeConversationId: string | null;
   onSelectConversation: (conversationId: string) => void;
+  onConversationSelect?: (conversationId: string) => void; // Optional callback for Dashboard mode
 }
 
 export const AgentConversationList: React.FC<AgentConversationListProps> = ({
   conversations,
   activeConversationId,
   onSelectConversation,
+  onConversationSelect,
 }) => {
   const location = useLocation();
   const sortedConversations = [...conversations].sort(
@@ -32,13 +34,17 @@ export const AgentConversationList: React.FC<AgentConversationListProps> = ({
         return (
           <li key={conv.conversationId} className={isActive ? 'active' : ''}>
             <Link
-              to={`/agent-conversation/${conv.conversationId}`}
+              to={onConversationSelect ? '#' : `/agent-conversation/${conv.conversationId}`}
               style={{
                 textDecoration: 'none',
                 color: 'inherit',
                 display: 'block',
               }}
-              onClick={() => {
+              onClick={(e) => {
+                if (onConversationSelect) {
+                  e.preventDefault();
+                  onConversationSelect(conv.conversationId);
+                }
                 onSelectConversation(conv.conversationId);
               }}
             >

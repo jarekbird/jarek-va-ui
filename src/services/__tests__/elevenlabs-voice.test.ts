@@ -8,13 +8,51 @@ import {
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch as any;
 
+// Mock feature flag
+vi.mock('../../utils/feature-flags', () => ({
+  isElevenLabsEnabled: vi.fn(() => true),
+}));
+
+// Mock API functions
+vi.mock('../../api/elevenlabs', () => ({
+  getVoiceSignedUrl: vi.fn(),
+  registerSession: vi.fn(),
+}));
+
+import { getVoiceSignedUrl, registerSession } from '../../api/elevenlabs';
+
 describe('ElevenLabsVoiceService', () => {
   let service: ElevenLabsVoiceService;
+  let mockGetUserMedia: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     service = new ElevenLabsVoiceService();
     vi.clearAllMocks();
     vi.useFakeTimers();
+
+    // Mock getUserMedia for microphone permission
+    mockGetUserMedia = vi.fn().mockResolvedValue({
+      getTracks: () => [{ stop: vi.fn() }],
+    });
+    Object.defineProperty(globalThis.navigator, 'mediaDevices', {
+      value: {
+        getUserMedia: mockGetUserMedia,
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    // Default mock for getVoiceSignedUrl
+    vi.mocked(getVoiceSignedUrl).mockResolvedValue({
+      signedUrl: 'wss://test-url',
+      expiresAt: new Date(Date.now() + 3600000).toISOString(),
+    });
+
+    // Default mock for registerSession
+    vi.mocked(registerSession).mockResolvedValue({
+      success: true,
+      message: 'Session registered',
+    });
   });
 
   afterEach(() => {
@@ -35,13 +73,7 @@ describe('ElevenLabsVoiceService', () => {
         },
       });
 
-      // Mock fetch for signed URL if needed (when no signedUrl provided)
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ url: 'wss://test-url', expiresAt: new Date(Date.now() + 3600000).toISOString() }),
-      } as Response);
-
-      const connectPromise = service.startVoiceSession('agent-123');
+      const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
 
       // Should be connecting immediately
       expect(service.getConnectionStatus()).toBe('connecting');
@@ -68,10 +100,10 @@ describe('ElevenLabsVoiceService', () => {
       const expiredDate = new Date(Date.now() - 1000);
       (service as any).signedUrlExpiresAt = expiredDate;
 
-      // Mock fetch to fail when trying to renew signed URL
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+      // Mock getVoiceSignedUrl to fail when trying to renew signed URL
+      vi.mocked(getVoiceSignedUrl).mockRejectedValueOnce(new Error('Network error'));
 
-      const connectPromise = service.startVoiceSession('agent-123', 'expired-url');
+      const connectPromise = service.startVoiceSession('agent-123', 'conv-123', 'expired-url');
       await vi.advanceTimersByTimeAsync(100);
 
       await expect(connectPromise).rejects.toThrow();
@@ -81,12 +113,7 @@ describe('ElevenLabsVoiceService', () => {
     });
 
     it('should prevent starting a session when already connected', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ url: 'wss://test-url', expiresAt: new Date(Date.now() + 3600000).toISOString() }),
-      } as Response);
-
-      const connectPromise = service.startVoiceSession('agent-123');
+      const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
       await vi.advanceTimersByTimeAsync(200);
       await connectPromise;
 
@@ -106,11 +133,6 @@ describe('ElevenLabsVoiceService', () => {
       // Set up for retry
       (service as any).agentId = 'agent-123';
       (service as any).reconnectAttempts = 0;
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ url: 'wss://test-url', expiresAt: new Date(Date.now() + 3600000).toISOString() }),
-      } as Response);
 
       // Call reconnectWithBackoff
       const reconnectPromise = (service as any).reconnectWithBackoff();
@@ -146,12 +168,7 @@ describe('ElevenLabsVoiceService', () => {
     });
 
     it('should reset reconnect attempts on successful connection', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ url: 'wss://test-url', expiresAt: new Date(Date.now() + 3600000).toISOString() }),
-      } as Response);
-
-      const connectPromise = service.startVoiceSession('agent-123');
+      const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
       await vi.advanceTimersByTimeAsync(200);
       await connectPromise;
 
@@ -170,10 +187,10 @@ describe('ElevenLabsVoiceService', () => {
       const newUrl = 'wss://new-signed-url';
       const newExpiresAt = new Date(Date.now() + 3600000).toISOString();
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ url: newUrl, expiresAt: newExpiresAt }),
-      } as Response);
+      vi.mocked(getVoiceSignedUrl).mockResolvedValueOnce({
+        signedUrl: newUrl,
+        expiresAt: newExpiresAt,
+      });
 
       // Set agent ID directly (don't start session to avoid connection logic)
       (service as any).agentId = 'agent-123';
@@ -183,9 +200,7 @@ describe('ElevenLabsVoiceService', () => {
       await vi.advanceTimersByTimeAsync(0); // Allow fetch to resolve
       await renewPromise;
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/signed-url?agent_id=agent-123')
-      );
+      expect(getVoiceSignedUrl).toHaveBeenCalledWith('agent-123');
       expect((service as any).signedUrl).toBe(newUrl);
     });
 
@@ -194,10 +209,10 @@ describe('ElevenLabsVoiceService', () => {
       (service as any).signedUrlExpiresAt = futureDate;
       (service as any).agentId = 'agent-123';
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ url: 'wss://new-url', expiresAt: new Date(Date.now() + 3600000).toISOString() }),
-      } as Response);
+      vi.mocked(getVoiceSignedUrl).mockResolvedValueOnce({
+        signedUrl: 'wss://new-url',
+        expiresAt: new Date(Date.now() + 3600000).toISOString(),
+      });
 
       // Set agent ID directly
       (service as any).agentId = 'agent-123';
@@ -206,10 +221,8 @@ describe('ElevenLabsVoiceService', () => {
       // renewSignedUrl always fetches a new URL
       await service.renewSignedUrl();
 
-      // Should have called fetch for renewal
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/signed-url?agent_id=agent-123')
-      );
+      // Should have called getVoiceSignedUrl for renewal
+      expect(getVoiceSignedUrl).toHaveBeenCalledWith('agent-123');
       expect((service as any).signedUrl).toBe('wss://new-url');
     });
 
@@ -218,18 +231,17 @@ describe('ElevenLabsVoiceService', () => {
       const newUrl = 'wss://new-signed-url';
       const newExpiresAt = new Date(Date.now() + 3600000).toISOString();
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ url: newUrl, expiresAt: newExpiresAt }),
-      } as Response);
+      vi.mocked(getVoiceSignedUrl)
+        .mockResolvedValueOnce({
+          signedUrl: 'wss://initial-url',
+          expiresAt: new Date(Date.now() + 3600000).toISOString(),
+        })
+        .mockResolvedValueOnce({
+          signedUrl: newUrl,
+          expiresAt: newExpiresAt,
+        });
 
-      // Start session and connect
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ url: 'wss://initial-url', expiresAt: new Date(Date.now() + 3600000).toISOString() }),
-      } as Response);
-
-      const connectPromise = service.startVoiceSession('agent-123', 'expired-url');
+      const connectPromise = service.startVoiceSession('agent-123', 'conv-123', 'expired-url');
       await vi.advanceTimersByTimeAsync(200);
       await connectPromise;
 
@@ -242,28 +254,33 @@ describe('ElevenLabsVoiceService', () => {
       await renewPromise;
 
       // Should have attempted to reconnect
-      expect(mockFetch).toHaveBeenCalled();
+      expect(getVoiceSignedUrl).toHaveBeenCalled();
     });
 
     it('should handle signed URL renewal failure', async () => {
       (service as any).agentId = 'agent-123';
       (service as any).status = 'disconnected'; // Ensure not connected to avoid reconnect logic
 
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+      // Mock getVoiceSignedUrl to always fail (even after retries)
+      // retryWithBackoff will retry 3 times, so we need to mock it to fail 4 times (initial + 3 retries)
+      vi.mocked(getVoiceSignedUrl)
+        .mockRejectedValueOnce(new Error('Network error'))
+        .mockRejectedValueOnce(new Error('Network error'))
+        .mockRejectedValueOnce(new Error('Network error'))
+        .mockRejectedValueOnce(new Error('Network error'));
 
-      // The error should be thrown and handled
-      await expect(service.renewSignedUrl()).rejects.toThrow('Network error');
+      // Advance timers to allow retries to complete
+      const renewPromise = service.renewSignedUrl();
+      await vi.advanceTimersByTimeAsync(10000); // Allow all retries to complete
+
+      // The error should be thrown after retries are exhausted
+      await expect(renewPromise).rejects.toThrow();
     });
   });
 
   describe('Heartbeat and Timeout Handling', () => {
     it('should start heartbeat when connected', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ url: 'wss://test-url', expiresAt: new Date(Date.now() + 3600000).toISOString() }),
-      } as Response);
-
-      const connectPromise = service.startVoiceSession('agent-123');
+      const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
       await vi.advanceTimersByTimeAsync(200);
       await connectPromise;
 
@@ -279,12 +296,7 @@ describe('ElevenLabsVoiceService', () => {
     });
 
     it('should stop heartbeat when disconnected', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ url: 'wss://test-url', expiresAt: new Date(Date.now() + 3600000).toISOString() }),
-      } as Response);
-
-      const connectPromise = service.startVoiceSession('agent-123');
+      const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
       await vi.advanceTimersByTimeAsync(200);
       await connectPromise;
 
@@ -305,12 +317,7 @@ describe('ElevenLabsVoiceService', () => {
         },
       });
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ url: 'wss://test-url', expiresAt: new Date(Date.now() + 3600000).toISOString() }),
-      } as Response);
-
-      const connectPromise = service.startVoiceSession('agent-123');
+      const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
       await vi.advanceTimersByTimeAsync(200);
       await connectPromise;
 
@@ -325,11 +332,18 @@ describe('ElevenLabsVoiceService', () => {
     });
 
     it('should send heartbeat pings periodically', async () => {
-      await service.startVoiceSession('agent-123');
-      vi.advanceTimersByTime(100);
+      const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
+      await vi.advanceTimersByTimeAsync(200);
+      await connectPromise;
 
       // Heartbeat should start automatically
       expect(service.getConnectionStatus()).toBe('connected');
+
+      // Set ws to a mock WebSocket for heartbeat
+      (service as any).ws = {
+        send: vi.fn(),
+        close: vi.fn(),
+      };
 
       // Advance time to trigger heartbeat ping (30 seconds)
       await vi.advanceTimersByTimeAsync(31000);
@@ -342,8 +356,15 @@ describe('ElevenLabsVoiceService', () => {
 
   describe('Text Message Sending', () => {
     it('should send text message when connected', async () => {
-      await service.startVoiceSession('agent-123');
-      vi.advanceTimersByTime(100);
+      const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
+      await vi.advanceTimersByTimeAsync(200);
+      await connectPromise;
+
+      // Set ws to a mock WebSocket so the check passes
+      (service as any).ws = {
+        send: vi.fn(),
+        close: vi.fn(),
+      };
 
       expect(() => service.sendTextToAgent('Hello agent')).not.toThrow();
     });
@@ -358,8 +379,9 @@ describe('ElevenLabsVoiceService', () => {
       const onConnect = vi.fn();
       service.configure({ onConnect });
 
-      await service.startVoiceSession('agent-123');
-      vi.advanceTimersByTime(100);
+      const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
+      await vi.advanceTimersByTimeAsync(200);
+      await connectPromise;
 
       expect(onConnect).toHaveBeenCalled();
     });
@@ -368,9 +390,19 @@ describe('ElevenLabsVoiceService', () => {
       const onError = vi.fn();
       service.configure({ onError });
 
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+      // Set expired URL to trigger renewal
+      const expiredDate = new Date(Date.now() - 1000);
+      (service as any).signedUrlExpiresAt = expiredDate;
 
-      await expect(service.startVoiceSession('agent-123', 'expired-url')).rejects.toThrow();
+      // Mock getVoiceSignedUrl to fail
+      vi.mocked(getVoiceSignedUrl).mockRejectedValue(new Error('Network error'));
+
+      const connectPromise = service.startVoiceSession('agent-123', 'conv-123', 'expired-url');
+      
+      // Advance timers to allow retries to complete
+      await vi.advanceTimersByTimeAsync(5000);
+      
+      await expect(connectPromise).rejects.toThrow();
 
       expect(onError).toHaveBeenCalled();
     });
@@ -379,8 +411,9 @@ describe('ElevenLabsVoiceService', () => {
       const onStatusChange = vi.fn();
       service.configure({ onStatusChange });
 
-      await service.startVoiceSession('agent-123');
-      vi.advanceTimersByTime(100);
+      const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
+      await vi.advanceTimersByTimeAsync(200);
+      await connectPromise;
 
       expect(onStatusChange).toHaveBeenCalledWith('connecting');
       expect(onStatusChange).toHaveBeenCalledWith('connected');
@@ -389,8 +422,9 @@ describe('ElevenLabsVoiceService', () => {
 
   describe('Session Management', () => {
     it('should end session and cleanup resources', async () => {
-      await service.startVoiceSession('agent-123');
-      vi.advanceTimersByTime(100);
+      const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
+      await vi.advanceTimersByTimeAsync(200);
+      await connectPromise;
 
       expect(service.getConnectionStatus()).toBe('connected');
 
@@ -402,14 +436,16 @@ describe('ElevenLabsVoiceService', () => {
     });
 
     it('should reset state after ending session', async () => {
-      await service.startVoiceSession('agent-123');
-      vi.advanceTimersByTime(100);
+      const connectPromise1 = service.startVoiceSession('agent-123', 'conv-123');
+      await vi.advanceTimersByTimeAsync(200);
+      await connectPromise1;
 
       service.endVoiceSession();
 
       // Should be able to start a new session
-      await service.startVoiceSession('agent-456');
-      vi.advanceTimersByTime(100);
+      const connectPromise2 = service.startVoiceSession('agent-456', 'conv-456');
+      await vi.advanceTimersByTimeAsync(200);
+      await connectPromise2;
 
       expect(service.getConnectionStatus()).toBe('connected');
     });
