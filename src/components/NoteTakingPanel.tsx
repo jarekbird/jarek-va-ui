@@ -67,6 +67,11 @@ export const NoteTakingPanel: React.FC<NoteTakingPanelProps> = ({
     setConversation(null);
   };
 
+  const handleNewConversation = (conversationId: string) => {
+    // Select the newly created conversation within the panel
+    handleConversationSelect(conversationId);
+  };
+
   return (
     <div className="note-taking-panel" data-testid="note-taking-panel">
       {selectedConversationId ? (
@@ -89,7 +94,12 @@ export const NoteTakingPanel: React.FC<NoteTakingPanelProps> = ({
           )}
         </div>
       ) : (
-        <ConversationListView onConversationSelect={handleConversationSelect} />
+        <ConversationListView 
+          onConversationSelect={handleConversationSelect}
+          onNewConversation={handleNewConversation}
+          showNavigation={false}
+          showContainer={false}
+        />
       )}
     </div>
   );

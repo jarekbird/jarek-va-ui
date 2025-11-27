@@ -9,10 +9,16 @@ import type { Conversation } from '../types';
 
 export interface ConversationListViewProps {
   onConversationSelect?: (conversationId: string) => void;
+  onNewConversation?: (conversationId: string) => void;
+  showNavigation?: boolean;
+  showContainer?: boolean;
 }
 
 export const ConversationListView: React.FC<ConversationListViewProps> = ({
   onConversationSelect,
+  onNewConversation,
+  showNavigation = true,
+  showContainer = true,
 }) => {
   const [conversations, setConversations] = React.useState<Conversation[]>([]);
   const [loading, setLoading] = React.useState<boolean>(true);
@@ -73,8 +79,13 @@ export const ConversationListView: React.FC<ConversationListViewProps> = ({
     try {
       const response = await createConversation({ queueType: 'api' });
       if (response.success && response.conversationId) {
-        // Navigate to the new conversation
-        navigate(`/conversation/${response.conversationId}`);
+        // If onNewConversation callback is provided (Dashboard mode), use it instead of navigating
+        if (onNewConversation) {
+          onNewConversation(response.conversationId);
+        } else {
+          // Navigate to the new conversation (standalone mode)
+          navigate(`/conversation/${response.conversationId}`);
+        }
         // Reload conversations list to include the new one
         await loadConversations();
       } else {
@@ -91,17 +102,18 @@ export const ConversationListView: React.FC<ConversationListViewProps> = ({
     }
   };
 
-  return (
-    <div className="container">
-      <Navigation />
+  const content = (
+    <>
+      {showNavigation && <Navigation />}
       <div className="header-with-button">
-        <h1>Note Taking History</h1>
+        {showContainer && <h1>Note Taking History</h1>}
+        {!showContainer && <h2 style={{ margin: 0, marginBottom: '10px' }}>Note Taking History</h2>}
         <button
           onClick={handleNewConversation}
           disabled={isCreating}
           className="new-conversation-button"
         >
-          {isCreating ? 'Creating...' : '+ New Note Session'}
+          {isCreating ? 'Creating...' : '+ New Note'}
         </button>
       </div>
       {loading && conversations.length === 0 && <LoadingSpinner />}
@@ -139,6 +151,12 @@ export const ConversationListView: React.FC<ConversationListViewProps> = ({
           No note sessions found.
         </p>
       )}
-    </div>
+    </>
   );
+
+  if (showContainer) {
+    return <div className="container">{content}</div>;
+  }
+
+  return <div>{content}</div>;
 };
