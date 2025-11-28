@@ -11,6 +11,9 @@ import './VoiceIndicator.css';
 export interface VoiceIndicatorProps {
   status: ConnectionStatus;
   mode?: 'idle' | 'listening' | 'speaking';
+  onConnect?: () => void;
+  onDisconnect?: () => void;
+  disabled?: boolean;
 }
 
 /**
@@ -31,6 +34,9 @@ export interface VoiceIndicatorProps {
 export const VoiceIndicator: React.FC<VoiceIndicatorProps> = ({
   status,
   mode = 'idle',
+  onConnect,
+  onDisconnect,
+  disabled = false,
 }) => {
   const getIndicatorClass = (): string => {
     const baseClass = 'voice-indicator';
@@ -70,12 +76,43 @@ export const VoiceIndicator: React.FC<VoiceIndicatorProps> = ({
     return 'Unknown';
   };
 
+  const handleButtonClick = () => {
+    if (status === 'disconnected' || status === 'error') {
+      onConnect?.();
+    } else if (status === 'connected' || status === 'connecting' || status === 'reconnecting') {
+      onDisconnect?.();
+    }
+  };
+
+  const getButtonText = (): string => {
+    if (status === 'disconnected' || status === 'error') {
+      return 'Connect';
+    }
+    if (status === 'connecting' || status === 'reconnecting') {
+      return 'Connecting...';
+    }
+    if (status === 'connected') {
+      return 'Disconnect';
+    }
+    return 'Connect';
+  };
+
   return (
     <div className="voice-indicator-container" data-testid="voice-indicator">
       <div className={getIndicatorClass()} role="status" aria-label={getStatusLabel()}>
         <div className="voice-indicator__inner"></div>
       </div>
       <span className="voice-indicator__label">{getStatusLabel()}</span>
+      {(onConnect || onDisconnect) && (
+        <button
+          className="voice-indicator__button"
+          onClick={handleButtonClick}
+          disabled={disabled || status === 'connecting' || status === 'reconnecting'}
+          aria-label={getButtonText()}
+        >
+          {getButtonText()}
+        </button>
+      )}
     </div>
   );
 };

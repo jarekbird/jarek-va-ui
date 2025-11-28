@@ -102,7 +102,12 @@ export async function registerSession(
   sessionData: RegisterSessionRequest
 ): Promise<RegisterSessionResponse> {
   const baseUrl = getElevenLabsApiBaseUrl();
-  const url = `${baseUrl}/agent-conversations/api/${conversationId}/session`;
+  // When using relative paths (dev mode), use the special /agent-session path
+  // that gets proxied to elevenlabs-agent
+  // When using absolute URL (production), use the full path
+  const url = baseUrl 
+    ? `${baseUrl}/agent-conversations/api/${conversationId}/session`
+    : `/agent-session/${conversationId}`;
 
   const response = await fetch(url, {
     method: 'POST',
@@ -165,7 +170,14 @@ export async function getAgentConfig(): Promise<{
     );
   }
 
-  return response.json();
+  const data = await response.json();
+  // The API returns { success: true, config: {...} }
+  // Extract the config object
+  if (data.success && data.config) {
+    return data.config;
+  }
+  // Fallback: if response is already the config object
+  return data;
 }
 
 

@@ -42,6 +42,14 @@ h1 {
   flex: 1;
 }
 
+.header-with-button h2 {
+  margin-bottom: 0;
+  flex: 1;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
 .new-conversation-button {
   padding: 12px 24px;
   background-color: #27ae60;
@@ -83,6 +91,33 @@ h1 {
   .new-conversation-button {
     width: 100%;
   }
+}
+
+/* Panel wrapper for Dashboard context (no container) */
+.conversation-list-view-panel,
+.agent-conversation-list-view-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.conversation-list-view-panel .header-with-button,
+.agent-conversation-list-view-panel .header-with-button {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.conversation-list-view-panel .conversation-list {
+  margin-bottom: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.agent-conversation-list-view-panel .filters-container {
+  margin-bottom: 1rem;
 }
 
 .conversation-list {

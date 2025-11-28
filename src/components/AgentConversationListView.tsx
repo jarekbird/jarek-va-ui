@@ -12,10 +12,14 @@ import type { AgentConversation } from '../types/agent-conversation';
 
 export interface AgentConversationListViewProps {
   onConversationSelect?: (conversationId: string) => void;
+  showNavigation?: boolean;
+  showContainer?: boolean;
 }
 
 export const AgentConversationListView: React.FC<AgentConversationListViewProps> = ({
   onConversationSelect,
+  showNavigation = true,
+  showContainer = true,
 }) => {
   const [conversations, setConversations] = React.useState<AgentConversation[]>(
     []
@@ -157,11 +161,12 @@ export const AgentConversationListView: React.FC<AgentConversationListViewProps>
     }
   };
 
-  return (
-    <div className="container">
-      <Navigation />
+  const content = (
+    <>
+      {showNavigation && <Navigation />}
       <div className="header-with-button">
-        <h1>Agent Conversations</h1>
+        {showContainer && <h1>Agent Conversations</h1>}
+        {!showContainer && <h2 style={{ margin: 0, marginBottom: '10px' }}>Agent Conversations</h2>}
         <button
           onClick={handleNewConversation}
           disabled={isCreating}
@@ -373,8 +378,14 @@ export const AgentConversationListView: React.FC<AgentConversationListViewProps>
           </button>
         </div>
       )}
-    </div>
+    </>
   );
+
+  if (showContainer) {
+    return <div className="container">{content}</div>;
+  }
+
+  return <div className="agent-conversation-list-view-panel">{content}</div>;
 };
 
 

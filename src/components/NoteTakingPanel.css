@@ -6,6 +6,7 @@
   background-color: #ffffff;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 0;
 }
 
 .note-taking-panel__detail {
@@ -35,5 +36,11 @@
 .note-taking-panel > * {
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
+}
+
+/* When showing list view, ensure proper spacing */
+.note-taking-panel .conversation-list-view-panel {
+  padding: 1rem;
 }
 

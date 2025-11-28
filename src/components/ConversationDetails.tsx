@@ -114,20 +114,30 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
         if (serverMessageCount > currentLocalCount) {
           // Get the current local conversation to preserve any optimistic updates
           const localConversation = currentConversationRef.current;
+          const localMessages = localConversation?.messages || [];
+          const serverMessages = serverConversation.messages;
           
-          // Merge: keep local messages that aren't in server yet, add new server messages
-          let mergedMessages = localConversation?.messages || [];
-          
-          // Find messages that are in server but not in local (new assistant responses)
-          const localMessageContents = new Set(
-            mergedMessages.map(m => `${m.role}:${m.content}:${m.timestamp}`)
-          );
-          const newServerMessages = serverConversation.messages.filter(
-            m => !localMessageContents.has(`${m.role}:${m.content}:${m.timestamp}`)
+          // Merge strategy: Use server messages as source of truth
+          // Match messages by role+content (not timestamp) to identify duplicates
+          const serverMessageKeys = new Set(
+            serverMessages.map(m => `${m.role}:${m.content}`)
           );
           
-          // Add new server messages
-          mergedMessages = [...mergedMessages, ...newServerMessages];
+          // Start with server messages (they have authoritative timestamps)
+          const mergedMessages = [...serverMessages];
+          
+          // Add any local messages that aren't in server yet (optimistic updates not yet saved)
+          localMessages.forEach(localMsg => {
+            const localKey = `${localMsg.role}:${localMsg.content}`;
+            if (!serverMessageKeys.has(localKey)) {
+              mergedMessages.push(localMsg);
+            }
+          });
+          
+          // Sort by timestamp to maintain chronological order
+          mergedMessages.sort((a, b) => 
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
           
           const mergedConversation: Conversation = {
             ...serverConversation,
@@ -304,3 +314,5 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
     </div>
   );
 };
+// test change
+// test

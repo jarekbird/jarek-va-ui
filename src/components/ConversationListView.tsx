@@ -158,5 +158,5 @@ export const ConversationListView: React.FC<ConversationListViewProps> = ({
     return <div className="container">{content}</div>;
   }
 
-  return <div>{content}</div>;
+  return <div className="conversation-list-view-panel">{content}</div>;
 };

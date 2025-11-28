@@ -100,7 +100,11 @@ export const AgentChatPanel: React.FC<AgentChatPanelProps> = ({
           )}
         </div>
       ) : (
-        <AgentConversationListView onConversationSelect={handleConversationSelect} />
+        <AgentConversationListView 
+          onConversationSelect={handleConversationSelect}
+          showNavigation={false}
+          showContainer={false}
+        />
       )}
     </div>
   );
