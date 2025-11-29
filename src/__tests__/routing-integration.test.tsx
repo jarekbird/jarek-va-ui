@@ -1,16 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from '../App';
-import * as conversationsAPI from '../api/conversations';
-import * as tasksAPI from '../api/tasks';
 import type { Conversation, Task } from '../types';
 
-// Mock the API modules
-vi.mock('../api/conversations');
-vi.mock('../api/tasks');
+// Mock fetch globally for integration tests
+const mockFetch = vi.fn();
+globalThis.fetch = mockFetch as unknown as typeof fetch;
 
 describe('Routing Integration', () => {
   let queryClient: QueryClient;
@@ -56,14 +54,60 @@ describe('Routing Integration', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(conversationsAPI.listConversations).mockResolvedValue(
-      mockConversations
-    );
-    vi.mocked(conversationsAPI.getConversationById).mockResolvedValue(
-      mockConversations[0]
-    );
-    vi.mocked(tasksAPI.listTasks).mockResolvedValue(mockTasks);
-    vi.mocked(tasksAPI.getTaskById).mockResolvedValue(mockTasks[0]);
+    // Default mock responses for fetch
+    (mockFetch as ReturnType<typeof vi.fn>).mockImplementation((url) => {
+      if (typeof url === 'string') {
+        // Mock fetchConversations - calls /conversations/api/list
+        if (url.includes('/conversations/api/list')) {
+          return Promise.resolve({
+            ok: true,
+            headers: {
+              get: (name: string) =>
+                name === 'content-type' ? 'application/json' : null,
+            },
+            json: async () => ({ conversations: mockConversations }),
+          });
+        }
+        // Mock fetchConversation - calls /conversations/api/{conversationId}
+        if (url.includes('/conversations/api/conv-1')) {
+          return Promise.resolve({
+            ok: true,
+            headers: {
+              get: (name: string) =>
+                name === 'content-type' ? 'application/json' : null,
+            },
+            json: async () => mockConversations[0],
+          });
+        }
+        // Mock listTasks - calls /api/tasks
+        if (url.includes('/api/tasks') && !url.match(/\/api\/tasks\/\d+$/)) {
+          return Promise.resolve({
+            ok: true,
+            headers: {
+              get: (name: string) =>
+                name === 'content-type' ? 'application/json' : null,
+            },
+            json: async () => ({ tasks: mockTasks }),
+          });
+        }
+        // Mock getTaskById - calls /api/tasks/{taskId}
+        if (url.includes('/api/tasks/1')) {
+          return Promise.resolve({
+            ok: true,
+            headers: {
+              get: (name: string) =>
+                name === 'content-type' ? 'application/json' : null,
+            },
+            json: async () => mockTasks[0],
+          });
+        }
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${url}`));
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('navigation between routes', () => {
@@ -134,9 +178,6 @@ describe('Routing Integration', () => {
 
     it('navigates to conversation detail from conversation list', async () => {
       const user = userEvent.setup();
-      vi.mocked(conversationsAPI.fetchConversations).mockResolvedValue({
-        conversations: mockConversations,
-      });
 
       render(
         <QueryClientProvider client={queryClient}>
@@ -159,9 +200,7 @@ describe('Routing Integration', () => {
 
         // Verify we're now on the conversation detail page
         await waitFor(() => {
-          expect(conversationsAPI.getConversationById).toHaveBeenCalledWith(
-            'conv-1'
-          );
+          expect(screen.getByText('Hello')).toBeInTheDocument();
         });
 
         // Verify conversation list is no longer visible
@@ -188,11 +227,6 @@ describe('Routing Integration', () => {
         ).toBeInTheDocument();
       });
 
-      // Find and click a task link - TaskList shows task ID or prompt
-      await waitFor(() => {
-        expect(tasksAPI.listTasks).toHaveBeenCalled();
-      });
-
       // Find task link by looking for the task ID or any link in the task list
       const taskLinks = screen.getAllByRole('link');
       const taskDetailLink = taskLinks.find(
@@ -204,7 +238,7 @@ describe('Routing Integration', () => {
 
         // Verify we're now on the task detail page
         await waitFor(() => {
-          expect(tasksAPI.getTaskById).toHaveBeenCalledWith(1);
+          expect(screen.getByText(/Back to Tasks/i)).toBeInTheDocument();
         });
 
         // Verify task list heading is no longer visible
@@ -244,12 +278,10 @@ describe('Routing Integration', () => {
       );
 
       await waitFor(() => {
-        expect(conversationsAPI.getConversationById).toHaveBeenCalledWith(
-          'conv-1'
-        );
+        expect(screen.getByText('Hello')).toBeInTheDocument();
       });
 
-      // Verify ConversationDetailView is rendered (not ConversationListView)
+      // Verify ConversationDetailPage is rendered (not ConversationsPage)
       expect(
         screen.queryByText('Conversation History')
       ).not.toBeInTheDocument();
@@ -271,7 +303,9 @@ describe('Routing Integration', () => {
       });
 
       // Verify it's the TaskListView component
-      expect(tasksAPI.listTasks).toHaveBeenCalled();
+      expect(
+        screen.getByRole('heading', { name: 'Tasks' })
+      ).toBeInTheDocument();
     });
 
     it('renders correct component for /tasks/:taskId route', async () => {
@@ -284,7 +318,7 @@ describe('Routing Integration', () => {
       );
 
       await waitFor(() => {
-        expect(tasksAPI.getTaskById).toHaveBeenCalledWith(1);
+        expect(screen.getByText(/Back to Tasks/i)).toBeInTheDocument();
       });
 
       // Verify TaskDetailView is rendered (not TaskListView)
