@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
-import { ConversationListView } from './components/ConversationListView';
+import { ConversationsPage } from './routes/conversations/ConversationsPage';
 import { ConversationDetailView } from './components/ConversationDetailView';
 import { TaskListView } from './components/TaskListView';
 import { TaskDetailView } from './components/TaskDetailView';
@@ -11,7 +11,7 @@ const App: React.FC = () => {
   return (
     <Layout>
       <Routes>
-        <Route path="/conversations" element={<ConversationListView />} />
+        <Route path="/conversations" element={<ConversationsPage />} />
         <Route
           path="/conversations/:conversationId"
           element={<ConversationDetailView />}

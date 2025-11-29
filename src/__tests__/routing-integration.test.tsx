@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from '../App';
 import * as conversationsAPI from '../api/conversations';
 import * as tasksAPI from '../api/tasks';
@@ -12,6 +13,19 @@ vi.mock('../api/conversations');
 vi.mock('../api/tasks');
 
 describe('Routing Integration', () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+          gcTime: 0,
+        },
+      },
+    });
+  });
+
   const mockConversations: Conversation[] = [
     {
       conversationId: 'conv-1',
@@ -56,9 +70,11 @@ describe('Routing Integration', () => {
     it('navigates from conversations to tasks via navigation link', async () => {
       const user = userEvent.setup();
       render(
-        <MemoryRouter initialEntries={['/conversations']}>
-          <App />
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/conversations']}>
+            <App />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
 
       // Wait for conversations to load
@@ -86,9 +102,11 @@ describe('Routing Integration', () => {
     it('navigates from tasks to conversations via navigation link', async () => {
       const user = userEvent.setup();
       render(
-        <MemoryRouter initialEntries={['/tasks']}>
-          <App />
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/tasks']}>
+            <App />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
 
       // Wait for tasks to load
@@ -116,15 +134,22 @@ describe('Routing Integration', () => {
 
     it('navigates to conversation detail from conversation list', async () => {
       const user = userEvent.setup();
+      vi.mocked(conversationsAPI.fetchConversations).mockResolvedValue({
+        conversations: mockConversations,
+      });
+
       render(
-        <MemoryRouter initialEntries={['/conversations']}>
-          <App />
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/conversations']}>
+            <App />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
 
       // Wait for conversations to load
       await waitFor(() => {
         expect(screen.getByText('Conversation History')).toBeInTheDocument();
+        expect(screen.getByText(/conv-1/i)).toBeInTheDocument();
       });
 
       // Find and click a conversation link
@@ -149,9 +174,11 @@ describe('Routing Integration', () => {
     it('navigates to task detail from task list', async () => {
       const user = userEvent.setup();
       render(
-        <MemoryRouter initialEntries={['/tasks']}>
-          <App />
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/tasks']}>
+            <App />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
 
       // Wait for tasks to load
@@ -190,9 +217,11 @@ describe('Routing Integration', () => {
   describe('route component rendering', () => {
     it('renders correct component for /conversations route', async () => {
       render(
-        <MemoryRouter initialEntries={['/conversations']}>
-          <App />
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/conversations']}>
+            <App />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
 
       await waitFor(() => {
@@ -207,9 +236,11 @@ describe('Routing Integration', () => {
 
     it('renders correct component for /conversations/:conversationId route', async () => {
       render(
-        <MemoryRouter initialEntries={['/conversations/conv-1']}>
-          <App />
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/conversations/conv-1']}>
+            <App />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
 
       await waitFor(() => {
@@ -226,9 +257,11 @@ describe('Routing Integration', () => {
 
     it('renders correct component for /tasks route', async () => {
       render(
-        <MemoryRouter initialEntries={['/tasks']}>
-          <App />
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/tasks']}>
+            <App />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
 
       await waitFor(() => {
@@ -243,9 +276,11 @@ describe('Routing Integration', () => {
 
     it('renders correct component for /tasks/:taskId route', async () => {
       render(
-        <MemoryRouter initialEntries={['/tasks/1']}>
-          <App />
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/tasks/1']}>
+            <App />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
 
       await waitFor(() => {
@@ -262,9 +297,11 @@ describe('Routing Integration', () => {
     it('maintains navigation links across route changes', async () => {
       const user = userEvent.setup();
       render(
-        <MemoryRouter initialEntries={['/conversations']}>
-          <App />
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/conversations']}>
+            <App />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
 
       // Verify navigation is present initially

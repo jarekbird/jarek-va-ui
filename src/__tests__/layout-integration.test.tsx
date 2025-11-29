@@ -1,14 +1,26 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from '../App';
 
 describe('Layout Integration', () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: 0,
+      },
+    },
+  });
+
   it('renders Layout with navigation for all routes', () => {
     render(
-      <MemoryRouter initialEntries={['/conversations']}>
-        <App />
-      </MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/conversations']}>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     // Verify Layout navigation is present
@@ -18,9 +30,11 @@ describe('Layout Integration', () => {
 
   it('renders Layout for conversation list route', () => {
     render(
-      <MemoryRouter initialEntries={['/conversations']}>
-        <App />
-      </MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/conversations']}>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     // Layout navigation should be present
@@ -31,9 +45,11 @@ describe('Layout Integration', () => {
 
   it('renders Layout for conversation detail route', () => {
     render(
-      <MemoryRouter initialEntries={['/conversations/conv-123']}>
-        <App />
-      </MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/conversations/conv-123']}>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     // Layout navigation should be present
@@ -43,9 +59,11 @@ describe('Layout Integration', () => {
 
   it('renders Layout for task list route', () => {
     render(
-      <MemoryRouter initialEntries={['/tasks']}>
-        <App />
-      </MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/tasks']}>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     // Layout navigation should be present - check for navigation links
@@ -66,9 +84,11 @@ describe('Layout Integration', () => {
 
   it('renders Layout for task detail route', () => {
     render(
-      <MemoryRouter initialEntries={['/tasks/123']}>
-        <App />
-      </MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/tasks/123']}>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     // Layout navigation should be present - check for navigation links

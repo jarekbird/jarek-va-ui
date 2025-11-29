@@ -35,15 +35,17 @@ describe('App', () => {
   });
 
   it('renders the main heading', () => {
-    vi.mocked(conversationsAPI.listConversations).mockResolvedValueOnce([]);
+    vi.mocked(conversationsAPI.fetchConversations).mockResolvedValueOnce({
+      conversations: [],
+    });
     render(<App />);
     expect(screen.getByText('Conversation History')).toBeInTheDocument();
   });
 
   it('loads and displays conversations on mount', async () => {
-    vi.mocked(conversationsAPI.listConversations).mockResolvedValueOnce(
-      mockConversations
-    );
+    vi.mocked(conversationsAPI.fetchConversations).mockResolvedValueOnce({
+      conversations: mockConversations,
+    });
 
     render(<App />);
 
@@ -54,7 +56,7 @@ describe('App', () => {
   });
 
   it('displays loading spinner while loading conversations', () => {
-    vi.mocked(conversationsAPI.listConversations).mockImplementation(
+    vi.mocked(conversationsAPI.fetchConversations).mockImplementation(
       () => new Promise(() => {}) // Never resolves
     );
 
@@ -68,7 +70,7 @@ describe('App', () => {
 
   it('displays error message when loading conversations fails', async () => {
     const errorMessage = 'Failed to fetch conversations';
-    vi.mocked(conversationsAPI.listConversations).mockRejectedValueOnce(
+    vi.mocked(conversationsAPI.fetchConversations).mockRejectedValueOnce(
       new Error(errorMessage)
     );
 
@@ -80,7 +82,9 @@ describe('App', () => {
   });
 
   it('displays "No conversations found" when list is empty', async () => {
-    vi.mocked(conversationsAPI.listConversations).mockResolvedValueOnce([]);
+    vi.mocked(conversationsAPI.fetchConversations).mockResolvedValueOnce({
+      conversations: [],
+    });
 
     render(<App />);
 
@@ -104,9 +108,9 @@ describe('App', () => {
       lastAccessedAt: '2025-01-01T00:00:00Z',
     };
 
-    vi.mocked(conversationsAPI.listConversations).mockResolvedValueOnce(
-      mockConversations
-    );
+    vi.mocked(conversationsAPI.fetchConversations).mockResolvedValueOnce({
+      conversations: mockConversations,
+    });
     vi.mocked(conversationsAPI.getConversationById).mockResolvedValueOnce(
       selectedConversation
     );
@@ -135,9 +139,9 @@ describe('App', () => {
     const user = userEvent.setup();
     const errorMessage = 'Failed to load conversation';
 
-    vi.mocked(conversationsAPI.listConversations).mockResolvedValueOnce(
-      mockConversations
-    );
+    vi.mocked(conversationsAPI.fetchConversations).mockResolvedValueOnce({
+      conversations: mockConversations,
+    });
     vi.mocked(conversationsAPI.getConversationById).mockRejectedValueOnce(
       new Error(errorMessage)
     );

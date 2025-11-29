@@ -1,24 +1,38 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useParams } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from '../App';
 
 describe('Routing', () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: 0,
+      },
+    },
+  });
+
   describe('route definitions', () => {
     it('renders ConversationListView at /conversations', () => {
       render(
-        <MemoryRouter initialEntries={['/conversations']}>
-          <App />
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/conversations']}>
+            <App />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
       expect(screen.getByText('Conversation History')).toBeInTheDocument();
     });
 
     it('renders ConversationDetailView at /conversations/:conversationId', () => {
       render(
-        <MemoryRouter initialEntries={['/conversations/conv-123']}>
-          <App />
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/conversations/conv-123']}>
+            <App />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
       // ConversationDetailView should be rendered (it will show loading/error initially)
       expect(
@@ -28,9 +42,11 @@ describe('Routing', () => {
 
     it('renders TaskListView at /tasks', () => {
       render(
-        <MemoryRouter initialEntries={['/tasks']}>
-          <App />
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/tasks']}>
+            <App />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
       // Check for h1 heading in main content (not navigation)
       const headings = screen.getAllByText('Tasks');
@@ -42,9 +58,11 @@ describe('Routing', () => {
 
     it('renders TaskDetailView at /tasks/:taskId', () => {
       render(
-        <MemoryRouter initialEntries={['/tasks/123']}>
-          <App />
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/tasks/123']}>
+            <App />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
       // TaskDetailView should be rendered (it will show loading/error initially)
       // Navigation will have "Tasks" link, but the h1 heading should not be present
@@ -61,14 +79,16 @@ describe('Routing', () => {
       };
 
       render(
-        <MemoryRouter initialEntries={['/conversations/test-conv-123']}>
-          <Routes>
-            <Route
-              path="/conversations/:conversationId"
-              element={<TestComponent />}
-            />
-          </Routes>
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/conversations/test-conv-123']}>
+            <Routes>
+              <Route
+                path="/conversations/:conversationId"
+                element={<TestComponent />}
+              />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
       );
 
       expect(screen.getByTestId('conversation-id')).toHaveTextContent(
@@ -83,11 +103,13 @@ describe('Routing', () => {
       };
 
       render(
-        <MemoryRouter initialEntries={['/tasks/456']}>
-          <Routes>
-            <Route path="/tasks/:taskId" element={<TestComponent />} />
-          </Routes>
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/tasks/456']}>
+            <Routes>
+              <Route path="/tasks/:taskId" element={<TestComponent />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
       );
 
       expect(screen.getByTestId('task-id')).toHaveTextContent('456');
