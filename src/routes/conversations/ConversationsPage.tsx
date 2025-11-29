@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ConversationList } from '../../components/ConversationList';
 import { ConversationFilters } from '../../components/ConversationFilters';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
@@ -9,12 +9,85 @@ import { createConversation } from '../../api/conversations';
 import type { ConversationFilterState } from '../../components/ConversationFilters';
 import type { Conversation } from '../../types';
 
+/**
+ * Converts URL search params to ConversationFilterState
+ */
+function searchParamsToFilters(
+  searchParams: URLSearchParams
+): ConversationFilterState {
+  const filters: ConversationFilterState = {};
+
+  const search = searchParams.get('search');
+  if (search) {
+    filters.search = search;
+  }
+
+  const status = searchParams.get('status');
+  if (status) {
+    filters.status = status;
+  }
+
+  const sortBy = searchParams.get('sortBy');
+  if (sortBy === 'createdAt' || sortBy === 'lastAccessedAt') {
+    filters.sortBy = sortBy;
+  }
+
+  const sortOrder = searchParams.get('sortOrder');
+  if (sortOrder === 'asc' || sortOrder === 'desc') {
+    filters.sortOrder = sortOrder;
+  }
+
+  return filters;
+}
+
+/**
+ * Converts ConversationFilterState to URL search params
+ */
+function filtersToSearchParams(
+  filters: ConversationFilterState
+): URLSearchParams {
+  const params = new URLSearchParams();
+
+  if (filters.search) {
+    params.set('search', filters.search);
+  }
+
+  if (filters.status) {
+    params.set('status', filters.status);
+  }
+
+  if (filters.sortBy) {
+    params.set('sortBy', filters.sortBy);
+  }
+
+  if (filters.sortOrder) {
+    params.set('sortOrder', filters.sortOrder);
+  }
+
+  return params;
+}
+
 export const ConversationsPage: React.FC = () => {
   const [isCreating, setIsCreating] = React.useState<boolean>(false);
   const [createError, setCreateError] = React.useState<string | null>(null);
-  const [filters, setFilters] = React.useState<ConversationFilterState>({});
+  const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Initialize filters from URL search params
+  const filters = React.useMemo(
+    () => searchParamsToFilters(searchParams),
+    [searchParams]
+  );
+
+  // Update URL search params when filters change
+  const handleFiltersChange = React.useCallback(
+    (newFilters: ConversationFilterState) => {
+      const params = filtersToSearchParams(newFilters);
+      setSearchParams(params, { replace: true });
+    },
+    [setSearchParams]
+  );
 
   // Extract API params from filters (excluding search which is client-side only)
   const apiParams = React.useMemo(() => {
@@ -103,7 +176,10 @@ export const ConversationsPage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <ConversationFilters filters={filters} onFiltersChange={setFilters} />
+      <ConversationFilters
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
+      />
 
       {/* Loading state */}
       {isLoading && conversations.length === 0 && <LoadingSpinner />}
