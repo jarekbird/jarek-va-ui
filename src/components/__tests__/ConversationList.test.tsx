@@ -225,4 +225,128 @@ describe('ConversationList', () => {
       ).toBeInTheDocument();
     });
   });
+
+  it('handles very long list of conversations', () => {
+    const onSelect = vi.fn();
+    const veryLongList: Conversation[] = Array.from(
+      { length: 500 },
+      (_, i) => ({
+        conversationId: `conv-${i + 1}`,
+        messages: [],
+        createdAt: `2025-01-${String(Math.floor(i / 30) + 1).padStart(2, '0')}T00:00:00Z`,
+        lastAccessedAt: `2025-01-${String(Math.floor(i / 30) + 1).padStart(2, '0')}T00:00:00Z`,
+      })
+    );
+
+    render(
+      <ConversationList
+        conversations={veryLongList}
+        activeConversationId={null}
+        onSelectConversation={onSelect}
+      />
+    );
+
+    // Should render all conversations - check that both first and last are present
+    // Use getAllByText and check that at least one matches (to avoid substring issues)
+    const conv1Elements = screen.getAllByText(/conv-1/i);
+    const conv500Elements = screen.getAllByText(/conv-500/i);
+    expect(conv1Elements.length).toBeGreaterThan(0);
+    expect(conv500Elements.length).toBeGreaterThan(0);
+    // Verify they contain the exact conversation ID
+    expect(conv1Elements.some((el) => el.textContent?.includes('conv-1'))).toBe(
+      true
+    );
+    expect(
+      conv500Elements.some((el) => el.textContent?.includes('conv-500'))
+    ).toBe(true);
+  });
+
+  it('handles conversations with empty messages arrays', () => {
+    const onSelect = vi.fn();
+    const conversationsWithEmptyMessages: Conversation[] = [
+      {
+        conversationId: 'conv-empty-1',
+        messages: [],
+        createdAt: '2025-01-01T00:00:00Z',
+        lastAccessedAt: '2025-01-02T00:00:00Z',
+      },
+      {
+        conversationId: 'conv-empty-2',
+        messages: [],
+        createdAt: '2025-01-01T00:00:00Z',
+        lastAccessedAt: '2025-01-03T00:00:00Z',
+      },
+    ];
+
+    render(
+      <ConversationList
+        conversations={conversationsWithEmptyMessages}
+        activeConversationId={null}
+        onSelectConversation={onSelect}
+      />
+    );
+
+    expect(screen.getByText(/conv-empty-1/i)).toBeInTheDocument();
+    expect(screen.getByText(/conv-empty-2/i)).toBeInTheDocument();
+  });
+
+  it('handles conversations with invalid date strings', () => {
+    const onSelect = vi.fn();
+    const conversationsWithInvalidDates: Conversation[] = [
+      {
+        conversationId: 'conv-invalid-1',
+        messages: [],
+        createdAt: 'invalid-date',
+        lastAccessedAt: 'also-invalid',
+      },
+      {
+        conversationId: 'conv-invalid-2',
+        messages: [],
+        createdAt: '2025-01-01T00:00:00Z',
+        lastAccessedAt: '2025-01-02T00:00:00Z',
+      },
+    ];
+
+    render(
+      <ConversationList
+        conversations={conversationsWithInvalidDates}
+        activeConversationId={null}
+        onSelectConversation={onSelect}
+      />
+    );
+
+    // Should still render conversations even with invalid dates
+    expect(screen.getByText(/conv-invalid-1/i)).toBeInTheDocument();
+    expect(screen.getByText(/conv-invalid-2/i)).toBeInTheDocument();
+  });
+
+  it('handles conversations with same createdAt (stable sort)', () => {
+    const onSelect = vi.fn();
+    const conversationsWithSameDate: Conversation[] = Array.from(
+      { length: 10 },
+      (_, i) => ({
+        conversationId: `conv-${i + 1}`,
+        messages: [],
+        createdAt: '2025-01-01T00:00:00Z',
+        lastAccessedAt: `2025-01-0${(i % 9) + 1}T00:00:00Z`,
+      })
+    );
+
+    render(
+      <ConversationList
+        conversations={conversationsWithSameDate}
+        activeConversationId={null}
+        onSelectConversation={onSelect}
+      />
+    );
+
+    // All should be rendered - use getAllByText since there might be multiple matches
+    conversationsWithSameDate.forEach((conv) => {
+      const elements = screen.getAllByText(
+        new RegExp(conv.conversationId, 'i')
+      );
+      expect(elements.length).toBeGreaterThan(0);
+      expect(elements[0]).toBeInTheDocument();
+    });
+  });
 });

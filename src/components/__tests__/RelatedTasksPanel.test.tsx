@@ -337,4 +337,277 @@ describe('RelatedTasksPanel', () => {
       enabled: true,
     });
   });
+
+  it('handles tasks with missing optional metadata (null createdat, updatedat, uuid)', () => {
+    const tasksWithNullMetadata: Task[] = [
+      {
+        id: 1,
+        prompt: 'Task with null metadata',
+        status: 1,
+        status_label: 'ready',
+        createdat: null,
+        updatedat: null,
+        order: 0,
+        uuid: null,
+      },
+    ];
+
+    mockUseRelatedTasksQuery.mockReturnValue({
+      data: { tasks: tasksWithNullMetadata },
+      isLoading: false,
+      isError: false,
+      error: null,
+      isSuccess: true,
+      isFetching: false,
+      refetch: vi.fn(),
+      dataUpdatedAt: Date.now(),
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      failureReason: null,
+      fetchStatus: 'idle',
+      status: 'success',
+      isInitialLoading: false,
+      isLoadingError: false,
+      isPaused: false,
+      isPlaceholderData: false,
+      isRefetchError: false,
+      isRefetching: false,
+      isStale: false,
+      isFetched: true,
+      isFetchedAfterMount: true,
+    } as unknown as ReturnType<typeof useRelatedTasksQuery>);
+
+    render(<RelatedTasksPanel conversationId="conv-123" />);
+
+    expect(screen.getByText('Task with null metadata')).toBeInTheDocument();
+    expect(screen.getByText('Task #1')).toBeInTheDocument();
+  });
+
+  it('handles tasks with empty prompt string', () => {
+    const tasksWithEmptyPrompt: Task[] = [
+      {
+        id: 1,
+        prompt: '',
+        status: 1,
+        status_label: 'ready',
+        createdat: '2025-01-01T12:00:00Z',
+        updatedat: '2025-01-01T13:00:00Z',
+        order: 0,
+        uuid: null,
+      },
+    ];
+
+    mockUseRelatedTasksQuery.mockReturnValue({
+      data: { tasks: tasksWithEmptyPrompt },
+      isLoading: false,
+      isError: false,
+      error: null,
+      isSuccess: true,
+      isFetching: false,
+      refetch: vi.fn(),
+      dataUpdatedAt: Date.now(),
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      failureReason: null,
+      fetchStatus: 'idle',
+      status: 'success',
+      isInitialLoading: false,
+      isLoadingError: false,
+      isPaused: false,
+      isPlaceholderData: false,
+      isRefetchError: false,
+      isRefetching: false,
+      isStale: false,
+      isFetched: true,
+      isFetchedAfterMount: true,
+    } as unknown as ReturnType<typeof useRelatedTasksQuery>);
+
+    render(<RelatedTasksPanel conversationId="conv-123" />);
+
+    expect(screen.getByText('Task #1')).toBeInTheDocument();
+    const promptElement = screen
+      .getByTestId('related-task-1')
+      .querySelector('.related-tasks-panel__task-prompt');
+    expect(promptElement?.textContent).toBe('');
+  });
+
+  it('handles tasks with very long prompt text', () => {
+    const longPrompt = 'A'.repeat(1000);
+    const tasksWithLongPrompt: Task[] = [
+      {
+        id: 1,
+        prompt: longPrompt,
+        status: 1,
+        status_label: 'ready',
+        createdat: '2025-01-01T12:00:00Z',
+        updatedat: '2025-01-01T13:00:00Z',
+        order: 0,
+        uuid: null,
+      },
+    ];
+
+    mockUseRelatedTasksQuery.mockReturnValue({
+      data: { tasks: tasksWithLongPrompt },
+      isLoading: false,
+      isError: false,
+      error: null,
+      isSuccess: true,
+      isFetching: false,
+      refetch: vi.fn(),
+      dataUpdatedAt: Date.now(),
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      failureReason: null,
+      fetchStatus: 'idle',
+      status: 'success',
+      isInitialLoading: false,
+      isLoadingError: false,
+      isPaused: false,
+      isPlaceholderData: false,
+      isRefetchError: false,
+      isRefetching: false,
+      isStale: false,
+      isFetched: true,
+      isFetchedAfterMount: true,
+    } as unknown as ReturnType<typeof useRelatedTasksQuery>);
+
+    render(<RelatedTasksPanel conversationId="conv-123" />);
+
+    expect(screen.getByText(longPrompt)).toBeInTheDocument();
+  });
+
+  it('handles tasks with all status labels', () => {
+    const tasksWithAllStatuses: Task[] = [
+      {
+        id: 1,
+        prompt: 'Ready task',
+        status: 0,
+        status_label: 'ready',
+        createdat: '2025-01-01T12:00:00Z',
+        updatedat: '2025-01-01T13:00:00Z',
+        order: 0,
+        uuid: null,
+      },
+      {
+        id: 2,
+        prompt: 'Complete task',
+        status: 1,
+        status_label: 'complete',
+        createdat: '2025-01-01T12:00:00Z',
+        updatedat: '2025-01-01T13:00:00Z',
+        order: 1,
+        uuid: null,
+      },
+      {
+        id: 3,
+        prompt: 'Archived task',
+        status: 2,
+        status_label: 'archived',
+        createdat: '2025-01-01T12:00:00Z',
+        updatedat: '2025-01-01T13:00:00Z',
+        order: 2,
+        uuid: null,
+      },
+      {
+        id: 4,
+        prompt: 'Backlogged task',
+        status: 3,
+        status_label: 'backlogged',
+        createdat: '2025-01-01T12:00:00Z',
+        updatedat: '2025-01-01T13:00:00Z',
+        order: 3,
+        uuid: null,
+      },
+      {
+        id: 5,
+        prompt: 'Unknown task',
+        status: 99,
+        status_label: 'unknown',
+        createdat: '2025-01-01T12:00:00Z',
+        updatedat: '2025-01-01T13:00:00Z',
+        order: 4,
+        uuid: null,
+      },
+    ];
+
+    mockUseRelatedTasksQuery.mockReturnValue({
+      data: { tasks: tasksWithAllStatuses },
+      isLoading: false,
+      isError: false,
+      error: null,
+      isSuccess: true,
+      isFetching: false,
+      refetch: vi.fn(),
+      dataUpdatedAt: Date.now(),
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      failureReason: null,
+      fetchStatus: 'idle',
+      status: 'success',
+      isInitialLoading: false,
+      isLoadingError: false,
+      isPaused: false,
+      isPlaceholderData: false,
+      isRefetchError: false,
+      isRefetching: false,
+      isStale: false,
+      isFetched: true,
+      isFetchedAfterMount: true,
+    } as unknown as ReturnType<typeof useRelatedTasksQuery>);
+
+    render(<RelatedTasksPanel conversationId="conv-123" />);
+
+    expect(screen.getByText('ready')).toBeInTheDocument();
+    expect(screen.getByText('complete')).toBeInTheDocument();
+    expect(screen.getByText('archived')).toBeInTheDocument();
+    expect(screen.getByText('backlogged')).toBeInTheDocument();
+    expect(screen.getByText('unknown')).toBeInTheDocument();
+  });
+
+  it('handles large number of related tasks', () => {
+    const manyTasks: Task[] = Array.from({ length: 100 }, (_, i) => ({
+      id: i + 1,
+      prompt: `Task ${i + 1}`,
+      status: i % 4,
+      status_label: ['ready', 'complete', 'archived', 'backlogged'][
+        i % 4
+      ] as Task['status_label'],
+      createdat: '2025-01-01T12:00:00Z',
+      updatedat: '2025-01-01T13:00:00Z',
+      order: i,
+      uuid: null,
+    }));
+
+    mockUseRelatedTasksQuery.mockReturnValue({
+      data: { tasks: manyTasks },
+      isLoading: false,
+      isError: false,
+      error: null,
+      isSuccess: true,
+      isFetching: false,
+      refetch: vi.fn(),
+      dataUpdatedAt: Date.now(),
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      failureReason: null,
+      fetchStatus: 'idle',
+      status: 'success',
+      isInitialLoading: false,
+      isLoadingError: false,
+      isPaused: false,
+      isPlaceholderData: false,
+      isRefetchError: false,
+      isRefetching: false,
+      isStale: false,
+      isFetched: true,
+      isFetchedAfterMount: true,
+    } as unknown as ReturnType<typeof useRelatedTasksQuery>);
+
+    render(<RelatedTasksPanel conversationId="conv-123" />);
+
+    expect(screen.getByText('Task 1')).toBeInTheDocument();
+    expect(screen.getByText('Task 100')).toBeInTheDocument();
+    expect(screen.getByTestId('related-task-1')).toBeInTheDocument();
+    expect(screen.getByTestId('related-task-100')).toBeInTheDocument();
+  });
 });

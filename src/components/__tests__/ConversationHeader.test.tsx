@@ -77,4 +77,97 @@ describe('ConversationHeader', () => {
     const timestamps = screen.getAllByText(/2025/);
     expect(timestamps.length).toBeGreaterThan(0);
   });
+
+  it('handles missing optional metadata gracefully', () => {
+    render(<ConversationHeader conversation={mockConversation} />);
+
+    // Should render conversation ID as title when title is not provided
+    expect(screen.getByText('Conversation ID: conv-123')).toBeInTheDocument();
+    // Should not render user section
+    expect(screen.queryByTestId('conversation-user')).not.toBeInTheDocument();
+    // Should not render status
+    expect(screen.queryByTestId('conversation-status')).not.toBeInTheDocument();
+  });
+
+  it('handles all optional metadata provided', () => {
+    render(
+      <ConversationHeader
+        conversation={mockConversation}
+        title="Custom Title"
+        user="test@example.com"
+        status="active"
+      />
+    );
+
+    expect(screen.getByText('Custom Title')).toBeInTheDocument();
+    expect(screen.getByText('User: test@example.com')).toBeInTheDocument();
+    expect(screen.getByText('active')).toBeInTheDocument();
+  });
+
+  it('handles partial optional metadata (only title)', () => {
+    render(
+      <ConversationHeader conversation={mockConversation} title="Only Title" />
+    );
+
+    expect(screen.getByText('Only Title')).toBeInTheDocument();
+    expect(screen.queryByTestId('conversation-user')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('conversation-status')).not.toBeInTheDocument();
+  });
+
+  it('handles partial optional metadata (only user)', () => {
+    render(
+      <ConversationHeader
+        conversation={mockConversation}
+        user="onlyuser@example.com"
+      />
+    );
+
+    expect(screen.getByText('Conversation ID: conv-123')).toBeInTheDocument();
+    expect(screen.getByText('User: onlyuser@example.com')).toBeInTheDocument();
+    expect(screen.queryByTestId('conversation-status')).not.toBeInTheDocument();
+  });
+
+  it('handles partial optional metadata (only status)', () => {
+    render(
+      <ConversationHeader conversation={mockConversation} status="pending" />
+    );
+
+    expect(screen.getByText('Conversation ID: conv-123')).toBeInTheDocument();
+    expect(screen.queryByTestId('conversation-user')).not.toBeInTheDocument();
+    expect(screen.getByText('pending')).toBeInTheDocument();
+  });
+
+  it('handles empty string optional metadata', () => {
+    render(
+      <ConversationHeader
+        conversation={mockConversation}
+        title=""
+        user=""
+        status=""
+      />
+    );
+
+    // Empty strings should be treated as falsy, so should fall back to defaults
+    expect(screen.getByText('Conversation ID: conv-123')).toBeInTheDocument();
+    // Empty strings are falsy in JS, so these should not render
+    expect(screen.queryByTestId('conversation-user')).not.toBeInTheDocument();
+    // Status with empty string should not render (falsy check)
+    expect(screen.queryByTestId('conversation-status')).not.toBeInTheDocument();
+  });
+
+  it('handles invalid date strings in timestamps gracefully', () => {
+    const conversationWithInvalidDates: Conversation = {
+      conversationId: 'conv-invalid-dates',
+      messages: [],
+      createdAt: 'invalid-date',
+      lastAccessedAt: 'also-invalid',
+    };
+
+    render(<ConversationHeader conversation={conversationWithInvalidDates} />);
+
+    // Should still render the component even with invalid dates
+    expect(screen.getByText(/conv-invalid-dates/i)).toBeInTheDocument();
+    expect(screen.getByText(/Created:/)).toBeInTheDocument();
+    expect(screen.getByText(/Last Accessed:/)).toBeInTheDocument();
+  });
 });

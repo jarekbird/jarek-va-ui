@@ -176,4 +176,94 @@ describe('ConversationListItem', () => {
     expect(meta?.querySelector('.conversation-id')).toBeInTheDocument();
     expect(meta?.querySelector('.conversation-date')).toBeInTheDocument();
   });
+
+  it('handles conversation with empty messages array', () => {
+    const emptyMessagesConversation: Conversation = {
+      conversationId: 'conv-empty',
+      messages: [],
+      createdAt: '2025-01-01T00:00:00Z',
+      lastAccessedAt: '2025-01-02T00:00:00Z',
+    };
+
+    render(
+      <MemoryRouter>
+        <ConversationListItem
+          conversation={emptyMessagesConversation}
+          isActive={false}
+          onSelectConversation={mockOnSelect}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/conv-empty/i)).toBeInTheDocument();
+    expect(screen.getByText(/Last accessed:/i)).toBeInTheDocument();
+  });
+
+  it('handles conversation with invalid date strings', () => {
+    const invalidDateConversation: Conversation = {
+      conversationId: 'conv-invalid-date',
+      messages: [],
+      createdAt: 'invalid-date',
+      lastAccessedAt: 'also-invalid',
+    };
+
+    render(
+      <MemoryRouter>
+        <ConversationListItem
+          conversation={invalidDateConversation}
+          isActive={false}
+          onSelectConversation={mockOnSelect}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/conv-invalid-date/i)).toBeInTheDocument();
+    // Should still render even with invalid dates
+    expect(screen.getByText(/Last accessed:/i)).toBeInTheDocument();
+  });
+
+  it('handles conversation with very long conversation ID', () => {
+    const longIdConversation: Conversation = {
+      conversationId: 'a'.repeat(200),
+      messages: [],
+      createdAt: '2025-01-01T00:00:00Z',
+      lastAccessedAt: '2025-01-02T00:00:00Z',
+    };
+
+    render(
+      <MemoryRouter>
+        <ConversationListItem
+          conversation={longIdConversation}
+          isActive={false}
+          onSelectConversation={mockOnSelect}
+        />
+      </MemoryRouter>
+    );
+
+    expect(
+      screen.getByText(new RegExp('a'.repeat(200), 'i'))
+    ).toBeInTheDocument();
+  });
+
+  it('handles conversation with same createdAt and lastAccessedAt', () => {
+    const sameDateConversation: Conversation = {
+      conversationId: 'conv-same-date',
+      messages: [],
+      createdAt: '2025-01-01T00:00:00Z',
+      lastAccessedAt: '2025-01-01T00:00:00Z',
+    };
+
+    render(
+      <MemoryRouter>
+        <ConversationListItem
+          conversation={sameDateConversation}
+          isActive={false}
+          onSelectConversation={mockOnSelect}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/conv-same-date/i)).toBeInTheDocument();
+    expect(screen.getByText(/Last accessed:/i)).toBeInTheDocument();
+  });
 });
