@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Conversation, Task } from '../types';
+import type { Conversation } from '../types';
 import { sendMessage, getConversationById } from '../api/conversations';
 import { ConversationHeader } from './ConversationHeader';
 import { MessageList } from './MessageList';
@@ -8,7 +8,6 @@ import { RelatedTasksPanel } from './RelatedTasksPanel';
 interface ConversationDetailsProps {
   conversation: Conversation | null;
   onConversationUpdate?: (conversation: Conversation) => void;
-  relatedTasks?: Task[];
   title?: string;
   user?: string;
   status?: string;
@@ -17,7 +16,6 @@ interface ConversationDetailsProps {
 export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
   conversation,
   onConversationUpdate,
-  relatedTasks = [],
   title,
   user,
   status,
@@ -181,10 +179,7 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
         </div>
       </form>
       {conversation && (
-        <RelatedTasksPanel
-          tasks={relatedTasks}
-          conversationId={conversation.conversationId}
-        />
+        <RelatedTasksPanel conversationId={conversation.conversationId} />
       )}
     </div>
   );

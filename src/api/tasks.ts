@@ -14,6 +14,8 @@ export interface FetchTasksParams {
   status?: number;
   /** Filter by status label */
   status_label?: 'ready' | 'complete' | 'archived' | 'backlogged' | 'unknown';
+  /** Filter by conversation ID */
+  conversation_id?: string;
   /** Sort order */
   sortBy?: 'createdat' | 'updatedat' | 'order';
   /** Sort direction */
@@ -56,6 +58,9 @@ export async function fetchTasks(
   }
   if (params?.status_label) {
     queryParams.append('status_label', params.status_label);
+  }
+  if (params?.conversation_id) {
+    queryParams.append('conversation_id', params.conversation_id);
   }
   if (params?.sortBy) {
     queryParams.append('sortBy', params.sortBy);

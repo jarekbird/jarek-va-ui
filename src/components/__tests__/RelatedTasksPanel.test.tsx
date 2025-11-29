@@ -1,7 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '../../test/test-utils';
 import { RelatedTasksPanel } from '../RelatedTasksPanel';
+import { useRelatedTasksQuery } from '../../hooks/useRelatedTasksQuery';
 import type { Task } from '../../types';
+
+// Mock the useRelatedTasksQuery hook
+vi.mock('../../hooks/useRelatedTasksQuery', () => ({
+  useRelatedTasksQuery: vi.fn(),
+}));
+
+const mockUseRelatedTasksQuery = vi.mocked(useRelatedTasksQuery);
 
 describe('RelatedTasksPanel', () => {
   const mockTasks: Task[] = [
@@ -27,15 +35,134 @@ describe('RelatedTasksPanel', () => {
     },
   ];
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders loading state', () => {
+    mockUseRelatedTasksQuery.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+      error: null,
+      isSuccess: false,
+      isFetching: false,
+      refetch: vi.fn(),
+      dataUpdatedAt: 0,
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      failureReason: null,
+      fetchStatus: 'fetching',
+      status: 'pending',
+      isInitialLoading: true,
+      isLoadingError: false,
+      isPaused: false,
+      isPlaceholderData: false,
+      isRefetchError: false,
+      isRefetching: false,
+      isStale: false,
+      isFetched: false,
+      isFetchedAfterMount: false,
+    } as unknown as ReturnType<typeof useRelatedTasksQuery>);
+
+    render(<RelatedTasksPanel conversationId="conv-123" />);
+
+    expect(screen.getByText('Related Tasks')).toBeInTheDocument();
+    expect(document.querySelector('.loading-spinner')).toBeInTheDocument();
+  });
+
+  it('renders error state', () => {
+    const errorMessage = 'Failed to load related tasks';
+    mockUseRelatedTasksQuery.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error(errorMessage),
+      isSuccess: false,
+      isFetching: false,
+      refetch: vi.fn(),
+      dataUpdatedAt: 0,
+      errorUpdatedAt: Date.now(),
+      failureCount: 1,
+      failureReason: new Error(errorMessage),
+      fetchStatus: 'idle',
+      status: 'error',
+      isInitialLoading: false,
+      isLoadingError: true,
+      isPaused: false,
+      isPlaceholderData: false,
+      isRefetchError: false,
+      isRefetching: false,
+      isStale: false,
+      isFetched: true,
+      isFetchedAfterMount: true,
+    } as unknown as ReturnType<typeof useRelatedTasksQuery>);
+
+    render(<RelatedTasksPanel conversationId="conv-123" />);
+
+    expect(screen.getByText('Related Tasks')).toBeInTheDocument();
+    expect(screen.getByText(errorMessage)).toBeInTheDocument();
+  });
+
   it('renders empty state when no tasks', () => {
-    render(<RelatedTasksPanel tasks={[]} conversationId="conv-123" />);
+    mockUseRelatedTasksQuery.mockReturnValue({
+      data: { tasks: [] },
+      isLoading: false,
+      isError: false,
+      error: null,
+      isSuccess: true,
+      isFetching: false,
+      refetch: vi.fn(),
+      dataUpdatedAt: Date.now(),
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      failureReason: null,
+      fetchStatus: 'idle',
+      status: 'success',
+      isInitialLoading: false,
+      isLoadingError: false,
+      isPaused: false,
+      isPlaceholderData: false,
+      isRefetchError: false,
+      isRefetching: false,
+      isStale: false,
+      isFetched: true,
+      isFetchedAfterMount: true,
+    } as unknown as ReturnType<typeof useRelatedTasksQuery>);
+
+    render(<RelatedTasksPanel conversationId="conv-123" />);
 
     expect(screen.getByText('Related Tasks')).toBeInTheDocument();
     expect(screen.getByText('No related tasks found.')).toBeInTheDocument();
   });
 
   it('renders list of tasks', () => {
-    render(<RelatedTasksPanel tasks={mockTasks} conversationId="conv-123" />);
+    mockUseRelatedTasksQuery.mockReturnValue({
+      data: { tasks: mockTasks },
+      isLoading: false,
+      isError: false,
+      error: null,
+      isSuccess: true,
+      isFetching: false,
+      refetch: vi.fn(),
+      dataUpdatedAt: Date.now(),
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      failureReason: null,
+      fetchStatus: 'idle',
+      status: 'success',
+      isInitialLoading: false,
+      isLoadingError: false,
+      isPaused: false,
+      isPlaceholderData: false,
+      isRefetchError: false,
+      isRefetching: false,
+      isStale: false,
+      isFetched: true,
+      isFetchedAfterMount: true,
+    } as unknown as ReturnType<typeof useRelatedTasksQuery>);
+
+    render(<RelatedTasksPanel conversationId="conv-123" />);
 
     expect(screen.getByText('Related Tasks')).toBeInTheDocument();
     expect(screen.getByText('Test task 1')).toBeInTheDocument();
@@ -43,7 +170,32 @@ describe('RelatedTasksPanel', () => {
   });
 
   it('renders task links with correct hrefs', () => {
-    render(<RelatedTasksPanel tasks={mockTasks} conversationId="conv-123" />);
+    mockUseRelatedTasksQuery.mockReturnValue({
+      data: { tasks: mockTasks },
+      isLoading: false,
+      isError: false,
+      error: null,
+      isSuccess: true,
+      isFetching: false,
+      refetch: vi.fn(),
+      dataUpdatedAt: Date.now(),
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      failureReason: null,
+      fetchStatus: 'idle',
+      status: 'success',
+      isInitialLoading: false,
+      isLoadingError: false,
+      isPaused: false,
+      isPlaceholderData: false,
+      isRefetchError: false,
+      isRefetching: false,
+      isStale: false,
+      isFetched: true,
+      isFetchedAfterMount: true,
+    } as unknown as ReturnType<typeof useRelatedTasksQuery>);
+
+    render(<RelatedTasksPanel conversationId="conv-123" />);
 
     const link1 = screen.getByTestId('related-task-1');
     const link2 = screen.getByTestId('related-task-2');
@@ -53,14 +205,64 @@ describe('RelatedTasksPanel', () => {
   });
 
   it('renders task IDs correctly', () => {
-    render(<RelatedTasksPanel tasks={mockTasks} conversationId="conv-123" />);
+    mockUseRelatedTasksQuery.mockReturnValue({
+      data: { tasks: mockTasks },
+      isLoading: false,
+      isError: false,
+      error: null,
+      isSuccess: true,
+      isFetching: false,
+      refetch: vi.fn(),
+      dataUpdatedAt: Date.now(),
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      failureReason: null,
+      fetchStatus: 'idle',
+      status: 'success',
+      isInitialLoading: false,
+      isLoadingError: false,
+      isPaused: false,
+      isPlaceholderData: false,
+      isRefetchError: false,
+      isRefetching: false,
+      isStale: false,
+      isFetched: true,
+      isFetchedAfterMount: true,
+    } as unknown as ReturnType<typeof useRelatedTasksQuery>);
+
+    render(<RelatedTasksPanel conversationId="conv-123" />);
 
     expect(screen.getByText('Task #1')).toBeInTheDocument();
     expect(screen.getByText('Task #2')).toBeInTheDocument();
   });
 
   it('renders task status labels correctly', () => {
-    render(<RelatedTasksPanel tasks={mockTasks} conversationId="conv-123" />);
+    mockUseRelatedTasksQuery.mockReturnValue({
+      data: { tasks: mockTasks },
+      isLoading: false,
+      isError: false,
+      error: null,
+      isSuccess: true,
+      isFetching: false,
+      refetch: vi.fn(),
+      dataUpdatedAt: Date.now(),
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      failureReason: null,
+      fetchStatus: 'idle',
+      status: 'success',
+      isInitialLoading: false,
+      isLoadingError: false,
+      isPaused: false,
+      isPlaceholderData: false,
+      isRefetchError: false,
+      isRefetching: false,
+      isStale: false,
+      isFetched: true,
+      isFetchedAfterMount: true,
+    } as unknown as ReturnType<typeof useRelatedTasksQuery>);
+
+    render(<RelatedTasksPanel conversationId="conv-123" />);
 
     const readyStatus = screen.getByText('ready');
     const completeStatus = screen.getByText('complete');
@@ -72,9 +274,67 @@ describe('RelatedTasksPanel', () => {
   });
 
   it('renders task prompts', () => {
-    render(<RelatedTasksPanel tasks={mockTasks} conversationId="conv-123" />);
+    mockUseRelatedTasksQuery.mockReturnValue({
+      data: { tasks: mockTasks },
+      isLoading: false,
+      isError: false,
+      error: null,
+      isSuccess: true,
+      isFetching: false,
+      refetch: vi.fn(),
+      dataUpdatedAt: Date.now(),
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      failureReason: null,
+      fetchStatus: 'idle',
+      status: 'success',
+      isInitialLoading: false,
+      isLoadingError: false,
+      isPaused: false,
+      isPlaceholderData: false,
+      isRefetchError: false,
+      isRefetching: false,
+      isStale: false,
+      isFetched: true,
+      isFetchedAfterMount: true,
+    } as unknown as ReturnType<typeof useRelatedTasksQuery>);
+
+    render(<RelatedTasksPanel conversationId="conv-123" />);
 
     expect(screen.getByText('Test task 1')).toBeInTheDocument();
     expect(screen.getByText('Test task 2')).toBeInTheDocument();
+  });
+
+  it('calls useRelatedTasksQuery with correct conversationId', () => {
+    mockUseRelatedTasksQuery.mockReturnValue({
+      data: { tasks: [] },
+      isLoading: false,
+      isError: false,
+      error: null,
+      isSuccess: true,
+      isFetching: false,
+      refetch: vi.fn(),
+      dataUpdatedAt: Date.now(),
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      failureReason: null,
+      fetchStatus: 'idle',
+      status: 'success',
+      isInitialLoading: false,
+      isLoadingError: false,
+      isPaused: false,
+      isPlaceholderData: false,
+      isRefetchError: false,
+      isRefetching: false,
+      isStale: false,
+      isFetched: true,
+      isFetchedAfterMount: true,
+    } as unknown as ReturnType<typeof useRelatedTasksQuery>);
+
+    render(<RelatedTasksPanel conversationId="conv-456" />);
+
+    expect(mockUseRelatedTasksQuery).toHaveBeenCalledWith('conv-456', {
+      enabled: true,
+    });
   });
 });

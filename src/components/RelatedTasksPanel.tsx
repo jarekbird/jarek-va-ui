@@ -1,23 +1,58 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import type { Task } from '../types';
+import { useRelatedTasksQuery } from '../hooks/useRelatedTasksQuery';
+import { LoadingSpinner } from './LoadingSpinner';
+import { ErrorMessage } from './ErrorMessage';
 import './RelatedTasksPanel.css';
 
 interface RelatedTasksPanelProps {
-  tasks: Task[];
   conversationId: string;
 }
 
 /**
  * Component that displays tasks linked to a conversation.
  * Shows a list of related tasks with links to their detail pages.
+ * Fetches tasks using the useRelatedTasksQuery hook.
  */
 export const RelatedTasksPanel: React.FC<RelatedTasksPanelProps> = ({
-  tasks,
-  // conversationId is kept in the interface for future API integration
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  conversationId: _conversationId,
+  conversationId,
 }) => {
+  const { data, isLoading, isError, error } = useRelatedTasksQuery(
+    conversationId,
+    {
+      enabled: !!conversationId,
+    }
+  );
+
+  const tasks = data?.tasks || [];
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="related-tasks-panel" data-testid="related-tasks-panel">
+        <h3 className="related-tasks-panel__title">Related Tasks</h3>
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  // Error state
+  if (isError) {
+    return (
+      <div className="related-tasks-panel" data-testid="related-tasks-panel">
+        <h3 className="related-tasks-panel__title">Related Tasks</h3>
+        <ErrorMessage
+          message={
+            error instanceof Error
+              ? error.message
+              : 'Failed to load related tasks'
+          }
+        />
+      </div>
+    );
+  }
+
+  // Empty state
   if (tasks.length === 0) {
     return (
       <div className="related-tasks-panel" data-testid="related-tasks-panel">
@@ -27,6 +62,7 @@ export const RelatedTasksPanel: React.FC<RelatedTasksPanelProps> = ({
     );
   }
 
+  // Tasks list
   return (
     <div className="related-tasks-panel" data-testid="related-tasks-panel">
       <h3 className="related-tasks-panel__title">Related Tasks</h3>
