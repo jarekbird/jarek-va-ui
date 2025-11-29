@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { Layout } from './components/layout/Layout';
 import { ConversationListView } from './components/ConversationListView';
 import { ConversationDetailView } from './components/ConversationDetailView';
 import { TaskListView } from './components/TaskListView';
@@ -8,15 +9,17 @@ import './styles/App.css';
 
 const App: React.FC = () => {
   return (
-    <Routes>
-      <Route path="/conversations" element={<ConversationListView />} />
-      <Route
-        path="/conversations/:conversationId"
-        element={<ConversationDetailView />}
-      />
-      <Route path="/tasks" element={<TaskListView />} />
-      <Route path="/tasks/:taskId" element={<TaskDetailView />} />
-    </Routes>
+    <Layout>
+      <Routes>
+        <Route path="/conversations" element={<ConversationListView />} />
+        <Route
+          path="/conversations/:conversationId"
+          element={<ConversationDetailView />}
+        />
+        <Route path="/tasks" element={<TaskListView />} />
+        <Route path="/tasks/:taskId" element={<TaskDetailView />} />
+      </Routes>
+    </Layout>
   );
 };
 

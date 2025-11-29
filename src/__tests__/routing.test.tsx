@@ -32,7 +32,12 @@ describe('Routing', () => {
           <App />
         </MemoryRouter>
       );
-      expect(screen.getByText('Tasks')).toBeInTheDocument();
+      // Check for h1 heading in main content (not navigation)
+      const headings = screen.getAllByText('Tasks');
+      expect(headings.length).toBeGreaterThan(0);
+      // The h1 should be in the document
+      const h1 = screen.getByRole('heading', { name: 'Tasks' });
+      expect(h1).toBeInTheDocument();
     });
 
     it('renders TaskDetailView at /tasks/:taskId', () => {
@@ -42,7 +47,9 @@ describe('Routing', () => {
         </MemoryRouter>
       );
       // TaskDetailView should be rendered (it will show loading/error initially)
-      expect(screen.queryByText('Tasks')).not.toBeInTheDocument();
+      // Navigation will have "Tasks" link, but the h1 heading should not be present
+      const headings = screen.queryAllByRole('heading', { name: 'Tasks' });
+      expect(headings.length).toBe(0);
     });
   });
 
