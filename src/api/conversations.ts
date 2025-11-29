@@ -138,6 +138,19 @@ export async function listConversations(): Promise<Conversation[]> {
   return response.json();
 }
 
+/**
+ * Fetches a single conversation by ID.
+ * This is an alias for getConversationById to maintain consistency with fetchConversations.
+ *
+ * @param conversationId - The ID of the conversation to fetch
+ * @returns Promise resolving to the conversation
+ */
+export async function fetchConversation(
+  conversationId: string
+): Promise<Conversation> {
+  return getConversationById(conversationId);
+}
+
 export async function getConversationById(
   conversationId: string
 ): Promise<Conversation> {
