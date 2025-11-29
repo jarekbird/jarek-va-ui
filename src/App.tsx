@@ -6,6 +6,7 @@ import { AgentConversationListView } from './components/AgentConversationListVie
 import { AgentConversationDetailView } from './components/AgentConversationDetailView';
 import { AgentConfigView } from './components/AgentConfigView';
 import { Dashboard } from './components/Dashboard';
+import { TaskDashboard } from './components/TaskDashboard';
 import { TaskListView } from './components/TaskListView';
 import { TaskDetailView } from './components/TaskDetailView';
 import { isElevenLabsEnabled } from './utils/feature-flags';
@@ -41,6 +42,7 @@ const App: React.FC = () => {
           />
         </>
       )}
+      <Route path="/task-dashboard" element={<TaskDashboard />} />
       <Route path="/tasks" element={<TaskListView />} />
       <Route path="/task/:id" element={<TaskDetailView />} />
     </Routes>

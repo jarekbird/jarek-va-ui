@@ -1,0 +1,109 @@
+.task-management-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+}
+
+.task-management-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.task-management-panel__header h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.task-management-panel__refresh {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.task-management-panel__refresh:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.task-management-panel__add-task {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.task-management-panel__input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.task-management-panel__input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #111827;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.task-management-panel__input:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.task-management-panel__input:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+}
+
+.task-management-panel__add-button {
+  padding: 0.5rem 1rem;
+  background-color: #3498db;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.task-management-panel__add-button:hover:not(:disabled) {
+  background-color: #2980b9;
+}
+
+.task-management-panel__add-button:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+
+.task-management-panel__list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.task-management-panel__empty {
+  text-align: center;
+  color: #6b7280;
+  padding: 2rem;
+}
+

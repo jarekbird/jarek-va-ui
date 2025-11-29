@@ -49,6 +49,12 @@ export const Navigation: React.FC = () => {
       >
         Tasks
       </Link>
+      <Link
+        to="/task-dashboard"
+        className={`nav-link ${isActive('/task-dashboard') ? 'active' : ''}`}
+      >
+        Task Dashboard
+      </Link>
     </nav>
   );
 };

@@ -37,6 +37,17 @@ export default defineConfig({
         target: 'http://cursor-runner:3001',
         changeOrigin: true,
       },
+      // Proxy repositories API to cursor-runner backend
+      '/repositories/api': {
+        target: 'http://cursor-runner:3001',
+        changeOrigin: true,
+      },
+      // Proxy cursor-agents API endpoints
+      '/agents': {
+        target: 'http://cursor-agents:3002',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/agents/, ''),
+      },
       // Proxy ElevenLabs agent API endpoints (when using relative paths)
       '/signed-url': {
         target: 'http://elevenlabs-agent:3004',

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { TaskDetails } from './TaskDetails';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
+import { Navigation } from './Navigation';
 import { getTaskById } from '../api/tasks';
 import type { Task } from '../types';
 
@@ -44,6 +45,7 @@ export const TaskDetailView: React.FC = () => {
 
   return (
     <div className="container">
+      <Navigation />
       <div style={{ marginBottom: '1rem' }}>
         <Link to="/tasks" style={{ color: '#3498db', textDecoration: 'none' }}>
           ← Back to Tasks

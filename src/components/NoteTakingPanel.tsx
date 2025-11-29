@@ -16,6 +16,7 @@ import './NoteTakingPanel.css';
 export interface NoteTakingPanelProps {
   conversationId?: string;
   onConversationSelect?: (conversationId: string) => void;
+  onConversationUpdate?: (conversation: Conversation) => void;
 }
 
 /**
@@ -25,6 +26,7 @@ export interface NoteTakingPanelProps {
 export const NoteTakingPanel: React.FC<NoteTakingPanelProps> = ({
   conversationId,
   onConversationSelect,
+  onConversationUpdate,
 }) => {
   const [selectedConversationId, setSelectedConversationId] = useState<string | undefined>(
     conversationId
@@ -88,7 +90,12 @@ export const NoteTakingPanel: React.FC<NoteTakingPanelProps> = ({
           {conversation && !loading && !error && (
             <ConversationDetails
               conversation={conversation}
-              onConversationUpdate={setConversation}
+              onConversationUpdate={(updatedConversation) => {
+                setConversation(updatedConversation);
+                if (onConversationUpdate) {
+                  onConversationUpdate(updatedConversation);
+                }
+              }}
               repository={(conversation as any).metadata?.repository as string | undefined}
             />
           )}

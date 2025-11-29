@@ -14,10 +14,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { VoiceIndicator } from './VoiceIndicator';
 import { AgentChatPanel } from './AgentChatPanel';
 import { NoteTakingPanel } from './NoteTakingPanel';
+import { WorkingDirectoryBrowser, type WorkingDirectoryBrowserRef } from './WorkingDirectoryBrowser';
 import { ElevenLabsVoiceService, type ConnectionStatus, type AgentMode } from '../services/elevenlabs-voice';
 import { isElevenLabsEnabled } from '../utils/feature-flags';
 import { getAgentConfig } from '../api/elevenlabs';
 import { ErrorMessage } from './ErrorMessage';
+import type { Conversation } from '../types';
 import './Dashboard.css';
 
 /**
@@ -32,6 +34,7 @@ export const Dashboard: React.FC = () => {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isLoadingAgentConfig, setIsLoadingAgentConfig] = useState<boolean>(true);
   const voiceServiceRef = useRef<ElevenLabsVoiceService | null>(null);
+  const fileBrowserRef = useRef<WorkingDirectoryBrowserRef>(null);
 
   // Load agent configuration
   useEffect(() => {
@@ -106,6 +109,14 @@ export const Dashboard: React.FC = () => {
     }
   }, [selectedAgentConversationId]);
 
+  // Handle note conversation updates - refresh file browser
+  const handleNoteConversationUpdate = (conversation: Conversation) => {
+    // Refresh file browser when note conversation is updated
+    if (fileBrowserRef.current) {
+      fileBrowserRef.current.refresh();
+    }
+  };
+
   const handleConnect = async () => {
     if (!voiceServiceRef.current) {
       setConnectionError('Voice service not initialized');
@@ -145,7 +156,10 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="dashboard" data-testid="dashboard">
       <div className="dashboard__content">
-        <div className="dashboard__left">
+        <div className="dashboard__file-browser">
+          <WorkingDirectoryBrowser ref={fileBrowserRef} />
+        </div>
+        <div className="dashboard__middle">
           <div className="dashboard__voice-indicator">
             <VoiceIndicator 
               status={voiceStatus} 
@@ -182,6 +196,7 @@ export const Dashboard: React.FC = () => {
           <NoteTakingPanel
             conversationId={selectedNoteConversationId}
             onConversationSelect={setSelectedNoteConversationId}
+            onConversationUpdate={handleNoteConversationUpdate}
           />
         </div>
       </div>
