@@ -21,8 +21,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   // Determine active conversation from URL if not provided
   const currentConversationId =
     activeConversationId ||
-    (location.pathname.startsWith('/conversation/')
-      ? location.pathname.split('/conversation/')[1]
+    (location.pathname.startsWith('/conversations/')
+      ? location.pathname.split('/conversations/')[1]
       : null);
 
   return (
@@ -32,7 +32,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
         return (
           <li key={conv.conversationId} className={isActive ? 'active' : ''}>
             <Link
-              to={`/conversation/${conv.conversationId}`}
+              to={`/conversations/${conv.conversationId}`}
               style={{
                 textDecoration: 'none',
                 color: 'inherit',

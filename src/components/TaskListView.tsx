@@ -34,8 +34,8 @@ export const TaskListView: React.FC = () => {
   };
 
   // Extract task ID from URL if present (for highlighting active task)
-  const activeTaskId = location.pathname.startsWith('/task/')
-    ? parseInt(location.pathname.split('/task/')[1], 10)
+  const activeTaskId = location.pathname.startsWith('/tasks/')
+    ? parseInt(location.pathname.split('/tasks/')[1], 10)
     : null;
 
   const handleSelectTask = (taskId: number) => {

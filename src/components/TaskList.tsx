@@ -48,8 +48,8 @@ export const TaskList: React.FC<TaskListProps> = ({
   // Determine active task from URL if not provided
   const currentTaskId =
     activeTaskId ||
-    (location.pathname.startsWith('/task/')
-      ? parseInt(location.pathname.split('/task/')[1], 10)
+    (location.pathname.startsWith('/tasks/')
+      ? parseInt(location.pathname.split('/tasks/')[1], 10)
       : null);
 
   // Group tasks by status for better organization
@@ -107,7 +107,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                 return (
                   <li key={task.id} className={isActive ? 'active' : ''}>
                     <Link
-                      to={`/task/${task.id}`}
+                      to={`/tasks/${task.id}`}
                       style={{
                         textDecoration: 'none',
                         color: 'inherit',

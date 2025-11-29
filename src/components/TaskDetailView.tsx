@@ -7,22 +7,22 @@ import { getTaskById } from '../api/tasks';
 import type { Task } from '../types';
 
 export const TaskDetailView: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { taskId } = useParams<{ taskId: string }>();
   const [task, setTask] = React.useState<Task | null>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (id) {
-      const taskId = parseInt(id, 10);
-      if (!isNaN(taskId)) {
-        loadTask(taskId);
+    if (taskId) {
+      const id = parseInt(taskId, 10);
+      if (!isNaN(id)) {
+        loadTask(id);
       } else {
         setError('Invalid task ID');
         setLoading(false);
       }
     }
-  }, [id]);
+  }, [taskId]);
 
   const loadTask = async (taskId: number) => {
     try {

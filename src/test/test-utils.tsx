@@ -10,7 +10,10 @@ import { MemoryRouter } from 'react-router-dom';
 const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
   // Use MemoryRouter in tests without basename for simplicity
   // Components that need routing will work with routes relative to "/"
-  return <MemoryRouter initialEntries={['/']}>{children}</MemoryRouter>;
+  // Default to /conversations route
+  return (
+    <MemoryRouter initialEntries={['/conversations']}>{children}</MemoryRouter>
+  );
 };
 
 const customRender = (

@@ -36,8 +36,8 @@ export const ConversationListView: React.FC = () => {
   };
 
   // Extract conversation ID from URL if present (for highlighting active conversation)
-  const activeConversationId = location.pathname.startsWith('/conversation/')
-    ? location.pathname.split('/conversation/')[1]
+  const activeConversationId = location.pathname.startsWith('/conversations/')
+    ? location.pathname.split('/conversations/')[1]
     : null;
 
   const handleSelectConversation = (conversationId: string) => {
@@ -59,7 +59,7 @@ export const ConversationListView: React.FC = () => {
       const response = await createConversation({ queueType: 'api' });
       if (response.success && response.conversationId) {
         // Navigate to the new conversation
-        navigate(`/conversation/${response.conversationId}`);
+        navigate(`/conversations/${response.conversationId}`);
         // Reload conversations list to include the new one
         await loadConversations();
       } else {

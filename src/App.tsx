@@ -9,13 +9,13 @@ import './styles/App.css';
 const App: React.FC = () => {
   return (
     <Routes>
-      <Route path="/" element={<ConversationListView />} />
+      <Route path="/conversations" element={<ConversationListView />} />
       <Route
-        path="/conversation/:conversationId"
+        path="/conversations/:conversationId"
         element={<ConversationDetailView />}
       />
       <Route path="/tasks" element={<TaskListView />} />
-      <Route path="/task/:id" element={<TaskDetailView />} />
+      <Route path="/tasks/:taskId" element={<TaskDetailView />} />
     </Routes>
   );
 };
