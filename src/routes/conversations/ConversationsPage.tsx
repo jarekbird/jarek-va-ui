@@ -1,21 +1,43 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ConversationList } from '../../components/ConversationList';
+import { ConversationFilters } from '../../components/ConversationFilters';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { ErrorMessage } from '../../components/ErrorMessage';
 import { useConversationsQuery } from '../../hooks/useConversationsQuery';
 import { createConversation } from '../../api/conversations';
+import type { ConversationFilterState } from '../../components/ConversationFilters';
+import type { Conversation } from '../../types';
 
 export const ConversationsPage: React.FC = () => {
   const [isCreating, setIsCreating] = React.useState<boolean>(false);
   const [createError, setCreateError] = React.useState<string | null>(null);
+  const [filters, setFilters] = React.useState<ConversationFilterState>({});
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Use the query hook to fetch conversations
-  const { data, isLoading, isError, error, refetch } = useConversationsQuery();
+  // Extract API params from filters (excluding search which is client-side only)
+  const apiParams = React.useMemo(() => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { search, ...apiFilters } = filters;
+    return Object.keys(apiFilters).length > 0 ? apiFilters : undefined;
+  }, [filters]);
 
-  const conversations = data?.conversations ?? [];
+  // Use the query hook to fetch conversations with API-supported filters
+  const { data, isLoading, isError, error, refetch } =
+    useConversationsQuery(apiParams);
+
+  // Apply client-side search filter if provided
+  const conversations = React.useMemo(() => {
+    const allConversations = data?.conversations ?? [];
+    if (!filters.search) {
+      return allConversations;
+    }
+    const searchLower = filters.search.toLowerCase();
+    return allConversations.filter((conv: Conversation) =>
+      conv.conversationId.toLowerCase().includes(searchLower)
+    );
+  }, [data?.conversations, filters.search]);
 
   // Extract conversation ID from URL if present (for highlighting active conversation)
   const activeConversationId = location.pathname.startsWith('/conversations/')
@@ -80,6 +102,9 @@ export const ConversationsPage: React.FC = () => {
         </button>
       </div>
 
+      {/* Filters */}
+      <ConversationFilters filters={filters} onFiltersChange={setFilters} />
+
       {/* Loading state */}
       {isLoading && conversations.length === 0 && <LoadingSpinner />}
 
@@ -98,7 +123,9 @@ export const ConversationsPage: React.FC = () => {
       {/* Empty state */}
       {!isLoading && !errorMessage && conversations.length === 0 && (
         <p style={{ textAlign: 'center', color: '#7f8c8d' }}>
-          No conversations found.
+          {filters.search
+            ? 'No conversations match your search criteria.'
+            : 'No conversations found.'}
         </p>
       )}
     </div>
