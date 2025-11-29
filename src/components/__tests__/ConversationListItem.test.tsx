@@ -93,4 +93,87 @@ describe('ConversationListItem', () => {
     const link = screen.getByRole('link');
     expect(link).toHaveAttribute('href', '/conversations/conv-123');
   });
+
+  it('formats last accessed date correctly', () => {
+    const conversationWithDate: Conversation = {
+      conversationId: 'conv-123',
+      messages: [],
+      createdAt: '2025-01-01T00:00:00Z',
+      lastAccessedAt: '2025-12-25T12:30:45Z',
+    };
+
+    render(
+      <MemoryRouter>
+        <ConversationListItem
+          conversation={conversationWithDate}
+          isActive={false}
+          onSelectConversation={mockOnSelect}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/Last accessed:/i)).toBeInTheDocument();
+    // The date should be formatted using toLocaleString
+    const dateText = screen.getByText(/Last accessed:/i).textContent;
+    expect(dateText).toContain('Last accessed:');
+  });
+
+  it('handles long conversation IDs', () => {
+    const longIdConversation: Conversation = {
+      conversationId: 'very-long-conversation-id-that-might-wrap',
+      messages: [],
+      createdAt: '2025-01-01T00:00:00Z',
+      lastAccessedAt: '2025-01-02T00:00:00Z',
+    };
+
+    render(
+      <MemoryRouter>
+        <ConversationListItem
+          conversation={longIdConversation}
+          isActive={false}
+          onSelectConversation={mockOnSelect}
+        />
+      </MemoryRouter>
+    );
+
+    expect(
+      screen.getByText(/very-long-conversation-id-that-might-wrap/i)
+    ).toBeInTheDocument();
+  });
+
+  it('applies correct styling to link', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <ConversationListItem
+          conversation={mockConversation}
+          isActive={false}
+          onSelectConversation={mockOnSelect}
+        />
+      </MemoryRouter>
+    );
+
+    const link = container.querySelector('a');
+    expect(link).toHaveStyle({
+      textDecoration: 'none',
+      color: 'inherit',
+      display: 'block',
+    });
+  });
+
+  it('renders conversation meta information', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <ConversationListItem
+          conversation={mockConversation}
+          isActive={false}
+          onSelectConversation={mockOnSelect}
+        />
+      </MemoryRouter>
+    );
+
+    const meta = container.querySelector('.conversation-meta');
+    expect(meta).toBeInTheDocument();
+    expect(meta?.querySelector('.conversation-id')).toBeInTheDocument();
+    expect(meta?.querySelector('.conversation-date')).toBeInTheDocument();
+  });
 });

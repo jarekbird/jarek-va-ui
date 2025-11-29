@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '../../test/test-utils';
+import { render as renderWithRouter } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 import { ConversationList } from '../ConversationList';
 import type { Conversation } from '../../types';
@@ -117,5 +120,109 @@ describe('ConversationList', () => {
       expect(list).toBeInTheDocument();
       expect(list.children.length).toBe(0);
     }
+  });
+
+  it('determines active conversation from URL when activeConversationId is null', () => {
+    const onSelect = vi.fn();
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const { container } = renderWithRouter(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/conversations/conv-2']}>
+          <ConversationList
+            conversations={mockConversations}
+            activeConversationId={null}
+            onSelectConversation={onSelect}
+          />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    const activeItem = container.querySelector('li.active');
+    expect(activeItem).not.toBeNull();
+    if (activeItem) {
+      expect(activeItem).toHaveTextContent('conv-2');
+    }
+  });
+
+  it('prioritizes activeConversationId prop over URL', () => {
+    const onSelect = vi.fn();
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const { container } = renderWithRouter(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/conversations/conv-2']}>
+          <ConversationList
+            conversations={mockConversations}
+            activeConversationId="conv-1"
+            onSelectConversation={onSelect}
+          />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    const activeItem = container.querySelector('li.active');
+    expect(activeItem).not.toBeNull();
+    if (activeItem) {
+      expect(activeItem).toHaveTextContent('conv-1');
+    }
+  });
+
+  it('handles conversations with same createdAt date', () => {
+    const onSelect = vi.fn();
+    const conversationsWithSameDate: Conversation[] = [
+      {
+        conversationId: 'conv-1',
+        messages: [],
+        createdAt: '2025-01-01T00:00:00Z',
+        lastAccessedAt: '2025-01-02T00:00:00Z',
+      },
+      {
+        conversationId: 'conv-2',
+        messages: [],
+        createdAt: '2025-01-01T00:00:00Z',
+        lastAccessedAt: '2025-01-03T00:00:00Z',
+      },
+    ];
+    render(
+      <ConversationList
+        conversations={conversationsWithSameDate}
+        activeConversationId={null}
+        onSelectConversation={onSelect}
+      />
+    );
+
+    // Both should be rendered
+    expect(screen.getByText(/conv-1/i)).toBeInTheDocument();
+    expect(screen.getByText(/conv-2/i)).toBeInTheDocument();
+  });
+
+  it('renders all conversations in the list', () => {
+    const onSelect = vi.fn();
+    const manyConversations: Conversation[] = Array.from(
+      { length: 5 },
+      (_, i) => ({
+        conversationId: `conv-${i + 1}`,
+        messages: [],
+        createdAt: `2025-01-0${i + 1}T00:00:00Z`,
+        lastAccessedAt: `2025-01-0${i + 1}T00:00:00Z`,
+      })
+    );
+
+    render(
+      <ConversationList
+        conversations={manyConversations}
+        activeConversationId={null}
+        onSelectConversation={onSelect}
+      />
+    );
+
+    manyConversations.forEach((conv) => {
+      expect(
+        screen.getByText(new RegExp(conv.conversationId, 'i'))
+      ).toBeInTheDocument();
+    });
   });
 });
