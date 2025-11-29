@@ -1,21 +1,31 @@
 import React from 'react';
-import type { Conversation } from '../types';
+import type { Conversation, Task } from '../types';
 import { sendMessage, getConversationById } from '../api/conversations';
+import { ConversationHeader } from './ConversationHeader';
+import { MessageList } from './MessageList';
+import { RelatedTasksPanel } from './RelatedTasksPanel';
 
 interface ConversationDetailsProps {
   conversation: Conversation | null;
   onConversationUpdate?: (conversation: Conversation) => void;
+  relatedTasks?: Task[];
+  title?: string;
+  user?: string;
+  status?: string;
 }
 
 export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
   conversation,
   onConversationUpdate,
+  relatedTasks = [],
+  title,
+  user,
+  status,
 }) => {
   const [message, setMessage] = React.useState<string>('');
   const [isSending, setIsSending] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null);
   const [isPolling, setIsPolling] = React.useState<boolean>(false);
-  const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const pollingIntervalRef = React.useRef<number | null>(null);
   const lastMessageCountRef = React.useRef<number>(0);
 
@@ -23,13 +33,6 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
   React.useEffect(() => {
     if (conversation) {
       lastMessageCountRef.current = conversation.messages.length;
-    }
-  }, [conversation]);
-
-  // Scroll to bottom when messages change
-  React.useEffect(() => {
-    if (conversation && messagesEndRef.current?.scrollIntoView) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [conversation]);
 
@@ -144,33 +147,13 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
 
   return (
     <div className="conversation-details">
-      <h2>Conversation ID: {conversation.conversationId}</h2>
-      <div className="messages-container">
-        {conversation.messages.map((msg, index) => (
-          <div key={index} className={`message ${msg.role}`}>
-            <div className="message-role">{msg.role}</div>
-            <div className="message-content">
-              <pre>{msg.content}</pre>
-            </div>
-            <div className="message-timestamp">
-              {new Date(msg.timestamp).toLocaleString()}
-            </div>
-          </div>
-        ))}
-        {isPolling && (
-          <div className="message assistant">
-            <div className="message-role">assistant</div>
-            <div className="message-content">
-              <div className="typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+      <ConversationHeader
+        conversation={conversation}
+        title={title}
+        user={user}
+        status={status}
+      />
+      <MessageList messages={conversation.messages} isPolling={isPolling} />
       <form onSubmit={handleSubmit} className="message-form">
         {error && <div className="error-message">{error}</div>}
         <div className="message-input-container">
@@ -197,6 +180,12 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
           </button>
         </div>
       </form>
+      {conversation && (
+        <RelatedTasksPanel
+          tasks={relatedTasks}
+          conversationId={conversation.conversationId}
+        />
+      )}
     </div>
   );
 };

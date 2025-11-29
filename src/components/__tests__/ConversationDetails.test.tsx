@@ -49,8 +49,10 @@ describe('ConversationDetails', () => {
       <ConversationDetails conversation={mockConversation} />
     );
 
-    const userMessage = container.querySelector('.message.user');
-    const assistantMessage = container.querySelector('.message.assistant');
+    const userMessage = container.querySelector('.message-item--user');
+    const assistantMessage = container.querySelector(
+      '.message-item--assistant'
+    );
 
     expect(userMessage).not.toBeNull();
     expect(assistantMessage).not.toBeNull();
