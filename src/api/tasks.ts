@@ -133,6 +133,17 @@ export async function listTasks(): Promise<Task[]> {
   return response.json();
 }
 
+/**
+ * Fetches a single task by ID.
+ * This is an alias for getTaskById to maintain consistency with fetchTasks.
+ *
+ * @param taskId - The ID of the task to fetch
+ * @returns Promise resolving to the task
+ */
+export async function fetchTask(taskId: number): Promise<Task> {
+  return getTaskById(taskId);
+}
+
 export async function getTaskById(taskId: number): Promise<Task> {
   const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`);
 
