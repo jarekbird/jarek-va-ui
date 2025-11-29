@@ -87,32 +87,37 @@ describe('ConversationDetailPage Integration Tests', () => {
     ];
 
     // Mock fetch to handle both API calls based on URL
-    (mockFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
-      // Conversation API call
-      if (url.includes('/conversations/api/conv-1')) {
-        return Promise.resolve({
-          ok: true,
-          headers: {
-            get: (name: string) =>
-              name === 'content-type' ? 'application/json' : null,
-          },
-          json: async () => mockConversation,
-        });
+    (mockFetch as ReturnType<typeof vi.fn>).mockImplementation(
+      (url: string) => {
+        // Conversation API call
+        if (url.includes('/conversations/api/conv-1')) {
+          return Promise.resolve({
+            ok: true,
+            headers: {
+              get: (name: string) =>
+                name === 'content-type' ? 'application/json' : null,
+            },
+            json: async () => mockConversation,
+          });
+        }
+        // Related tasks API call
+        if (
+          url.includes('/api/tasks') &&
+          url.includes('conversation_id=conv-1')
+        ) {
+          return Promise.resolve({
+            ok: true,
+            headers: {
+              get: (name: string) =>
+                name === 'content-type' ? 'application/json' : null,
+            },
+            json: async () => ({ tasks: mockRelatedTasks }),
+          });
+        }
+        // Default fallback
+        return Promise.reject(new Error(`Unexpected URL: ${url}`));
       }
-      // Related tasks API call
-      if (url.includes('/api/tasks') && url.includes('conversation_id=conv-1')) {
-        return Promise.resolve({
-          ok: true,
-          headers: {
-            get: (name: string) =>
-              name === 'content-type' ? 'application/json' : null,
-          },
-          json: async () => ({ tasks: mockRelatedTasks }),
-        });
-      }
-      // Default fallback
-      return Promise.reject(new Error(`Unexpected URL: ${url}`));
-    });
+    );
 
     renderWithProviders(<ConversationDetailPage />, ['/conversations/conv-1']);
 
@@ -122,13 +127,13 @@ describe('ConversationDetailPage Integration Tests', () => {
     });
 
     // Verify header content
-    expect(
-      screen.getByText(/conversation id: conv-1/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/conversation id: conv-1/i)).toBeInTheDocument();
 
     // Verify messages section
     expect(screen.getByTestId('message-list')).toBeInTheDocument();
-    expect(screen.getByText('Hello, this is a test message')).toBeInTheDocument();
+    expect(
+      screen.getByText('Hello, this is a test message')
+    ).toBeInTheDocument();
     expect(screen.getByText('Hello! How can I help you?')).toBeInTheDocument();
 
     // Wait for related tasks to finish loading
@@ -163,32 +168,37 @@ describe('ConversationDetailPage Integration Tests', () => {
     };
 
     // Mock fetch to handle both API calls based on URL
-    (mockFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
-      // Conversation API call
-      if (url.includes('/conversations/api/conv-2')) {
-        return Promise.resolve({
-          ok: true,
-          headers: {
-            get: (name: string) =>
-              name === 'content-type' ? 'application/json' : null,
-          },
-          json: async () => mockConversation,
-        });
+    (mockFetch as ReturnType<typeof vi.fn>).mockImplementation(
+      (url: string) => {
+        // Conversation API call
+        if (url.includes('/conversations/api/conv-2')) {
+          return Promise.resolve({
+            ok: true,
+            headers: {
+              get: (name: string) =>
+                name === 'content-type' ? 'application/json' : null,
+            },
+            json: async () => mockConversation,
+          });
+        }
+        // Related tasks API call (empty tasks)
+        if (
+          url.includes('/api/tasks') &&
+          url.includes('conversation_id=conv-2')
+        ) {
+          return Promise.resolve({
+            ok: true,
+            headers: {
+              get: (name: string) =>
+                name === 'content-type' ? 'application/json' : null,
+            },
+            json: async () => ({ tasks: [] }),
+          });
+        }
+        // Default fallback
+        return Promise.reject(new Error(`Unexpected URL: ${url}`));
       }
-      // Related tasks API call (empty tasks)
-      if (url.includes('/api/tasks') && url.includes('conversation_id=conv-2')) {
-        return Promise.resolve({
-          ok: true,
-          headers: {
-            get: (name: string) =>
-              name === 'content-type' ? 'application/json' : null,
-          },
-          json: async () => ({ tasks: [] }),
-        });
-      }
-      // Default fallback
-      return Promise.reject(new Error(`Unexpected URL: ${url}`));
-    });
+    );
 
     renderWithProviders(<ConversationDetailPage />, ['/conversations/conv-2']);
 
@@ -198,9 +208,7 @@ describe('ConversationDetailPage Integration Tests', () => {
     });
 
     // Verify the correct conversation ID is displayed
-    expect(
-      screen.getByText(/conversation id: conv-2/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/conversation id: conv-2/i)).toBeInTheDocument();
 
     // Verify the API was called with the correct conversation ID
     const fetchCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls;
@@ -219,32 +227,37 @@ describe('ConversationDetailPage Integration Tests', () => {
     };
 
     // Mock fetch to handle both API calls based on URL
-    (mockFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
-      // Conversation API call
-      if (url.includes('/conversations/api/conv-3')) {
-        return Promise.resolve({
-          ok: true,
-          headers: {
-            get: (name: string) =>
-              name === 'content-type' ? 'application/json' : null,
-          },
-          json: async () => mockConversation,
-        });
+    (mockFetch as ReturnType<typeof vi.fn>).mockImplementation(
+      (url: string) => {
+        // Conversation API call
+        if (url.includes('/conversations/api/conv-3')) {
+          return Promise.resolve({
+            ok: true,
+            headers: {
+              get: (name: string) =>
+                name === 'content-type' ? 'application/json' : null,
+            },
+            json: async () => mockConversation,
+          });
+        }
+        // Related tasks API call
+        if (
+          url.includes('/api/tasks') &&
+          url.includes('conversation_id=conv-3')
+        ) {
+          return Promise.resolve({
+            ok: true,
+            headers: {
+              get: (name: string) =>
+                name === 'content-type' ? 'application/json' : null,
+            },
+            json: async () => ({ tasks: [] }),
+          });
+        }
+        // Default fallback
+        return Promise.reject(new Error(`Unexpected URL: ${url}`));
       }
-      // Related tasks API call
-      if (url.includes('/api/tasks') && url.includes('conversation_id=conv-3')) {
-        return Promise.resolve({
-          ok: true,
-          headers: {
-            get: (name: string) =>
-              name === 'content-type' ? 'application/json' : null,
-          },
-          json: async () => ({ tasks: [] }),
-        });
-      }
-      // Default fallback
-      return Promise.reject(new Error(`Unexpected URL: ${url}`));
-    });
+    );
 
     renderWithProviders(<ConversationDetailPage />, ['/conversations/conv-3']);
 
@@ -254,9 +267,7 @@ describe('ConversationDetailPage Integration Tests', () => {
     });
 
     // Verify header contains conversation ID
-    expect(
-      screen.getByText(/conversation id: conv-3/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/conversation id: conv-3/i)).toBeInTheDocument();
 
     // Verify metadata labels are present
     expect(screen.getByText(/created:/i)).toBeInTheDocument();
@@ -293,32 +304,37 @@ describe('ConversationDetailPage Integration Tests', () => {
     };
 
     // Mock fetch to handle both API calls based on URL
-    (mockFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
-      // Conversation API call
-      if (url.includes('/conversations/api/conv-4')) {
-        return Promise.resolve({
-          ok: true,
-          headers: {
-            get: (name: string) =>
-              name === 'content-type' ? 'application/json' : null,
-          },
-          json: async () => mockConversation,
-        });
+    (mockFetch as ReturnType<typeof vi.fn>).mockImplementation(
+      (url: string) => {
+        // Conversation API call
+        if (url.includes('/conversations/api/conv-4')) {
+          return Promise.resolve({
+            ok: true,
+            headers: {
+              get: (name: string) =>
+                name === 'content-type' ? 'application/json' : null,
+            },
+            json: async () => mockConversation,
+          });
+        }
+        // Related tasks API call
+        if (
+          url.includes('/api/tasks') &&
+          url.includes('conversation_id=conv-4')
+        ) {
+          return Promise.resolve({
+            ok: true,
+            headers: {
+              get: (name: string) =>
+                name === 'content-type' ? 'application/json' : null,
+            },
+            json: async () => ({ tasks: [] }),
+          });
+        }
+        // Default fallback
+        return Promise.reject(new Error(`Unexpected URL: ${url}`));
       }
-      // Related tasks API call
-      if (url.includes('/api/tasks') && url.includes('conversation_id=conv-4')) {
-        return Promise.resolve({
-          ok: true,
-          headers: {
-            get: (name: string) =>
-              name === 'content-type' ? 'application/json' : null,
-          },
-          json: async () => ({ tasks: [] }),
-        });
-      }
-      // Default fallback
-      return Promise.reject(new Error(`Unexpected URL: ${url}`));
-    });
+    );
 
     renderWithProviders(<ConversationDetailPage />, ['/conversations/conv-4']);
 
@@ -366,32 +382,37 @@ describe('ConversationDetailPage Integration Tests', () => {
     ];
 
     // Mock fetch to handle both API calls based on URL
-    (mockFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
-      // Conversation API call
-      if (url.includes('/conversations/api/conv-5')) {
-        return Promise.resolve({
-          ok: true,
-          headers: {
-            get: (name: string) =>
-              name === 'content-type' ? 'application/json' : null,
-          },
-          json: async () => mockConversation,
-        });
+    (mockFetch as ReturnType<typeof vi.fn>).mockImplementation(
+      (url: string) => {
+        // Conversation API call
+        if (url.includes('/conversations/api/conv-5')) {
+          return Promise.resolve({
+            ok: true,
+            headers: {
+              get: (name: string) =>
+                name === 'content-type' ? 'application/json' : null,
+            },
+            json: async () => mockConversation,
+          });
+        }
+        // Related tasks API call
+        if (
+          url.includes('/api/tasks') &&
+          url.includes('conversation_id=conv-5')
+        ) {
+          return Promise.resolve({
+            ok: true,
+            headers: {
+              get: (name: string) =>
+                name === 'content-type' ? 'application/json' : null,
+            },
+            json: async () => ({ tasks: mockRelatedTasks }),
+          });
+        }
+        // Default fallback
+        return Promise.reject(new Error(`Unexpected URL: ${url}`));
       }
-      // Related tasks API call
-      if (url.includes('/api/tasks') && url.includes('conversation_id=conv-5')) {
-        return Promise.resolve({
-          ok: true,
-          headers: {
-            get: (name: string) =>
-              name === 'content-type' ? 'application/json' : null,
-          },
-          json: async () => ({ tasks: mockRelatedTasks }),
-        });
-      }
-      // Default fallback
-      return Promise.reject(new Error(`Unexpected URL: ${url}`));
-    });
+    );
 
     renderWithProviders(<ConversationDetailPage />, ['/conversations/conv-5']);
 
@@ -434,32 +455,37 @@ describe('ConversationDetailPage Integration Tests', () => {
     };
 
     // Mock fetch to handle both API calls based on URL
-    (mockFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
-      // Conversation API call
-      if (url.includes('/conversations/api/conv-6')) {
-        return Promise.resolve({
-          ok: true,
-          headers: {
-            get: (name: string) =>
-              name === 'content-type' ? 'application/json' : null,
-          },
-          json: async () => mockConversation,
-        });
+    (mockFetch as ReturnType<typeof vi.fn>).mockImplementation(
+      (url: string) => {
+        // Conversation API call
+        if (url.includes('/conversations/api/conv-6')) {
+          return Promise.resolve({
+            ok: true,
+            headers: {
+              get: (name: string) =>
+                name === 'content-type' ? 'application/json' : null,
+            },
+            json: async () => mockConversation,
+          });
+        }
+        // Related tasks API call with empty array
+        if (
+          url.includes('/api/tasks') &&
+          url.includes('conversation_id=conv-6')
+        ) {
+          return Promise.resolve({
+            ok: true,
+            headers: {
+              get: (name: string) =>
+                name === 'content-type' ? 'application/json' : null,
+            },
+            json: async () => ({ tasks: [] }),
+          });
+        }
+        // Default fallback
+        return Promise.reject(new Error(`Unexpected URL: ${url}`));
       }
-      // Related tasks API call with empty array
-      if (url.includes('/api/tasks') && url.includes('conversation_id=conv-6')) {
-        return Promise.resolve({
-          ok: true,
-          headers: {
-            get: (name: string) =>
-              name === 'content-type' ? 'application/json' : null,
-          },
-          json: async () => ({ tasks: [] }),
-        });
-      }
-      // Default fallback
-      return Promise.reject(new Error(`Unexpected URL: ${url}`));
-    });
+    );
 
     renderWithProviders(<ConversationDetailPage />, ['/conversations/conv-6']);
 
