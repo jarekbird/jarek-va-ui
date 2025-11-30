@@ -4,7 +4,7 @@ import { Layout } from './components/layout/Layout';
 import { ConversationsPage } from './routes/conversations/ConversationsPage';
 import { ConversationDetailPage } from './routes/conversations/ConversationDetailPage';
 import { TaskListView } from './components/TaskListView';
-import { TaskDetailView } from './components/TaskDetailView';
+import { TaskDetailPage } from './routes/tasks/TaskDetailPage';
 import './styles/App.css';
 
 const App: React.FC = () => {
@@ -17,7 +17,7 @@ const App: React.FC = () => {
           element={<ConversationDetailPage />}
         />
         <Route path="/tasks" element={<TaskListView />} />
-        <Route path="/tasks/:taskId" element={<TaskDetailView />} />
+        <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
       </Routes>
     </Layout>
   );
