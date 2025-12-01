@@ -5,6 +5,8 @@
  */
 import type { Conversation } from '../types';
 
+// Conversations API always uses /conversations/api path
+// This can be overridden via VITE_API_BASE_URL environment variable
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/conversations/api';
 
 /**

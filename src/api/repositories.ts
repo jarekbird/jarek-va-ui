@@ -2,6 +2,7 @@
  * API client for repository file browser.
  */
 import type { FileNode } from '../types/file-tree';
+import { getApiBasePath } from '../utils/api-base';
 
 /**
  * Get file tree for the cursor working directory
@@ -11,7 +12,8 @@ import type { FileNode } from '../types/file-tree';
 export async function getWorkingDirectoryFiles(): Promise<FileNode[]> {
   // Use /api/working-directory/files endpoint
   // This endpoint uses TARGET_APP_PATH from cursor-runner (set to /cursor)
-  const response = await fetch('/api/working-directory/files');
+  const apiBase = getApiBasePath();
+  const response = await fetch(`${apiBase}/working-directory/files`);
 
   // Check if response is actually JSON before parsing
   const contentType = response.headers.get('content-type');

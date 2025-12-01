@@ -1,8 +1,10 @@
 import type { Task } from '../types';
+import { getApiBasePath } from '../utils/api-base';
 
-// Tasks API uses /api/tasks directly (not /conversations/api)
-// This is different from conversations API which uses /conversations/api
-const TASKS_API_BASE = '/api';
+// Tasks API base path - dynamically determined based on environment
+// In production with Traefik: /conversations/api
+// Locally or at root: /api
+const getTasksApiBase = () => getApiBasePath();
 
 /**
  * Parameters for fetching tasks with filters and pagination
@@ -72,7 +74,8 @@ export async function fetchTasks(
   }
 
   const queryString = queryParams.toString();
-  const url = `${TASKS_API_BASE}/tasks${queryString ? `?${queryString}` : ''}`;
+  const apiBase = getTasksApiBase();
+  const url = `${apiBase}/tasks${queryString ? `?${queryString}` : ''}`;
 
   const response = await fetch(url);
 
@@ -117,7 +120,8 @@ export async function fetchTasks(
 }
 
 export async function listTasks(): Promise<Task[]> {
-  const url = `${TASKS_API_BASE}/tasks`;
+  const apiBase = getTasksApiBase();
+  const url = `${apiBase}/tasks`;
   console.log('[tasks API] Fetching tasks from:', url);
 
   try {
@@ -186,7 +190,8 @@ export async function fetchTask(taskId: number): Promise<Task> {
 }
 
 export async function getTaskById(taskId: number): Promise<Task> {
-  const response = await fetch(`${TASKS_API_BASE}/tasks/${taskId}`);
+  const apiBase = getTasksApiBase();
+  const response = await fetch(`${apiBase}/tasks/${taskId}`);
 
   // Check if response is actually JSON before parsing
   const contentType = response.headers.get('content-type');
@@ -213,7 +218,8 @@ export async function getTaskById(taskId: number): Promise<Task> {
 }
 
 export async function createTask(prompt: string): Promise<Task> {
-  const response = await fetch(`${TASKS_API_BASE}/tasks`, {
+  const apiBase = getTasksApiBase();
+  const response = await fetch(`${apiBase}/tasks`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
