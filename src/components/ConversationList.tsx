@@ -34,7 +34,11 @@ export const ConversationList: React.FC<ConversationListProps> = ({
         return (
           <li key={conv.conversationId} className={isActive ? 'active' : ''}>
             <Link
-              to={onConversationSelect ? '#' : `/conversation/${conv.conversationId}`}
+              to={
+                onConversationSelect
+                  ? '#'
+                  : `/conversation/${conv.conversationId}`
+              }
               style={{
                 textDecoration: 'none',
                 color: 'inherit',

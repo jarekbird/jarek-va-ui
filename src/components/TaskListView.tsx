@@ -65,5 +65,3 @@ export const TaskListView: React.FC = () => {
     </div>
   );
 };
-
-

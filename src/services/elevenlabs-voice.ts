@@ -1,13 +1,13 @@
 /**
  * ElevenLabs Voice Service
  * Manages WebSocket/WebRTC connection to ElevenLabs conversational agent
- * 
+ *
  * State Machine:
  * - disconnected → connecting → connected
  * - connected → reconnecting → connected (on network issues)
  * - any → error (on fatal errors)
  * - any → disconnected (on explicit end)
- * 
+ *
  * Events:
  * - onConnect: Fired when connection is established
  * - onDisconnect: Fired when connection is closed
@@ -21,7 +21,12 @@ import { getVoiceSignedUrl, registerSession } from '../api/elevenlabs';
 import { isElevenLabsEnabled } from '../utils/feature-flags';
 import { retryWithBackoff } from '../utils/retry';
 
-export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error';
+export type ConnectionStatus =
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting'
+  | 'error';
 
 export type AgentMode = 'idle' | 'listening' | 'speaking';
 
@@ -153,7 +158,10 @@ export class ElevenLabsVoiceService {
           maxRetries: 3,
           initialDelay: 1000,
           onRetry: (attempt, error) => {
-            console.warn(`Retrying signed URL renewal (attempt ${attempt}):`, error.message);
+            console.warn(
+              `Retrying signed URL renewal (attempt ${attempt}):`,
+              error.message
+            );
           },
         }
       );
@@ -198,7 +206,9 @@ export class ElevenLabsVoiceService {
       this.signedUrlRenewalTimer = setTimeout(() => {
         this.renewSignedUrl().catch((error) => {
           console.error('Scheduled signed URL renewal failed:', error);
-          this.handleError(error instanceof Error ? error : new Error(String(error)));
+          this.handleError(
+            error instanceof Error ? error : new Error(String(error))
+          );
         });
       }, renewalTime);
     } else {
@@ -317,13 +327,18 @@ export class ElevenLabsVoiceService {
           await this.renewSignedUrl();
         } catch (error) {
           // Continue without signed URL if fetch fails (for public agents)
-          console.warn('Failed to fetch signed URL, continuing without it:', error);
+          console.warn(
+            'Failed to fetch signed URL, continuing without it:',
+            error
+          );
         }
       }
 
       // Request microphone permission
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
         // Store stream for later use (in real implementation)
         stream.getTracks().forEach((track) => track.stop()); // Stop for now, will use in real connection
       } catch (error) {
@@ -396,7 +411,10 @@ export class ElevenLabsVoiceService {
           maxRetries: 3,
           initialDelay: 1000,
           onRetry: (attempt, error) => {
-            console.warn(`Retrying session registration (attempt ${attempt}):`, error.message);
+            console.warn(
+              `Retrying session registration (attempt ${attempt}):`,
+              error.message
+            );
           },
         }
       );
@@ -443,7 +461,9 @@ export class ElevenLabsVoiceService {
       this.notifyStatusChange();
       if (this.config.onError) {
         this.config.onError(
-          new Error('Connection failed after multiple retry attempts. Please try again.')
+          new Error(
+            'Connection failed after multiple retry attempts. Please try again.'
+          )
         );
       }
     }
@@ -507,4 +527,3 @@ export class ElevenLabsVoiceService {
     }
   }
 }
-

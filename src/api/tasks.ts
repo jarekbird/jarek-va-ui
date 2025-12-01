@@ -5,27 +5,61 @@ import type { Task } from '../types';
 const TASKS_API_BASE = '/api';
 
 export async function listTasks(): Promise<Task[]> {
-  const response = await fetch(`${TASKS_API_BASE}/tasks`);
+  const url = `${TASKS_API_BASE}/tasks`;
+  console.log('[tasks API] Fetching tasks from:', url);
 
-  // Check if response is actually JSON before parsing
-  const contentType = response.headers.get('content-type');
-  if (!contentType || !contentType.includes('application/json')) {
-    const text = await response.text();
-    throw new Error(
-      `Expected JSON but received ${contentType}. Response: ${text.substring(0, 200)}`
+  try {
+    const response = await fetch(url);
+    console.log(
+      '[tasks API] Response status:',
+      response.status,
+      response.statusText
     );
-  }
-
-  if (!response.ok) {
-    const errorData = await response
-      .json()
-      .catch(() => ({ error: response.statusText }));
-    throw new Error(
-      errorData.error || `Failed to fetch tasks: ${response.statusText}`
+    console.log(
+      '[tasks API] Response headers:',
+      Object.fromEntries(response.headers.entries())
     );
-  }
 
-  return response.json();
+    // Check if response is actually JSON before parsing
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('[tasks API] Non-JSON response:', {
+        contentType,
+        text: text.substring(0, 500),
+      });
+      throw new Error(
+        `Expected JSON but received ${contentType}. Response: ${text.substring(0, 200)}`
+      );
+    }
+
+    if (!response.ok) {
+      const errorData = await response
+        .json()
+        .catch(() => ({ error: response.statusText }));
+      console.error('[tasks API] Error response:', errorData);
+      throw new Error(
+        errorData.error || `Failed to fetch tasks: ${response.statusText}`
+      );
+    }
+
+    const data = await response.json();
+    console.log('[tasks API] Successfully parsed response:', {
+      isArray: Array.isArray(data),
+      count: Array.isArray(data) ? data.length : 'not an array',
+      data: Array.isArray(data) ? data : 'not an array',
+    });
+
+    if (!Array.isArray(data)) {
+      console.warn('[tasks API] Response is not an array:', data);
+      return [];
+    }
+
+    return data;
+  } catch (error) {
+    console.error('[tasks API] Fetch error:', error);
+    throw error;
+  }
 }
 
 export async function getTaskById(taskId: number): Promise<Task> {

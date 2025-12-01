@@ -3,8 +3,6 @@
  */
 import type { FileNode } from '../types/file-tree';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/conversations/api';
-
 /**
  * Get file tree for the cursor working directory
  * @returns Promise resolving to FileNode[] tree structure
@@ -32,7 +30,8 @@ export async function getWorkingDirectoryFiles(): Promise<FileNode[]> {
       .json()
       .catch(() => ({ error: response.statusText }));
     throw new Error(
-      errorData.error || `Failed to fetch working directory files: ${response.statusText}`
+      errorData.error ||
+        `Failed to fetch working directory files: ${response.statusText}`
     );
   }
 
@@ -69,11 +68,10 @@ export async function getRepositoryFiles(
       .json()
       .catch(() => ({ error: response.statusText }));
     throw new Error(
-      errorData.error || `Failed to fetch repository files: ${response.statusText}`
+      errorData.error ||
+        `Failed to fetch repository files: ${response.statusText}`
     );
   }
 
   return response.json();
 }
-
-

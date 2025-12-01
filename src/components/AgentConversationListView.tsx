@@ -16,11 +16,9 @@ export interface AgentConversationListViewProps {
   showContainer?: boolean;
 }
 
-export const AgentConversationListView: React.FC<AgentConversationListViewProps> = ({
-  onConversationSelect,
-  showNavigation = true,
-  showContainer = true,
-}) => {
+export const AgentConversationListView: React.FC<
+  AgentConversationListViewProps
+> = ({ onConversationSelect, showNavigation = true, showContainer = true }) => {
   const [conversations, setConversations] = React.useState<AgentConversation[]>(
     []
   );
@@ -29,7 +27,9 @@ export const AgentConversationListView: React.FC<AgentConversationListViewProps>
   const [isCreating, setIsCreating] = React.useState<boolean>(false);
   const [searchQuery, setSearchQuery] = React.useState<string>('');
   const [filterAgentId, setFilterAgentId] = React.useState<string>('');
-  const [sortBy, setSortBy] = React.useState<'created' | 'lastAccessed' | 'messageCount'>('lastAccessed');
+  const [sortBy, setSortBy] = React.useState<
+    'created' | 'lastAccessed' | 'messageCount'
+  >('lastAccessed');
   const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('desc');
   const [page, setPage] = React.useState<number>(1);
   const [pageSize] = React.useState<number>(20);
@@ -39,6 +39,7 @@ export const AgentConversationListView: React.FC<AgentConversationListViewProps>
 
   React.useEffect(() => {
     loadConversations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, sortBy, sortOrder]);
 
   const loadConversations = async () => {
@@ -47,9 +48,14 @@ export const AgentConversationListView: React.FC<AgentConversationListViewProps>
       setError(null);
       const offset = (page - 1) * pageSize;
       // Map frontend sortBy values to backend sortBy values
-      const backendSortBy = sortBy === 'created' ? 'createdAt' : sortBy === 'lastAccessed' ? 'lastAccessedAt' : 'messageCount';
-      const response = await listAgentConversations({ 
-        limit: pageSize, 
+      const backendSortBy =
+        sortBy === 'created'
+          ? 'createdAt'
+          : sortBy === 'lastAccessed'
+            ? 'lastAccessedAt'
+            : 'messageCount';
+      const response = await listAgentConversations({
+        limit: pageSize,
         offset,
         sortBy: backendSortBy,
         sortOrder,
@@ -60,9 +66,11 @@ export const AgentConversationListView: React.FC<AgentConversationListViewProps>
       let errorMessage = 'An error occurred while loading agent conversations';
       if (err instanceof Error) {
         if (err.message.includes('fetch') || err.message.includes('network')) {
-          errorMessage = 'Network error: Please check your connection and try again';
+          errorMessage =
+            'Network error: Please check your connection and try again';
         } else if (err.message.includes('404')) {
-          errorMessage = 'Service not found. Please check if the backend is running.';
+          errorMessage =
+            'Service not found. Please check if the backend is running.';
         } else if (err.message.includes('500')) {
           errorMessage = 'Server error: Please try again in a moment';
         } else {
@@ -95,8 +103,8 @@ export const AgentConversationListView: React.FC<AgentConversationListViewProps>
 
     // Filter by agent ID
     if (filterAgentId) {
-      filtered = filtered.filter(
-        (conv) => conv.agentId?.toLowerCase().includes(filterAgentId.toLowerCase())
+      filtered = filtered.filter((conv) =>
+        conv.agentId?.toLowerCase().includes(filterAgentId.toLowerCase())
       );
     }
 
@@ -122,7 +130,7 @@ export const AgentConversationListView: React.FC<AgentConversationListViewProps>
     // Sorting is now handled by the backend, so we just return filtered results
     // The backend will return conversations already sorted according to sortBy and sortOrder
     return filtered;
-  }, [conversations, searchQuery, filterAgentId, sortBy, sortOrder]);
+  }, [conversations, searchQuery, filterAgentId]);
 
   // Get unique agent IDs for filter dropdown
   const uniqueAgentIds = React.useMemo(() => {
@@ -166,7 +174,11 @@ export const AgentConversationListView: React.FC<AgentConversationListViewProps>
       {showNavigation && <Navigation />}
       <div className="header-with-button">
         {showContainer && <h1>Agent Conversations</h1>}
-        {!showContainer && <h2 style={{ margin: 0, marginBottom: '10px' }}>Agent Conversations</h2>}
+        {!showContainer && (
+          <h2 style={{ margin: 0, marginBottom: '10px' }}>
+            Agent Conversations
+          </h2>
+        )}
         <button
           onClick={handleNewConversation}
           disabled={isCreating}
@@ -176,9 +188,24 @@ export const AgentConversationListView: React.FC<AgentConversationListViewProps>
         </button>
       </div>
       <div className="filters-container" style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '15px',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+          }}
+        >
           <div style={{ flex: '1', minWidth: '200px' }}>
-            <label htmlFor="search-input" style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em', color: '#2c3e50' }}>
+            <label
+              htmlFor="search-input"
+              style={{
+                display: 'block',
+                marginBottom: '5px',
+                fontSize: '0.9em',
+                color: '#2c3e50',
+              }}
+            >
               Search:
             </label>
             <input
@@ -197,7 +224,15 @@ export const AgentConversationListView: React.FC<AgentConversationListViewProps>
             />
           </div>
           <div style={{ minWidth: '200px' }}>
-            <label htmlFor="agent-filter" style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em', color: '#2c3e50' }}>
+            <label
+              htmlFor="agent-filter"
+              style={{
+                display: 'block',
+                marginBottom: '5px',
+                fontSize: '0.9em',
+                color: '#2c3e50',
+              }}
+            >
               Filter by Agent:
             </label>
             <select
@@ -242,15 +277,35 @@ export const AgentConversationListView: React.FC<AgentConversationListViewProps>
             </div>
           )}
         </div>
-        <div style={{ display: 'flex', gap: '15px', alignItems: 'center', marginTop: '10px', flexWrap: 'wrap' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '15px',
+            alignItems: 'center',
+            marginTop: '10px',
+            flexWrap: 'wrap',
+          }}
+        >
           <div style={{ minWidth: '150px' }}>
-            <label htmlFor="sort-by" style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em', color: '#2c3e50' }}>
+            <label
+              htmlFor="sort-by"
+              style={{
+                display: 'block',
+                marginBottom: '5px',
+                fontSize: '0.9em',
+                color: '#2c3e50',
+              }}
+            >
               Sort by:
             </label>
             <select
               id="sort-by"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'created' | 'lastAccessed' | 'messageCount')}
+              onChange={(e) =>
+                setSortBy(
+                  e.target.value as 'created' | 'lastAccessed' | 'messageCount'
+                )
+              }
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -265,7 +320,15 @@ export const AgentConversationListView: React.FC<AgentConversationListViewProps>
             </select>
           </div>
           <div style={{ minWidth: '120px' }}>
-            <label htmlFor="sort-order" style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em', color: '#2c3e50' }}>
+            <label
+              htmlFor="sort-order"
+              style={{
+                display: 'block',
+                marginBottom: '5px',
+                fontSize: '0.9em',
+                color: '#2c3e50',
+              }}
+            >
               Order:
             </label>
             <select
@@ -284,11 +347,23 @@ export const AgentConversationListView: React.FC<AgentConversationListViewProps>
               <option value="asc">Oldest First</option>
             </select>
           </div>
-          <div style={{ fontSize: '0.9em', color: '#7f8c8d', alignSelf: 'flex-end', paddingBottom: '8px' }}>
+          <div
+            style={{
+              fontSize: '0.9em',
+              color: '#7f8c8d',
+              alignSelf: 'flex-end',
+              paddingBottom: '8px',
+            }}
+          >
             {searchQuery || filterAgentId ? (
-              <>Showing {filteredAndSortedConversations.length} of {conversations.length} conversations</>
+              <>
+                Showing {filteredAndSortedConversations.length} of{' '}
+                {conversations.length} conversations
+              </>
             ) : (
-              <>Showing {conversations.length} of {totalCount} conversations</>
+              <>
+                Showing {conversations.length} of {totalCount} conversations
+              </>
             )}
           </div>
         </div>
@@ -328,56 +403,78 @@ export const AgentConversationListView: React.FC<AgentConversationListViewProps>
           No agent conversations found.
         </p>
       )}
-      {!loading && !error && conversations.length > 0 && filteredAndSortedConversations.length === 0 && (
-        <p style={{ textAlign: 'center', color: '#7f8c8d' }}>
-          No conversations match your search criteria.
-        </p>
-      )}
-      
+      {!loading &&
+        !error &&
+        conversations.length > 0 &&
+        filteredAndSortedConversations.length === 0 && (
+          <p style={{ textAlign: 'center', color: '#7f8c8d' }}>
+            No conversations match your search criteria.
+          </p>
+        )}
+
       {/* Pagination controls */}
-      {!loading && !error && totalCount > pageSize && !searchQuery && !filterAgentId && (
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          gap: '10px', 
-          marginTop: '20px',
-          paddingTop: '20px',
-          borderTop: '1px solid #ecf0f1'
-        }}>
-          <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
+      {!loading &&
+        !error &&
+        totalCount > pageSize &&
+        !searchQuery &&
+        !filterAgentId && (
+          <div
             style={{
-              padding: '8px 16px',
-              backgroundColor: page === 1 ? '#ecf0f1' : '#3498db',
-              color: page === 1 ? '#95a5a6' : 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: page === 1 ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '10px',
+              marginTop: '20px',
+              paddingTop: '20px',
+              borderTop: '1px solid #ecf0f1',
             }}
           >
-            Previous
-          </button>
-          <span style={{ color: '#2c3e50' }}>
-            Page {page} of {Math.ceil(totalCount / pageSize)}
-          </span>
-          <button
-            onClick={() => setPage(p => Math.min(Math.ceil(totalCount / pageSize), p + 1))}
-            disabled={page >= Math.ceil(totalCount / pageSize)}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: page >= Math.ceil(totalCount / pageSize) ? '#ecf0f1' : '#3498db',
-              color: page >= Math.ceil(totalCount / pageSize) ? '#95a5a6' : 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: page >= Math.ceil(totalCount / pageSize) ? 'not-allowed' : 'pointer',
-            }}
-          >
-            Next
-          </button>
-        </div>
-      )}
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: page === 1 ? '#ecf0f1' : '#3498db',
+                color: page === 1 ? '#95a5a6' : 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: page === 1 ? 'not-allowed' : 'pointer',
+              }}
+            >
+              Previous
+            </button>
+            <span style={{ color: '#2c3e50' }}>
+              Page {page} of {Math.ceil(totalCount / pageSize)}
+            </span>
+            <button
+              onClick={() =>
+                setPage((p) =>
+                  Math.min(Math.ceil(totalCount / pageSize), p + 1)
+                )
+              }
+              disabled={page >= Math.ceil(totalCount / pageSize)}
+              style={{
+                padding: '8px 16px',
+                backgroundColor:
+                  page >= Math.ceil(totalCount / pageSize)
+                    ? '#ecf0f1'
+                    : '#3498db',
+                color:
+                  page >= Math.ceil(totalCount / pageSize)
+                    ? '#95a5a6'
+                    : 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor:
+                  page >= Math.ceil(totalCount / pageSize)
+                    ? 'not-allowed'
+                    : 'pointer',
+              }}
+            >
+              Next
+            </button>
+          </div>
+        )}
     </>
   );
 
@@ -387,5 +484,3 @@ export const AgentConversationListView: React.FC<AgentConversationListViewProps>
 
   return <div className="agent-conversation-list-view-panel">{content}</div>;
 };
-
-

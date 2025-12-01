@@ -60,5 +60,3 @@ export const TaskDetailView: React.FC = () => {
     </div>
   );
 };
-
-

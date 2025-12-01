@@ -9,9 +9,8 @@ import type { AgentConversation } from '../types/agent-conversation';
 
 export const AgentConversationDetailView: React.FC = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
-  const [conversation, setConversation] = React.useState<AgentConversation | null>(
-    null
-  );
+  const [conversation, setConversation] =
+    React.useState<AgentConversation | null>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
   const [isPolling, setIsPolling] = React.useState<boolean>(false);
@@ -37,7 +36,8 @@ export const AgentConversationDetailView: React.FC = () => {
         const updatedConversation = await getAgentConversation(conversationId);
         // Only update if messages have changed (to avoid unnecessary re-renders)
         if (
-          updatedConversation.messages.length !== conversation.messages.length ||
+          updatedConversation.messages.length !==
+            conversation.messages.length ||
           JSON.stringify(updatedConversation.messages) !==
             JSON.stringify(conversation.messages)
         ) {
@@ -172,5 +172,3 @@ export const AgentConversationDetailView: React.FC = () => {
     </div>
   );
 };
-
-

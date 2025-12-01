@@ -48,6 +48,11 @@ describe('retryWithBackoff', () => {
       onRetry,
     });
 
+    // Ensure promise is handled
+    promise.catch(() => {
+      // Expected rejection, suppress unhandled rejection warning
+    });
+
     // Advance through retries
     vi.advanceTimersByTime(100); // First retry after 100ms
     await vi.runAllTimersAsync();
@@ -74,6 +79,11 @@ describe('retryWithBackoff', () => {
       maxDelay: 2000,
       multiplier: 2,
       onRetry,
+    });
+
+    // Ensure promise is handled
+    promise.catch(() => {
+      // Expected rejection, suppress unhandled rejection warning
     });
 
     // Advance through retries - need to advance enough for all retries
@@ -145,10 +155,7 @@ describe('retryWithBackoff', () => {
     const result = await promise;
 
     expect(result).toBe('success');
-    expect(shouldRetry).toHaveBeenCalledWith(
-      expect.any(Error),
-      0
-    );
+    expect(shouldRetry).toHaveBeenCalledWith(expect.any(Error), 0);
   });
 
   it('throws last error after max retries', async () => {
@@ -158,6 +165,11 @@ describe('retryWithBackoff', () => {
     const promise = retryWithBackoff(fn, {
       maxRetries: 2,
       initialDelay: 10, // Use smaller delay for faster test
+    });
+
+    // Ensure promise is handled
+    promise.catch(() => {
+      // Expected rejection, suppress unhandled rejection warning
     });
 
     // Run all timers to completion
@@ -196,4 +208,3 @@ describe('createRetryFunction', () => {
     expect(fn).toHaveBeenCalledTimes(2);
   });
 });
-

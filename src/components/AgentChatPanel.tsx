@@ -11,7 +11,11 @@ import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
 import { getAgentConversation } from '../api/agent-conversations';
 import type { AgentConversation } from '../types/agent-conversation';
-import type { ElevenLabsVoiceService, ConnectionStatus, AgentMode } from '../services/elevenlabs-voice';
+import type {
+  ElevenLabsVoiceService,
+  ConnectionStatus,
+  AgentMode,
+} from '../services/elevenlabs-voice';
 import './AgentChatPanel.css';
 
 export interface AgentChatPanelProps {
@@ -33,10 +37,12 @@ export const AgentChatPanel: React.FC<AgentChatPanelProps> = ({
   voiceStatus,
   voiceMode,
 }) => {
-  const [selectedConversationId, setSelectedConversationId] = useState<string | undefined>(
-    conversationId
+  const [selectedConversationId, setSelectedConversationId] = useState<
+    string | undefined
+  >(conversationId);
+  const [conversation, setConversation] = useState<AgentConversation | null>(
+    null
   );
-  const [conversation, setConversation] = useState<AgentConversation | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,7 +61,8 @@ export const AgentChatPanel: React.FC<AgentChatPanelProps> = ({
       const data = await getAgentConversation(id);
       setConversation(data);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load conversation';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to load conversation';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -100,7 +107,7 @@ export const AgentChatPanel: React.FC<AgentChatPanelProps> = ({
           )}
         </div>
       ) : (
-        <AgentConversationListView 
+        <AgentConversationListView
           onConversationSelect={handleConversationSelect}
           showNavigation={false}
           showContainer={false}
@@ -109,4 +116,3 @@ export const AgentChatPanel: React.FC<AgentChatPanelProps> = ({
     </div>
   );
 };
-

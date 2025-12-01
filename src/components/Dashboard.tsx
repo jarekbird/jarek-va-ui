@@ -1,7 +1,7 @@
 /**
  * Dashboard Component
  * Main layout combining voice indicator, agent chat, and note-taking panels
- * 
+ *
  * Layout:
  * - Desktop: Three regions side-by-side
  *   - Upper left: Voice indicator
@@ -14,25 +14,36 @@ import React, { useState, useEffect, useRef } from 'react';
 import { VoiceIndicator } from './VoiceIndicator';
 import { AgentChatPanel } from './AgentChatPanel';
 import { NoteTakingPanel } from './NoteTakingPanel';
-import { WorkingDirectoryBrowser, type WorkingDirectoryBrowserRef } from './WorkingDirectoryBrowser';
-import { ElevenLabsVoiceService, type ConnectionStatus, type AgentMode } from '../services/elevenlabs-voice';
+import {
+  WorkingDirectoryBrowser,
+  type WorkingDirectoryBrowserRef,
+} from './WorkingDirectoryBrowser';
+import {
+  ElevenLabsVoiceService,
+  type ConnectionStatus,
+  type AgentMode,
+} from '../services/elevenlabs-voice';
 import { isElevenLabsEnabled } from '../utils/feature-flags';
 import { getAgentConfig } from '../api/elevenlabs';
 import { ErrorMessage } from './ErrorMessage';
-import type { Conversation } from '../types';
 import './Dashboard.css';
 
 /**
  * Dashboard - Unified view for voice agent and note-taking
  */
 export const Dashboard: React.FC = () => {
-  const [selectedAgentConversationId, setSelectedAgentConversationId] = useState<string | undefined>();
-  const [selectedNoteConversationId, setSelectedNoteConversationId] = useState<string | undefined>();
-  const [voiceStatus, setVoiceStatus] = useState<ConnectionStatus>('disconnected');
+  const [selectedAgentConversationId, setSelectedAgentConversationId] =
+    useState<string | undefined>();
+  const [selectedNoteConversationId, setSelectedNoteConversationId] = useState<
+    string | undefined
+  >();
+  const [voiceStatus, setVoiceStatus] =
+    useState<ConnectionStatus>('disconnected');
   const [voiceMode, setVoiceMode] = useState<AgentMode>('idle');
   const [agentId, setAgentId] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [isLoadingAgentConfig, setIsLoadingAgentConfig] = useState<boolean>(true);
+  const [isLoadingAgentConfig, setIsLoadingAgentConfig] =
+    useState<boolean>(true);
   const voiceServiceRef = useRef<ElevenLabsVoiceService | null>(null);
   const fileBrowserRef = useRef<WorkingDirectoryBrowserRef>(null);
 
@@ -110,7 +121,7 @@ export const Dashboard: React.FC = () => {
   }, [selectedAgentConversationId]);
 
   // Handle note conversation updates - refresh file browser
-  const handleNoteConversationUpdate = (conversation: Conversation) => {
+  const handleNoteConversationUpdate = () => {
     // Refresh file browser when note conversation is updated
     if (fileBrowserRef.current) {
       fileBrowserRef.current.refresh();
@@ -124,7 +135,9 @@ export const Dashboard: React.FC = () => {
     }
 
     if (!agentId) {
-      setConnectionError('Agent ID not configured. Please check your agent configuration.');
+      setConnectionError(
+        'Agent ID not configured. Please check your agent configuration.'
+      );
       return;
     }
 
@@ -140,7 +153,8 @@ export const Dashboard: React.FC = () => {
         selectedAgentConversationId
       );
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to connect to agent';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to connect to agent';
       setConnectionError(errorMessage);
       console.error('Connection error:', error);
     }
@@ -161,23 +175,37 @@ export const Dashboard: React.FC = () => {
         </div>
         <div className="dashboard__middle">
           <div className="dashboard__voice-indicator">
-            <VoiceIndicator 
-              status={voiceStatus} 
+            <VoiceIndicator
+              status={voiceStatus}
               mode={voiceMode}
               onConnect={handleConnect}
               onDisconnect={handleDisconnect}
-              disabled={isLoadingAgentConfig || !agentId || !selectedAgentConversationId}
+              disabled={
+                isLoadingAgentConfig || !agentId || !selectedAgentConversationId
+              }
             />
-            {connectionError && (
-              <ErrorMessage message={connectionError} />
-            )}
+            {connectionError && <ErrorMessage message={connectionError} />}
             {!agentId && !isLoadingAgentConfig && (
-              <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#ef4444', textAlign: 'center' }}>
+              <div
+                style={{
+                  marginTop: '0.5rem',
+                  fontSize: '0.75rem',
+                  color: '#ef4444',
+                  textAlign: 'center',
+                }}
+              >
                 Agent ID not configured
               </div>
             )}
             {!selectedAgentConversationId && agentId && (
-              <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#f59e0b', textAlign: 'center' }}>
+              <div
+                style={{
+                  marginTop: '0.5rem',
+                  fontSize: '0.75rem',
+                  color: '#f59e0b',
+                  textAlign: 'center',
+                }}
+              >
                 Select an agent conversation to connect
               </div>
             )}
@@ -203,4 +231,3 @@ export const Dashboard: React.FC = () => {
     </div>
   );
 };
-

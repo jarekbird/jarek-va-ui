@@ -20,7 +20,13 @@ export interface Task {
   id: number;
   prompt: string;
   status: number;
-  status_label: 'ready' | 'complete' | 'archived' | 'backlogged' | 'unknown';
+  status_label:
+    | 'ready'
+    | 'complete'
+    | 'archived'
+    | 'backlogged'
+    | 'in_progress'
+    | 'unknown';
   createdat: string | null;
   updatedat: string | null;
   order: number;

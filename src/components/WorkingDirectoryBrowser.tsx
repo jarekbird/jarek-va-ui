@@ -3,7 +3,12 @@
  * Displays a file tree view of the cursor working directory
  */
 
-import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useImperativeHandle,
+  forwardRef,
+} from 'react';
 import { getWorkingDirectoryFiles } from '../api/repositories';
 import type { FileNode } from '../types/file-tree';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -21,9 +26,15 @@ interface FileTreeNodeProps {
   onToggleExpand: (path: string) => void;
 }
 
-const FileTreeNode: React.FC<FileTreeNodeProps> = ({ node, level = 0, expandedPaths, onToggleExpand }) => {
+const FileTreeNode: React.FC<FileTreeNodeProps> = ({
+  node,
+  level = 0,
+  expandedPaths,
+  onToggleExpand,
+}) => {
   const isExpanded = expandedPaths.has(node.path);
-  const hasChildren = node.type === 'directory' && node.children && node.children.length > 0;
+  const hasChildren =
+    node.type === 'directory' && node.children && node.children.length > 0;
 
   const handleToggle = () => {
     if (hasChildren) {
@@ -58,9 +69,9 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({ node, level = 0, expandedPa
       {isExpanded && hasChildren && node.children && (
         <div>
           {node.children.map((child, index) => (
-            <FileTreeNode 
-              key={`${child.path}-${index}`} 
-              node={child} 
+            <FileTreeNode
+              key={`${child.path}-${index}`}
+              node={child}
               level={level + 1}
               expandedPaths={expandedPaths}
               onToggleExpand={onToggleExpand}
@@ -72,99 +83,102 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({ node, level = 0, expandedPa
   );
 };
 
-export const WorkingDirectoryBrowser = forwardRef<WorkingDirectoryBrowserRef>((props, ref) => {
-  const [files, setFiles] = useState<FileNode[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  // Track expanded paths to preserve state on refresh
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+export const WorkingDirectoryBrowser = forwardRef<WorkingDirectoryBrowserRef>(
+  (_props, ref) => {
+    const [files, setFiles] = useState<FileNode[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+    // Track expanded paths to preserve state on refresh
+    const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    loadFiles();
-  }, []);
+    useEffect(() => {
+      loadFiles();
+    }, []);
 
-  // Initialize with first level expanded
-  useEffect(() => {
-    if (files.length > 0 && expandedPaths.size === 0) {
-      const initialExpanded = new Set<string>();
-      files.forEach(node => {
-        if (node.type === 'directory') {
-          initialExpanded.add(node.path);
-        }
-      });
-      setExpandedPaths(initialExpanded);
-    }
-  }, [files]);
-
-  const loadFiles = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const fileTree = await getWorkingDirectoryFiles();
-      setFiles(fileTree);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load file tree';
-      setError(errorMessage);
-      console.error('Failed to load working directory files:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleToggleExpand = (path: string) => {
-    setExpandedPaths(prev => {
-      const next = new Set(prev);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
+    // Initialize with first level expanded
+    useEffect(() => {
+      if (files.length > 0 && expandedPaths.size === 0) {
+        const initialExpanded = new Set<string>();
+        files.forEach((node) => {
+          if (node.type === 'directory') {
+            initialExpanded.add(node.path);
+          }
+        });
+        setExpandedPaths(initialExpanded);
       }
-      return next;
-    });
-  };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [files]);
 
-  // Expose refresh method via ref
-  useImperativeHandle(ref, () => ({
-    refresh: async () => {
-      await loadFiles();
-    },
-  }));
+    const loadFiles = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const fileTree = await getWorkingDirectoryFiles();
+        setFiles(fileTree);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to load file tree';
+        setError(errorMessage);
+        console.error('Failed to load working directory files:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  return (
-    <div className="working-directory-browser">
-      <div className="working-directory-browser__header">
-        <h3>Working Directory</h3>
-        <button
-          className="working-directory-browser__refresh"
-          onClick={loadFiles}
-          title="Refresh"
-          aria-label="Refresh file tree"
-        >
-          ↻
-        </button>
+    const handleToggleExpand = (path: string) => {
+      setExpandedPaths((prev) => {
+        const next = new Set(prev);
+        if (next.has(path)) {
+          next.delete(path);
+        } else {
+          next.add(path);
+        }
+        return next;
+      });
+    };
+
+    // Expose refresh method via ref
+    useImperativeHandle(ref, () => ({
+      refresh: async () => {
+        await loadFiles();
+      },
+    }));
+
+    return (
+      <div className="working-directory-browser">
+        <div className="working-directory-browser__header">
+          <h3>Working Directory</h3>
+          <button
+            className="working-directory-browser__refresh"
+            onClick={loadFiles}
+            title="Refresh"
+            aria-label="Refresh file tree"
+          >
+            ↻
+          </button>
+        </div>
+        {loading && <LoadingSpinner />}
+        {error && <ErrorMessage message={error} />}
+        {!loading && !error && files.length === 0 && (
+          <div className="working-directory-browser__empty">
+            <p>No files found</p>
+          </div>
+        )}
+        {!loading && !error && files.length > 0 && (
+          <div className="working-directory-browser__tree">
+            {files.map((node, index) => (
+              <FileTreeNode
+                key={`${node.path}-${index}`}
+                node={node}
+                expandedPaths={expandedPaths}
+                onToggleExpand={handleToggleExpand}
+              />
+            ))}
+          </div>
+        )}
       </div>
-      {loading && <LoadingSpinner />}
-      {error && <ErrorMessage message={error} />}
-      {!loading && !error && files.length === 0 && (
-        <div className="working-directory-browser__empty">
-          <p>No files found</p>
-        </div>
-      )}
-      {!loading && !error && files.length > 0 && (
-        <div className="working-directory-browser__tree">
-          {files.map((node, index) => (
-            <FileTreeNode 
-              key={`${node.path}-${index}`} 
-              node={node}
-              expandedPaths={expandedPaths}
-              onToggleExpand={handleToggleExpand}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-});
+    );
+  }
+);
 
 WorkingDirectoryBrowser.displayName = 'WorkingDirectoryBrowser';
-

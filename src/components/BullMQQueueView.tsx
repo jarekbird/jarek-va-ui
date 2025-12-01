@@ -27,7 +27,8 @@ export const BullMQQueueView: React.FC = () => {
       const data = await listQueues();
       setQueues(data);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load queues';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to load queues';
       setError(errorMessage);
       console.error('Failed to load queues:', err);
     } finally {
@@ -40,10 +41,6 @@ export const BullMQQueueView: React.FC = () => {
     if (count < 5) return '#3498db'; // blue
     if (count < 10) return '#f39c12'; // orange
     return '#e74c3c'; // red
-  };
-
-  const getTotalJobs = (queue: QueueInfo): number => {
-    return queue.waiting + queue.active + queue.completed + queue.failed + queue.delayed;
   };
 
   return (
@@ -69,7 +66,6 @@ export const BullMQQueueView: React.FC = () => {
       {!loading && !error && queues.length > 0 && (
         <div className="bullmq-queue-view__queues">
           {queues.map((queue) => {
-            const totalJobs = getTotalJobs(queue);
             const hasActiveJobs = queue.active > 0 || queue.waiting > 0;
 
             return (
@@ -78,16 +74,21 @@ export const BullMQQueueView: React.FC = () => {
                 className={`bullmq-queue-view__queue ${hasActiveJobs ? 'bullmq-queue-view__queue--active' : ''}`}
               >
                 <div className="bullmq-queue-view__queue-header">
-                  <h4 className="bullmq-queue-view__queue-name">{queue.name}</h4>
+                  <h4 className="bullmq-queue-view__queue-name">
+                    {queue.name}
+                  </h4>
                   {queue.agents.length > 0 && (
                     <span className="bullmq-queue-view__queue-agents">
-                      {queue.agents.length} agent{queue.agents.length !== 1 ? 's' : ''}
+                      {queue.agents.length} agent
+                      {queue.agents.length !== 1 ? 's' : ''}
                     </span>
                   )}
                 </div>
                 <div className="bullmq-queue-view__queue-stats">
                   <div className="bullmq-queue-view__stat">
-                    <span className="bullmq-queue-view__stat-label">Waiting:</span>
+                    <span className="bullmq-queue-view__stat-label">
+                      Waiting:
+                    </span>
                     <span
                       className="bullmq-queue-view__stat-value"
                       style={{ color: getStatusColor(queue.waiting) }}
@@ -96,7 +97,9 @@ export const BullMQQueueView: React.FC = () => {
                     </span>
                   </div>
                   <div className="bullmq-queue-view__stat">
-                    <span className="bullmq-queue-view__stat-label">Active:</span>
+                    <span className="bullmq-queue-view__stat-label">
+                      Active:
+                    </span>
                     <span
                       className="bullmq-queue-view__stat-value"
                       style={{ color: getStatusColor(queue.active) }}
@@ -105,31 +108,48 @@ export const BullMQQueueView: React.FC = () => {
                     </span>
                   </div>
                   <div className="bullmq-queue-view__stat">
-                    <span className="bullmq-queue-view__stat-label">Completed:</span>
-                    <span className="bullmq-queue-view__stat-value">{queue.completed}</span>
+                    <span className="bullmq-queue-view__stat-label">
+                      Completed:
+                    </span>
+                    <span className="bullmq-queue-view__stat-value">
+                      {queue.completed}
+                    </span>
                   </div>
                   <div className="bullmq-queue-view__stat">
-                    <span className="bullmq-queue-view__stat-label">Failed:</span>
+                    <span className="bullmq-queue-view__stat-label">
+                      Failed:
+                    </span>
                     <span
                       className="bullmq-queue-view__stat-value"
-                      style={{ color: queue.failed > 0 ? '#e74c3c' : '#95a5a6' }}
+                      style={{
+                        color: queue.failed > 0 ? '#e74c3c' : '#95a5a6',
+                      }}
                     >
                       {queue.failed}
                     </span>
                   </div>
                   {queue.delayed > 0 && (
                     <div className="bullmq-queue-view__stat">
-                      <span className="bullmq-queue-view__stat-label">Delayed:</span>
-                      <span className="bullmq-queue-view__stat-value">{queue.delayed}</span>
+                      <span className="bullmq-queue-view__stat-label">
+                        Delayed:
+                      </span>
+                      <span className="bullmq-queue-view__stat-value">
+                        {queue.delayed}
+                      </span>
                     </div>
                   )}
                 </div>
                 {queue.agents.length > 0 && (
                   <div className="bullmq-queue-view__queue-agents-list">
-                    <div className="bullmq-queue-view__agents-label">Agents:</div>
+                    <div className="bullmq-queue-view__agents-label">
+                      Agents:
+                    </div>
                     <div className="bullmq-queue-view__agents">
                       {queue.agents.map((agent, index) => (
-                        <span key={index} className="bullmq-queue-view__agent-tag">
+                        <span
+                          key={index}
+                          className="bullmq-queue-view__agent-tag"
+                        >
                           {agent}
                         </span>
                       ))}
@@ -144,4 +164,3 @@ export const BullMQQueueView: React.FC = () => {
     </div>
   );
 };
-

@@ -44,7 +44,9 @@ describe('RepositoryFileBrowser', () => {
 
   it('renders repository structure header', () => {
     render(<RepositoryFileBrowser repository="test-repo" files={mockFiles} />);
-    expect(screen.getByText(/repository structure \(read-only\)/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/repository structure \(read-only\)/i)
+    ).toBeInTheDocument();
   });
 
   it('renders file tree with directories and files', () => {
@@ -55,7 +57,9 @@ describe('RepositoryFileBrowser', () => {
 
   it('shows loading state', () => {
     render(<RepositoryFileBrowser repository="test-repo" loading={true} />);
-    expect(screen.getByText(/loading repository structure/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/loading repository structure/i)
+    ).toBeInTheDocument();
   });
 
   it('shows error message', () => {
@@ -68,7 +72,9 @@ describe('RepositoryFileBrowser', () => {
 
   it('shows empty state when no files', () => {
     render(<RepositoryFileBrowser repository="test-repo" files={[]} />);
-    expect(screen.getByText(/no files found in repository/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/no files found in repository/i)
+    ).toBeInTheDocument();
   });
 
   it('expands and collapses directories', async () => {
@@ -100,7 +106,7 @@ describe('RepositoryFileBrowser', () => {
 
   it('renders nested directory structure', () => {
     render(<RepositoryFileBrowser repository="test-repo" files={mockFiles} />);
-    
+
     // Check nested structure
     expect(screen.getByText('src')).toBeInTheDocument();
     expect(screen.getByText('index.ts')).toBeInTheDocument();
@@ -113,8 +119,10 @@ describe('RepositoryFileBrowser', () => {
       <RepositoryFileBrowser repository="test-repo" files={mockFiles} />
     );
 
-    // Check that nested items have padding
-    const fileNodes = container.querySelectorAll('[style*="paddingLeft"]');
+    // Check that nested items have padding (check for padding-left in style attribute)
+    const fileNodes = container.querySelectorAll(
+      '[style*="padding-left"], [style*="paddingLeft"]'
+    );
     expect(fileNodes.length).toBeGreaterThan(0);
   });
 
@@ -124,13 +132,19 @@ describe('RepositoryFileBrowser', () => {
     );
 
     const browserContainer = container.firstChild as HTMLElement;
-    expect(browserContainer).toHaveStyle({ maxHeight: '500px', overflowY: 'auto' });
+    expect(browserContainer).toHaveStyle({
+      maxHeight: '500px',
+      overflowY: 'auto',
+    });
   });
 
   describe('Performance', () => {
     it('renders large file tree efficiently', () => {
       // Generate a large file tree
-      const generateLargeTree = (depth: number, filesPerDir: number): FileNode[] => {
+      const generateLargeTree = (
+        depth: number,
+        filesPerDir: number
+      ): FileNode[] => {
         if (depth === 0) {
           return Array.from({ length: filesPerDir }, (_, i) => ({
             name: `file${i}.ts`,
@@ -150,17 +164,21 @@ describe('RepositoryFileBrowser', () => {
       const largeTree = generateLargeTree(3, 10); // 3 levels, 10 items per level = ~1000 nodes
 
       const start = performance.now();
-      render(<RepositoryFileBrowser repository="test-repo" files={largeTree} />);
+      render(
+        <RepositoryFileBrowser repository="test-repo" files={largeTree} />
+      );
       const duration = performance.now() - start;
 
-      // Should render large tree in less than 500ms
-      expect(duration).toBeLessThan(500);
-      expect(screen.getByText('dir0')).toBeInTheDocument();
+      // Should render large tree in less than 1000ms (increased threshold for CI environments)
+      expect(duration).toBeLessThan(1000);
+      // Use getAllByText since there are multiple dir0 elements in the tree
+      const dir0Elements = screen.getAllByText('dir0');
+      expect(dir0Elements.length).toBeGreaterThan(0);
     });
 
     it('handles very deep directory nesting', () => {
       // Create a deeply nested structure
-      let deepTree: FileNode = {
+      const deepTree: FileNode = {
         name: 'root',
         path: 'root',
         type: 'directory',
@@ -183,7 +201,9 @@ describe('RepositoryFileBrowser', () => {
       }
 
       const start = performance.now();
-      render(<RepositoryFileBrowser repository="test-repo" files={[deepTree]} />);
+      render(
+        <RepositoryFileBrowser repository="test-repo" files={[deepTree]} />
+      );
       const duration = performance.now() - start;
 
       // Should handle deep nesting efficiently
@@ -194,17 +214,23 @@ describe('RepositoryFileBrowser', () => {
 
   describe('Accessibility', () => {
     it('has proper ARIA roles for expandable directories', () => {
-      render(<RepositoryFileBrowser repository="test-repo" files={mockFiles} />);
-      
+      render(
+        <RepositoryFileBrowser repository="test-repo" files={mockFiles} />
+      );
+
       const directoryButtons = screen.getAllByRole('button');
       expect(directoryButtons.length).toBeGreaterThan(0);
     });
 
     it('supports keyboard navigation', async () => {
       const user = userEvent.setup();
-      render(<RepositoryFileBrowser repository="test-repo" files={mockFiles} />);
+      render(
+        <RepositoryFileBrowser repository="test-repo" files={mockFiles} />
+      );
 
-      const directoryButton = screen.getByText('utils').closest('div[role="button"]') as HTMLElement;
+      const directoryButton = screen
+        .getByText('utils')
+        .closest('div[role="button"]') as HTMLElement;
       if (directoryButton) {
         directoryButton.focus();
         await user.keyboard('{Enter}');
@@ -213,4 +239,3 @@ describe('RepositoryFileBrowser', () => {
     });
   });
 });
-

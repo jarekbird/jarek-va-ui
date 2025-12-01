@@ -41,9 +41,11 @@ export const ConversationListView: React.FC<ConversationListViewProps> = ({
       let errorMessage = 'An error occurred while loading note sessions';
       if (err instanceof Error) {
         if (err.message.includes('fetch') || err.message.includes('network')) {
-          errorMessage = 'Network error: Please check your connection and try again';
+          errorMessage =
+            'Network error: Please check your connection and try again';
         } else if (err.message.includes('404')) {
-          errorMessage = 'Service not found. Please check if the backend is running.';
+          errorMessage =
+            'Service not found. Please check if the backend is running.';
         } else if (err.message.includes('500')) {
           errorMessage = 'Server error: Please try again in a moment';
         } else {
@@ -107,7 +109,11 @@ export const ConversationListView: React.FC<ConversationListViewProps> = ({
       {showNavigation && <Navigation />}
       <div className="header-with-button">
         {showContainer && <h1>Note Taking History</h1>}
-        {!showContainer && <h2 style={{ margin: 0, marginBottom: '10px' }}>Note Taking History</h2>}
+        {!showContainer && (
+          <h2 style={{ margin: 0, marginBottom: '10px' }}>
+            Note Taking History
+          </h2>
+        )}
         <button
           onClick={handleNewConversation}
           disabled={isCreating}

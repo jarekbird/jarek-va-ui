@@ -30,17 +30,26 @@ vi.mock('../VoiceIndicator', () => ({
 }));
 
 vi.mock('../AgentChatPanel', () => ({
-  AgentChatPanel: () => <div data-testid="agent-chat-panel">Agent Chat Panel</div>,
+  AgentChatPanel: () => (
+    <div data-testid="agent-chat-panel">Agent Chat Panel</div>
+  ),
 }));
 
 vi.mock('../NoteTakingPanel', () => ({
-  NoteTakingPanel: () => <div data-testid="note-taking-panel">Note Taking Panel</div>,
+  NoteTakingPanel: () => (
+    <div data-testid="note-taking-panel">Note Taking Panel</div>
+  ),
 }));
 
 describe('Dashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(isElevenLabsEnabled).mockReturnValue(true);
+    // Ensure ElevenLabsVoiceService mock is properly set up
+    vi.mocked(ElevenLabsVoiceService).mockImplementation(() => ({
+      configure: vi.fn(),
+      endVoiceSession: vi.fn(),
+    }));
   });
 
   it('renders all three panels', () => {
@@ -51,11 +60,10 @@ describe('Dashboard', () => {
     expect(screen.getByTestId('note-taking-panel')).toBeInTheDocument();
   });
 
-  it('renders dashboard header', () => {
+  it('renders dashboard container', () => {
     render(<Dashboard />);
 
-    expect(screen.getByText('Dashboard')).toBeInTheDocument();
-    expect(screen.getByText('Voice Agent & Note-Taking')).toBeInTheDocument();
+    expect(screen.getByTestId('dashboard')).toBeInTheDocument();
   });
 
   it('passes voice status to VoiceIndicator', () => {
@@ -87,5 +95,3 @@ describe('Dashboard', () => {
     expect(mockEndVoiceSession).toHaveBeenCalled();
   });
 });
-
-

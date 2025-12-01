@@ -34,7 +34,11 @@ export const AgentConversationList: React.FC<AgentConversationListProps> = ({
         return (
           <li key={conv.conversationId} className={isActive ? 'active' : ''}>
             <Link
-              to={onConversationSelect ? '#' : `/agent-conversation/${conv.conversationId}`}
+              to={
+                onConversationSelect
+                  ? '#'
+                  : `/agent-conversation/${conv.conversationId}`
+              }
               style={{
                 textDecoration: 'none',
                 color: 'inherit',
@@ -64,5 +68,3 @@ export const AgentConversationList: React.FC<AgentConversationListProps> = ({
     </ul>
   );
 };
-
-

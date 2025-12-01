@@ -38,7 +38,9 @@ describe('AgentConversationDetails', () => {
   });
 
   it('renders nothing when conversation is null', () => {
-    const { container } = render(<AgentConversationDetails conversation={null} />);
+    const { container } = render(
+      <AgentConversationDetails conversation={null} />
+    );
     expect(container.firstChild).toBeNull();
   });
 
@@ -76,17 +78,21 @@ describe('AgentConversationDetails', () => {
 
   it('renders message input form', () => {
     render(<AgentConversationDetails conversation={mockAgentConversation} />);
-    expect(screen.getByPlaceholderText(/type your message/i)).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText(/type your message/i)
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument();
   });
 
   it('allows typing in message input', async () => {
     const user = userEvent.setup();
     render(<AgentConversationDetails conversation={mockAgentConversation} />);
-    const input = screen.getByPlaceholderText(/type your message/i) as HTMLInputElement;
-    
+    const input = screen.getByPlaceholderText(
+      /type your message/i
+    ) as HTMLInputElement;
+
     await user.type(input, 'Test message');
-    
+
     expect(input.value).toBe('Test message');
   });
 
@@ -96,18 +102,20 @@ describe('AgentConversationDetails', () => {
       success: true,
       message: 'Message sent',
     });
-    vi.mocked(agentConversationsAPI.getAgentConversation).mockResolvedValueOnce({
-      ...mockAgentConversation,
-      messages: [
-        ...mockAgentConversation.messages,
-        {
-          role: 'user',
-          content: 'New message',
-          timestamp: new Date().toISOString(),
-          source: 'text',
-        },
-      ],
-    });
+    vi.mocked(agentConversationsAPI.getAgentConversation).mockResolvedValueOnce(
+      {
+        ...mockAgentConversation,
+        messages: [
+          ...mockAgentConversation.messages,
+          {
+            role: 'user',
+            content: 'New message',
+            timestamp: new Date().toISOString(),
+            source: 'text',
+          },
+        ],
+      }
+    );
 
     const onConversationUpdate = vi.fn();
     render(
@@ -154,7 +162,9 @@ describe('AgentConversationDetails', () => {
     await user.click(sendButton);
 
     await waitFor(() => {
-      expect(screen.getByText(new RegExp(errorMessage, 'i'))).toBeInTheDocument();
+      expect(
+        screen.getByText(new RegExp(errorMessage, 'i'))
+      ).toBeInTheDocument();
     });
   });
 
@@ -188,7 +198,9 @@ describe('AgentConversationDetails', () => {
 
     render(<AgentConversationDetails conversation={mockAgentConversation} />);
 
-    const input = screen.getByPlaceholderText(/type your message/i) as HTMLInputElement;
+    const input = screen.getByPlaceholderText(
+      /type your message/i
+    ) as HTMLInputElement;
     const sendButton = screen.getByRole('button', { name: /send/i });
 
     await user.type(input, 'Test message');
@@ -247,7 +259,7 @@ describe('AgentConversationDetails', () => {
     // Check that messages container exists and is scrollable
     const messagesContainer = container.querySelector('.messages-container');
     expect(messagesContainer).toBeInTheDocument();
-    
+
     // All messages should be rendered
     expect(screen.getByText('Message 1')).toBeInTheDocument();
     expect(screen.getByText('Message 100')).toBeInTheDocument();
@@ -275,4 +287,3 @@ describe('AgentConversationDetails', () => {
     });
   });
 });
-

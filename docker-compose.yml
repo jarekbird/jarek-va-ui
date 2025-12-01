@@ -20,7 +20,7 @@ services:
       - "3002:80"
     networks:
       - virtual-assistant-network
-    # Note: Traefik service is defined in jarek-va/docker-compose.yml
+    # Note: Traefik service is defined in cursor-runner/docker-compose.yml
     # This service connects to it via the shared network
     labels:
       - "traefik.enable=true"

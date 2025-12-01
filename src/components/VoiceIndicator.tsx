@@ -18,14 +18,14 @@ export interface VoiceIndicatorProps {
 
 /**
  * VoiceIndicator - Visual indicator for agent voice status
- * 
+ *
  * States:
  * - disconnected: Gray, static
  * - connecting: Blue, pulsing slowly
  * - connected: Green, static
  * - reconnecting: Yellow, pulsing
  * - error: Red, static
- * 
+ *
  * Modes (when connected):
  * - idle: Green, static
  * - listening: Blue, pulsing
@@ -40,7 +40,7 @@ export const VoiceIndicator: React.FC<VoiceIndicatorProps> = ({
 }) => {
   const getIndicatorClass = (): string => {
     const baseClass = 'voice-indicator';
-    
+
     if (status === 'disconnected') {
       return `${baseClass} ${baseClass}--disconnected`;
     }
@@ -59,7 +59,7 @@ export const VoiceIndicator: React.FC<VoiceIndicatorProps> = ({
       }
       return `${baseClass} ${baseClass}--idle`;
     }
-    
+
     return baseClass;
   };
 
@@ -79,7 +79,11 @@ export const VoiceIndicator: React.FC<VoiceIndicatorProps> = ({
   const handleButtonClick = () => {
     if (status === 'disconnected' || status === 'error') {
       onConnect?.();
-    } else if (status === 'connected' || status === 'connecting' || status === 'reconnecting') {
+    } else if (
+      status === 'connected' ||
+      status === 'connecting' ||
+      status === 'reconnecting'
+    ) {
       onDisconnect?.();
     }
   };
@@ -99,7 +103,11 @@ export const VoiceIndicator: React.FC<VoiceIndicatorProps> = ({
 
   return (
     <div className="voice-indicator-container" data-testid="voice-indicator">
-      <div className={getIndicatorClass()} role="status" aria-label={getStatusLabel()}>
+      <div
+        className={getIndicatorClass()}
+        role="status"
+        aria-label={getStatusLabel()}
+      >
         <div className="voice-indicator__inner"></div>
       </div>
       <span className="voice-indicator__label">{getStatusLabel()}</span>
@@ -107,7 +115,9 @@ export const VoiceIndicator: React.FC<VoiceIndicatorProps> = ({
         <button
           className="voice-indicator__button"
           onClick={handleButtonClick}
-          disabled={disabled || status === 'connecting' || status === 'reconnecting'}
+          disabled={
+            disabled || status === 'connecting' || status === 'reconnecting'
+          }
           aria-label={getButtonText()}
         >
           {getButtonText()}
@@ -116,5 +126,3 @@ export const VoiceIndicator: React.FC<VoiceIndicatorProps> = ({
     </div>
   );
 };
-
-

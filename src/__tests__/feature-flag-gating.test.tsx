@@ -12,9 +12,10 @@ import { isElevenLabsEnabled } from '../utils/feature-flags';
  * before building/running the app.
  */
 describe('Feature Flag Gating', () => {
-  const isEnabled = import.meta.env.VITE_ELEVENLABS_AGENT_ENABLED === 'true' ||
-                    import.meta.env.VITE_ELEVENLABS_AGENT_ENABLED === 'True' ||
-                    import.meta.env.VITE_ELEVENLABS_AGENT_ENABLED === 'TRUE';
+  const isEnabled =
+    import.meta.env.VITE_ELEVENLABS_AGENT_ENABLED === 'true' ||
+    import.meta.env.VITE_ELEVENLABS_AGENT_ENABLED === 'True' ||
+    import.meta.env.VITE_ELEVENLABS_AGENT_ENABLED === 'TRUE';
 
   describe('Navigation Gating', () => {
     it('conditionally shows/hides agent navigation links based on flag', () => {
@@ -24,10 +25,12 @@ describe('Feature Flag Gating', () => {
         expect(screen.getByText('Agent Conversations')).toBeInTheDocument();
         expect(screen.getByText('Agent Config')).toBeInTheDocument();
       } else {
-        expect(screen.queryByText('Agent Conversations')).not.toBeInTheDocument();
+        expect(
+          screen.queryByText('Agent Conversations')
+        ).not.toBeInTheDocument();
         expect(screen.queryByText('Agent Config')).not.toBeInTheDocument();
       }
-      
+
       // These should always be visible
       expect(screen.getByText('Note Taking History')).toBeInTheDocument();
       expect(screen.getByText('Tasks')).toBeInTheDocument();
@@ -49,4 +52,3 @@ describe('Feature Flag Gating', () => {
     });
   });
 });
-

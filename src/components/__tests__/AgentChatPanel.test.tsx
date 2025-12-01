@@ -4,18 +4,29 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { AgentChatPanel } from '../AgentChatPanel';
+import type { AgentConversation } from '../../types/agent-conversation';
 
 // Mock child components
 vi.mock('../AgentConversationListView', () => ({
-  AgentConversationListView: ({ onConversationSelect }: { onConversationSelect?: (id: string) => void }) => (
+  AgentConversationListView: ({
+    onConversationSelect,
+  }: {
+    onConversationSelect?: (id: string) => void;
+  }) => (
     <div data-testid="agent-conversation-list-view">
-      <button onClick={() => onConversationSelect?.('conv-123')}>Select Conversation</button>
+      <button onClick={() => onConversationSelect?.('conv-123')}>
+        Select Conversation
+      </button>
     </div>
   ),
 }));
 
 vi.mock('../AgentConversationDetailView', () => ({
-  AgentConversationDetailView: ({ conversationId }: { conversationId: string }) => (
+  AgentConversationDetailView: ({
+    conversationId,
+  }: {
+    conversationId: string;
+  }) => (
     <div data-testid="agent-conversation-detail-view">
       Conversation: {conversationId}
     </div>
@@ -23,7 +34,11 @@ vi.mock('../AgentConversationDetailView', () => ({
 }));
 
 vi.mock('../AgentConversationDetails', () => ({
-  AgentConversationDetails: ({ conversation }: { conversation: any }) => (
+  AgentConversationDetails: ({
+    conversation,
+  }: {
+    conversation: AgentConversation;
+  }) => (
     <div data-testid="agent-conversation-details">
       Conversation: {conversation?.conversationId}
     </div>
@@ -52,11 +67,15 @@ describe('AgentChatPanel', () => {
 
   it('renders list view by default', () => {
     render(<AgentChatPanel />);
-    expect(screen.getByTestId('agent-conversation-list-view')).toBeInTheDocument();
+    expect(
+      screen.getByTestId('agent-conversation-list-view')
+    ).toBeInTheDocument();
   });
 
   it('renders detail view when conversationId is provided', async () => {
-    const { getAgentConversation } = await import('../../api/agent-conversations');
+    const { getAgentConversation } = await import(
+      '../../api/agent-conversations'
+    );
     vi.mocked(getAgentConversation).mockResolvedValue({
       conversationId: 'conv-123',
       messages: [],
@@ -81,7 +100,9 @@ describe('AgentChatPanel', () => {
   });
 
   it('shows back button in detail view', async () => {
-    const { getAgentConversation } = await import('../../api/agent-conversations');
+    const { getAgentConversation } = await import(
+      '../../api/agent-conversations'
+    );
     vi.mocked(getAgentConversation).mockResolvedValue({
       conversationId: 'conv-123',
       messages: [],
@@ -96,5 +117,3 @@ describe('AgentChatPanel', () => {
     expect(screen.getByText('← Back')).toBeInTheDocument();
   });
 });
-
-

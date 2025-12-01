@@ -8,7 +8,9 @@ export const Navigation: React.FC = () => {
   const elevenLabsEnabled = isElevenLabsEnabled();
 
   const isActive = (path: string) => {
-    return location.pathname === path || location.pathname.startsWith(path + '/');
+    return (
+      location.pathname === path || location.pathname.startsWith(path + '/')
+    );
   };
 
   return (
@@ -58,4 +60,3 @@ export const Navigation: React.FC = () => {
     </nav>
   );
 };
-

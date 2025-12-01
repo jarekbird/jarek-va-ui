@@ -72,4 +72,3 @@ export async function getQueueInfo(queueName: string): Promise<QueueInfo> {
 
   return response.json();
 }
-

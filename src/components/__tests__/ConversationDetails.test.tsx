@@ -99,23 +99,32 @@ describe('ConversationDetails', () => {
         },
       ];
 
-      vi.mocked(repositoriesAPI.getRepositoryFiles).mockResolvedValueOnce(mockFiles);
+      vi.mocked(repositoriesAPI.getRepositoryFiles).mockResolvedValueOnce(
+        mockFiles
+      );
 
       render(
-        <ConversationDetails conversation={mockConversation} repository="test-repo" />
+        <ConversationDetails
+          conversation={mockConversation}
+          repository="test-repo"
+        />
       );
 
       await waitFor(() => {
         expect(screen.getByText(/repository structure/i)).toBeInTheDocument();
       });
 
-      expect(screen.getByText(/repository structure \(read-only\)/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/repository structure \(read-only\)/i)
+      ).toBeInTheDocument();
       expect(screen.getByText(/repository: test-repo/i)).toBeInTheDocument();
     });
 
     it('does not render file browser when repository is not provided', () => {
       render(<ConversationDetails conversation={mockConversation} />);
-      expect(screen.queryByText(/repository structure/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/repository structure/i)
+      ).not.toBeInTheDocument();
     });
 
     it('shows loading state while fetching file tree', () => {
@@ -124,10 +133,15 @@ describe('ConversationDetails', () => {
       );
 
       render(
-        <ConversationDetails conversation={mockConversation} repository="test-repo" />
+        <ConversationDetails
+          conversation={mockConversation}
+          repository="test-repo"
+        />
       );
 
-      expect(screen.getByText(/loading repository structure/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/loading repository structure/i)
+      ).toBeInTheDocument();
     });
 
     it('shows error message when file tree loading fails', async () => {
@@ -137,11 +151,16 @@ describe('ConversationDetails', () => {
       );
 
       render(
-        <ConversationDetails conversation={mockConversation} repository="test-repo" />
+        <ConversationDetails
+          conversation={mockConversation}
+          repository="test-repo"
+        />
       );
 
       await waitFor(() => {
-        expect(screen.getByText(new RegExp(errorMessage, 'i'))).toBeInTheDocument();
+        expect(
+          screen.getByText(new RegExp(errorMessage, 'i'))
+        ).toBeInTheDocument();
       });
     });
 
@@ -156,7 +175,10 @@ describe('ConversationDetails', () => {
       };
 
       const { container } = render(
-        <ConversationDetails conversation={longConversation} repository="test-repo" />
+        <ConversationDetails
+          conversation={longConversation}
+          repository="test-repo"
+        />
       );
 
       // Check that messages container has max-height for scrolling

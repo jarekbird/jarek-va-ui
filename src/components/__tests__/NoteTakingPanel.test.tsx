@@ -4,18 +4,31 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { NoteTakingPanel } from '../NoteTakingPanel';
+import type { Conversation } from '../../types';
 
 // Mock child components
 vi.mock('../ConversationListView', () => ({
-  ConversationListView: ({ onConversationSelect }: { onConversationSelect?: (id: string) => void }) => (
+  ConversationListView: ({
+    onConversationSelect,
+  }: {
+    onConversationSelect?: (id: string) => void;
+  }) => (
     <div data-testid="conversation-list-view">
-      <button onClick={() => onConversationSelect?.('conv-123')}>Select Conversation</button>
+      <button onClick={() => onConversationSelect?.('conv-123')}>
+        Select Conversation
+      </button>
     </div>
   ),
 }));
 
 vi.mock('../ConversationDetails', () => ({
-  ConversationDetails: ({ conversation, repository }: { conversation: any; repository?: string }) => (
+  ConversationDetails: ({
+    conversation,
+    repository,
+  }: {
+    conversation: Conversation;
+    repository?: string;
+  }) => (
     <div data-testid="conversation-details">
       Conversation: {conversation?.conversationId}
       {repository && <div>Repository: {repository}</div>}
@@ -81,7 +94,7 @@ describe('NoteTakingPanel', () => {
       createdAt: new Date().toISOString(),
       lastAccessedAt: new Date().toISOString(),
       metadata: { repository: 'test-repo' },
-    } as any);
+    } as Conversation & { metadata?: { repository?: string } });
 
     render(<NoteTakingPanel conversationId="conv-123" />);
 
@@ -106,5 +119,3 @@ describe('NoteTakingPanel', () => {
     expect(screen.getByText('← Back')).toBeInTheDocument();
   });
 });
-
-

@@ -12,39 +12,47 @@ describe('VoiceIndicator', () => {
   });
 
   it('applies correct class for disconnected status', () => {
-    render(<VoiceIndicator status="disconnected" mode="idle" />);
-    const indicator = screen.getByTestId('voice-indicator');
-    expect(indicator).toHaveClass('voice-indicator', 'disconnected');
+    const { container } = render(
+      <VoiceIndicator status="disconnected" mode="idle" />
+    );
+    const indicator = container.querySelector('.voice-indicator--disconnected');
+    expect(indicator).toBeInTheDocument();
   });
 
   it('applies correct class for connecting status', () => {
-    render(<VoiceIndicator status="connecting" mode="idle" />);
-    const indicator = screen.getByTestId('voice-indicator');
-    expect(indicator).toHaveClass('voice-indicator', 'connecting');
+    const { container } = render(
+      <VoiceIndicator status="connecting" mode="idle" />
+    );
+    const indicator = container.querySelector('.voice-indicator--connecting');
+    expect(indicator).toBeInTheDocument();
   });
 
   it('applies correct class for listening mode', () => {
-    render(<VoiceIndicator status="connected" mode="listening" />);
-    const indicator = screen.getByTestId('voice-indicator');
-    expect(indicator).toHaveClass('voice-indicator', 'listening');
+    const { container } = render(
+      <VoiceIndicator status="connected" mode="listening" />
+    );
+    const indicator = container.querySelector('.voice-indicator--listening');
+    expect(indicator).toBeInTheDocument();
   });
 
   it('applies correct class for speaking mode', () => {
-    render(<VoiceIndicator status="connected" mode="speaking" />);
-    const indicator = screen.getByTestId('voice-indicator');
-    expect(indicator).toHaveClass('voice-indicator', 'speaking');
+    const { container } = render(
+      <VoiceIndicator status="connected" mode="speaking" />
+    );
+    const indicator = container.querySelector('.voice-indicator--speaking');
+    expect(indicator).toBeInTheDocument();
   });
 
   it('applies correct class for error status', () => {
-    render(<VoiceIndicator status="error" mode="idle" />);
-    const indicator = screen.getByTestId('voice-indicator');
-    expect(indicator).toHaveClass('voice-indicator', 'error');
+    const { container } = render(<VoiceIndicator status="error" mode="idle" />);
+    const indicator = container.querySelector('.voice-indicator--error');
+    expect(indicator).toBeInTheDocument();
   });
 
   it('shows error indicator when status is error', () => {
     render(<VoiceIndicator status="error" mode="idle" />);
-    const indicator = screen.getByTestId('voice-indicator');
-    expect(indicator.textContent).toContain('!');
+    const label = screen.getByText('Error');
+    expect(label).toBeInTheDocument();
   });
 
   it('has role="status" for accessibility', () => {
@@ -53,5 +61,3 @@ describe('VoiceIndicator', () => {
     expect(indicator).toBeInTheDocument();
   });
 });
-
-

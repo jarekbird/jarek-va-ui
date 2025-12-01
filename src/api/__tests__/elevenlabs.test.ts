@@ -129,7 +129,9 @@ describe('ElevenLabs API', () => {
 
       expect(result.success).toBe(true);
       const callArgs = (mockFetch as ReturnType<typeof vi.fn>).mock.calls[0];
-      expect(callArgs[0]).toMatch(/\/agent-conversations\/api\/conv-123\/session$/);
+      expect(callArgs[0]).toMatch(
+        /\/agent-conversations\/api\/conv-123\/session$/
+      );
       expect(callArgs[1].method).toBe('POST');
       const body = JSON.parse(callArgs[1].body);
       expect(body.sessionUrl).toBe('wss://example.com/session');
@@ -179,4 +181,3 @@ describe('ElevenLabs API', () => {
     });
   });
 });
-

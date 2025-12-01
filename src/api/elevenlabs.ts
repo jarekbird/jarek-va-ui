@@ -82,7 +82,7 @@ export async function getVoiceSignedUrl(
   }
 
   const data = await response.json();
-  
+
   // Handle both camelCase and snake_case response formats
   return {
     signedUrl: data.signedUrl || data.signed_url || data.url,
@@ -105,7 +105,7 @@ export async function registerSession(
   // When using relative paths (dev mode), use the special /agent-session path
   // that gets proxied to elevenlabs-agent
   // When using absolute URL (production), use the full path
-  const url = baseUrl 
+  const url = baseUrl
     ? `${baseUrl}/agent-conversations/api/${conversationId}/session`
     : `/agent-session/${conversationId}`;
 
@@ -179,5 +179,3 @@ export async function getAgentConfig(): Promise<{
   // Fallback: if response is already the config object
   return data;
 }
-
-

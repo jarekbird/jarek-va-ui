@@ -38,7 +38,9 @@ describe('App', () => {
     vi.mocked(conversationsAPI.listConversations).mockResolvedValueOnce([]);
     render(<App />);
     // Check for h1 heading specifically (not the nav link)
-    expect(screen.getByRole('heading', { name: 'Note Taking History' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Note Taking History' })
+    ).toBeInTheDocument();
   });
 
   it('loads and displays conversations on mount', async () => {
@@ -75,10 +77,17 @@ describe('App', () => {
 
     render(<App />);
 
-    await waitFor(() => {
-      // Error message might be wrapped in error component, check for text content
-      expect(screen.getByText(/Failed to fetch conversations|Network error|An error occurred/i)).toBeInTheDocument();
-    }, { timeout: 3000 });
+    await waitFor(
+      () => {
+        // Error message might be wrapped in error component, check for text content
+        expect(
+          screen.getByText(
+            /Failed to fetch conversations|Network error|An error occurred/i
+          )
+        ).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it('displays "No note sessions found" when list is empty', async () => {

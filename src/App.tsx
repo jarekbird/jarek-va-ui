@@ -24,10 +24,7 @@ const App: React.FC = () => {
       />
       {elevenLabsEnabled && (
         <>
-          <Route
-            path="/dashboard"
-            element={<Dashboard />}
-          />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route
             path="/agent-conversations"
             element={<AgentConversationListView />}
@@ -36,10 +33,7 @@ const App: React.FC = () => {
             path="/agent-conversation/:conversationId"
             element={<AgentConversationDetailView />}
           />
-          <Route
-            path="/agent-config"
-            element={<AgentConfigView />}
-          />
+          <Route path="/agent-config" element={<AgentConfigView />} />
         </>
       )}
       <Route path="/task-dashboard" element={<TaskDashboard />} />

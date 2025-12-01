@@ -34,7 +34,9 @@ export interface RetryOptions {
 /**
  * Default retry options
  */
-const DEFAULT_OPTIONS: Required<Omit<RetryOptions, 'onRetry' | 'shouldRetry'>> & {
+const DEFAULT_OPTIONS: Required<
+  Omit<RetryOptions, 'onRetry' | 'shouldRetry'>
+> & {
   onRetry?: RetryOptions['onRetry'];
   shouldRetry?: RetryOptions['shouldRetry'];
 } = {
@@ -79,9 +81,13 @@ function defaultShouldRetry(error: Error, attempt: number): boolean {
   }
 
   // Retry on 5xx server errors (if error has status property)
-  if ('status' in error && typeof (error as any).status === 'number') {
-    const status = (error as any).status;
-    if (status >= 500 && status < 600) {
+  if ('status' in error) {
+    const errorWithStatus = error as Error & { status?: number };
+    if (
+      typeof errorWithStatus.status === 'number' &&
+      errorWithStatus.status >= 500 &&
+      errorWithStatus.status < 600
+    ) {
       return true;
     }
   }
@@ -119,7 +125,12 @@ export async function retryWithBackoff<T>(
 
       // Check if we should retry
       if (attempt < maxRetries && shouldRetry(lastError, attempt)) {
-        const delay = calculateDelay(attempt, initialDelay, maxDelay, multiplier);
+        const delay = calculateDelay(
+          attempt,
+          initialDelay,
+          maxDelay,
+          multiplier
+        );
 
         // Call onRetry callback if provided
         if (onRetry) {
@@ -148,5 +159,3 @@ export function createRetryFunction<T>(
 ): (fn: () => Promise<T>) => Promise<T> {
   return (fn: () => Promise<T>) => retryWithBackoff(fn, options);
 }
-
-

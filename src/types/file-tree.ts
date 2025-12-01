@@ -7,5 +7,3 @@ export interface FileNode {
   type: 'file' | 'directory';
   children?: FileNode[];
 }
-
-

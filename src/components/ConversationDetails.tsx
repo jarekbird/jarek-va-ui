@@ -22,9 +22,8 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
 }) => {
   // Local copy of the conversation to ensure UI updates immediately,
   // even if parent components don't re-render in sync.
-  const [localConversation, setLocalConversation] = React.useState<Conversation | null>(
-    conversation
-  );
+  const [localConversation, setLocalConversation] =
+    React.useState<Conversation | null>(conversation);
 
   const [message, setMessage] = React.useState<string>('');
   const [isSending, setIsSending] = React.useState<boolean>(false);
@@ -33,9 +32,10 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const pollingIntervalRef = React.useRef<number | null>(null);
   const lastMessageCountRef = React.useRef<number>(0);
+  const lastMessageContentRef = React.useRef<string>(''); // Track last message content for streaming detection
   const conversationIdRef = React.useRef<string | null>(null);
   const currentConversationRef = React.useRef<Conversation | null>(null);
-  
+
   // File browser state
   const [fileTree, setFileTree] = React.useState<FileNode[]>([]);
   const [fileTreeLoading, setFileTreeLoading] = React.useState<boolean>(false);
@@ -52,6 +52,12 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
       lastMessageCountRef.current = localConversation.messages.length;
       conversationIdRef.current = localConversation.conversationId;
       currentConversationRef.current = localConversation;
+      // Update last message content ref for streaming detection
+      if (localConversation.messages.length > 0) {
+        const lastMsg =
+          localConversation.messages[localConversation.messages.length - 1];
+        lastMessageContentRef.current = lastMsg.content;
+      }
     }
   }, [localConversation]);
 
@@ -109,50 +115,76 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
         const serverMessageCount = serverConversation.messages.length;
         const currentLocalCount = lastMessageCountRef.current;
 
-        // Only update if server has more messages than we currently have
-        // This preserves optimistic updates (user messages) that haven't been saved yet
-        if (serverMessageCount > currentLocalCount) {
-          // Get the current local conversation to preserve any optimistic updates
-          const localConversation = currentConversationRef.current;
-          const localMessages = localConversation?.messages || [];
-          const serverMessages = serverConversation.messages;
-          
+        // Get the current local conversation to preserve any optimistic updates
+        const localConversation = currentConversationRef.current;
+        const localMessages = localConversation?.messages || [];
+        const serverMessages = serverConversation.messages;
+
+        // Check if there are changes:
+        // 1. New messages added (count increased)
+        // 2. Existing messages updated (content changed, e.g., streaming appends)
+        const hasNewMessages = serverMessageCount > currentLocalCount;
+
+        // For streaming: check if last message content changed (even if count is same)
+        // This detects when the backend appends to the last message in real-time
+        const lastServerMessage =
+          serverMessages.length > 0
+            ? serverMessages[serverMessages.length - 1]
+            : null;
+        const lastServerContent = lastServerMessage?.content || '';
+        const previousLastContent = lastMessageContentRef.current;
+        const hasUpdatedMessages =
+          lastServerContent !== previousLastContent &&
+          lastServerContent.length > 0;
+
+        // Update if there are new messages OR if existing messages were updated (streaming)
+        if (hasNewMessages || hasUpdatedMessages) {
           // Merge strategy: Use server messages as source of truth
           // Match messages by role+content (not timestamp) to identify duplicates
           const serverMessageKeys = new Set(
-            serverMessages.map(m => `${m.role}:${m.content}`)
+            serverMessages.map((m) => `${m.role}:${m.content}`)
           );
-          
-          // Start with server messages (they have authoritative timestamps)
+
+          // Start with server messages (they have authoritative timestamps and content)
           const mergedMessages = [...serverMessages];
-          
+
           // Add any local messages that aren't in server yet (optimistic updates not yet saved)
-          localMessages.forEach(localMsg => {
+          localMessages.forEach((localMsg) => {
             const localKey = `${localMsg.role}:${localMsg.content}`;
             if (!serverMessageKeys.has(localKey)) {
               mergedMessages.push(localMsg);
             }
           });
-          
+
           // Sort by timestamp to maintain chronological order
-          mergedMessages.sort((a, b) => 
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          mergedMessages.sort(
+            (a, b) =>
+              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
           );
-          
+
           const mergedConversation: Conversation = {
             ...serverConversation,
             messages: mergedMessages,
           };
-          
+
           lastMessageCountRef.current = mergedMessages.length;
+          // Update last message content ref for next comparison
+          if (mergedMessages.length > 0) {
+            const lastMsg = mergedMessages[mergedMessages.length - 1];
+            lastMessageContentRef.current = lastMsg.content;
+          }
+
           if (onConversationUpdate) {
             onConversationUpdate(mergedConversation);
           }
 
           // Stop polling if we have an assistant response (last message is from assistant)
+          // AND the message content hasn't changed (streaming has completed)
+          // We detect completion by checking if content is stable (same as last poll)
           if (
             mergedMessages.length > 0 &&
-            mergedMessages[mergedMessages.length - 1].role === 'assistant'
+            mergedMessages[mergedMessages.length - 1].role === 'assistant' &&
+            !hasUpdatedMessages // Content hasn't changed since last poll = streaming complete
           ) {
             setIsPolling(false);
             if (pollingIntervalRef.current) {
@@ -198,12 +230,12 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
       messages: [...localConversation.messages, userMessage],
       lastAccessedAt: new Date().toISOString(),
     };
-    
+
     // Update refs immediately to ensure they're current before polling starts
     lastMessageCountRef.current = updatedConversation.messages.length;
     conversationIdRef.current = updatedConversation.conversationId;
     currentConversationRef.current = updatedConversation;
-    
+
     // Update local state immediately so the UI reflects the new message
     setLocalConversation(updatedConversation);
 

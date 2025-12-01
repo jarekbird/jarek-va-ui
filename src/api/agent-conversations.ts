@@ -9,7 +9,7 @@ import type { AgentConversation } from '../types/agent-conversation';
  * Base URL for agent conversation API endpoints.
  * These endpoints are served by cursor-runner, not elevenlabs-agent.
  * Uses relative path to work with both nginx proxy and Traefik routing.
- * 
+ *
  * Note: VITE_ELEVENLABS_AGENT_URL is for elevenlabs-agent service endpoints
  * (like /config, /signed-url), not for agent conversation API endpoints.
  */
@@ -79,7 +79,7 @@ export async function listAgentConversations(
   }
   const queryString = params.toString();
   const url = `${baseUrl}/list${queryString ? `?${queryString}` : ''}`;
-  
+
   const response = await fetch(url);
 
   // Check if response is actually JSON before parsing
@@ -96,7 +96,8 @@ export async function listAgentConversations(
       .json()
       .catch(() => ({ error: response.statusText }));
     throw new Error(
-      errorData.error || `Failed to fetch agent conversations: ${response.statusText}`
+      errorData.error ||
+        `Failed to fetch agent conversations: ${response.statusText}`
     );
   }
 
@@ -132,7 +133,8 @@ export async function getAgentConversation(
       .json()
       .catch(() => ({ error: response.statusText }));
     throw new Error(
-      errorData.error || `Failed to fetch agent conversation: ${response.statusText}`
+      errorData.error ||
+        `Failed to fetch agent conversation: ${response.statusText}`
     );
   }
 
@@ -147,7 +149,7 @@ export interface CreateAgentConversationRequest {
    * Optional agent ID to associate with this conversation
    */
   agentId?: string;
-  
+
   /**
    * Optional metadata to attach to the conversation
    */
@@ -197,7 +199,8 @@ export async function createAgentConversation(
       .json()
       .catch(() => ({ error: response.statusText }));
     throw new Error(
-      errorData.error || `Failed to create agent conversation: ${response.statusText}`
+      errorData.error ||
+        `Failed to create agent conversation: ${response.statusText}`
     );
   }
 
@@ -212,12 +215,12 @@ export interface SendAgentMessageRequest {
    * Role of the message sender (user or assistant)
    */
   role: 'user' | 'assistant';
-  
+
   /**
    * Content of the message
    */
   content: string;
-  
+
   /**
    * Optional source of the message (voice or text)
    */

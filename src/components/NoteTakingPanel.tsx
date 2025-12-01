@@ -28,9 +28,9 @@ export const NoteTakingPanel: React.FC<NoteTakingPanelProps> = ({
   onConversationSelect,
   onConversationUpdate,
 }) => {
-  const [selectedConversationId, setSelectedConversationId] = useState<string | undefined>(
-    conversationId
-  );
+  const [selectedConversationId, setSelectedConversationId] = useState<
+    string | undefined
+  >(conversationId);
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +50,8 @@ export const NoteTakingPanel: React.FC<NoteTakingPanelProps> = ({
       const data = await getConversationById(id);
       setConversation(data);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load conversation';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to load conversation';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -96,12 +97,19 @@ export const NoteTakingPanel: React.FC<NoteTakingPanelProps> = ({
                   onConversationUpdate(updatedConversation);
                 }
               }}
-              repository={(conversation as any).metadata?.repository as string | undefined}
+              repository={
+                'metadata' in conversation &&
+                conversation.metadata &&
+                typeof conversation.metadata === 'object' &&
+                'repository' in conversation.metadata
+                  ? String(conversation.metadata.repository)
+                  : undefined
+              }
             />
           )}
         </div>
       ) : (
-        <ConversationListView 
+        <ConversationListView
           onConversationSelect={handleConversationSelect}
           onNewConversation={handleNewConversation}
           showNavigation={false}
@@ -111,4 +119,3 @@ export const NoteTakingPanel: React.FC<NoteTakingPanelProps> = ({
     </div>
   );
 };
-

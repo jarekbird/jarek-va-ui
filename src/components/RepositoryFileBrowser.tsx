@@ -15,7 +15,8 @@ interface FileTreeNodeProps {
 
 const FileTreeNode: React.FC<FileTreeNodeProps> = ({ node, level = 0 }) => {
   const [isExpanded, setIsExpanded] = React.useState<boolean>(level < 2); // Auto-expand first 2 levels
-  const hasChildren = node.type === 'directory' && node.children && node.children.length > 0;
+  const hasChildren =
+    node.type === 'directory' && node.children && node.children.length > 0;
 
   const handleToggle = () => {
     if (hasChildren) {
@@ -66,7 +67,11 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({ node, level = 0 }) => {
       {isExpanded && hasChildren && node.children && (
         <div>
           {node.children.map((child, index) => (
-            <FileTreeNode key={`${child.path}-${index}`} node={child} level={level + 1} />
+            <FileTreeNode
+              key={`${child.path}-${index}`}
+              node={child}
+              level={level + 1}
+            />
           ))}
         </div>
       )}
@@ -119,10 +124,14 @@ export const RepositoryFileBrowser: React.FC<RepositoryFileBrowserProps> = ({
         overflowY: 'auto',
       }}
     >
-      <div style={{ marginBottom: '0.5rem', fontWeight: 'bold', color: '#2c3e50' }}>
+      <div
+        style={{ marginBottom: '0.5rem', fontWeight: 'bold', color: '#2c3e50' }}
+      >
         Repository Structure (read-only)
       </div>
-      <div style={{ fontSize: '12px', color: '#7f8c8d', marginBottom: '0.5rem' }}>
+      <div
+        style={{ fontSize: '12px', color: '#7f8c8d', marginBottom: '0.5rem' }}
+      >
         Repository: {repository}
       </div>
       <div>
@@ -133,5 +142,3 @@ export const RepositoryFileBrowser: React.FC<RepositoryFileBrowserProps> = ({
     </div>
   );
 };
-
-

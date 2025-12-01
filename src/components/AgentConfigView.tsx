@@ -58,7 +58,9 @@ export const AgentConfigView: React.FC = () => {
         throw new Error(data.error || 'Failed to load configuration');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load configuration');
+      setError(
+        err instanceof Error ? err.message : 'Failed to load configuration'
+      );
     }
   };
 
@@ -166,11 +168,17 @@ export const AgentConfigView: React.FC = () => {
               </div>
               <div className="config-item">
                 <strong>Webhook Secret:</strong>
-                <span>{config.webhookSecretConfigured ? '✓ Configured' : '✗ Not configured'}</span>
+                <span>
+                  {config.webhookSecretConfigured
+                    ? '✓ Configured'
+                    : '✗ Not configured'}
+                </span>
               </div>
               <div className="config-item">
                 <strong>API Key:</strong>
-                <span>{config.hasApiKey ? '✓ Configured' : '✗ Not configured'}</span>
+                <span>
+                  {config.hasApiKey ? '✓ Configured' : '✗ Not configured'}
+                </span>
               </div>
               <div className="config-item">
                 <strong>Redis:</strong>
@@ -191,17 +199,32 @@ export const AgentConfigView: React.FC = () => {
                 </div>
                 <div className="health-item">
                   <strong>Redis:</strong>
-                  <span style={{ color: getStatusColor(health.dependencies.redis) }}>
-                    {getStatusIcon(health.dependencies.redis)} {health.dependencies.redis}
+                  <span
+                    style={{ color: getStatusColor(health.dependencies.redis) }}
+                  >
+                    {getStatusIcon(health.dependencies.redis)}{' '}
+                    {health.dependencies.redis}
                   </span>
                 </div>
                 <div className="health-item">
                   <strong>Cursor Runner:</strong>
-                  <span style={{ color: getStatusColor(health.dependencies.cursorRunner) }}>
-                    {getStatusIcon(health.dependencies.cursorRunner)} {health.dependencies.cursorRunner}
+                  <span
+                    style={{
+                      color: getStatusColor(health.dependencies.cursorRunner),
+                    }}
+                  >
+                    {getStatusIcon(health.dependencies.cursorRunner)}{' '}
+                    {health.dependencies.cursorRunner}
                   </span>
                 </div>
-                <div className="health-item" style={{ marginTop: '10px', fontSize: '0.9em', color: '#7f8c8d' }}>
+                <div
+                  className="health-item"
+                  style={{
+                    marginTop: '10px',
+                    fontSize: '0.9em',
+                    color: '#7f8c8d',
+                  }}
+                >
                   Last updated: {new Date(health.timestamp).toLocaleString()}
                 </div>
               </div>
@@ -212,4 +235,3 @@ export const AgentConfigView: React.FC = () => {
     </div>
   );
 };
-
