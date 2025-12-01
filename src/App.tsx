@@ -1,25 +1,45 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { Layout } from './components/layout/Layout';
-import { ConversationsPage } from './routes/conversations/ConversationsPage';
-import { ConversationDetailPage } from './routes/conversations/ConversationDetailPage';
+import { ConversationListView } from './components/ConversationListView';
+import { ConversationDetailView } from './components/ConversationDetailView';
+import { AgentConversationListView } from './components/AgentConversationListView';
+import { AgentConversationDetailView } from './components/AgentConversationDetailView';
+import { AgentConfigView } from './components/AgentConfigView';
+import { Dashboard } from './components/Dashboard';
+import { TaskDashboard } from './components/TaskDashboard';
 import { TaskListView } from './components/TaskListView';
-import { TaskDetailPage } from './routes/tasks/TaskDetailPage';
+import { TaskDetailView } from './components/TaskDetailView';
+import { isElevenLabsEnabled } from './utils/feature-flags';
 import './styles/App.css';
 
 const App: React.FC = () => {
+  const elevenLabsEnabled = isElevenLabsEnabled();
+
   return (
-    <Layout>
-      <Routes>
-        <Route path="/conversations" element={<ConversationsPage />} />
-        <Route
-          path="/conversations/:conversationId"
-          element={<ConversationDetailPage />}
-        />
-        <Route path="/tasks" element={<TaskListView />} />
-        <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
-      </Routes>
-    </Layout>
+    <Routes>
+      <Route path="/" element={<ConversationListView />} />
+      <Route
+        path="/conversation/:conversationId"
+        element={<ConversationDetailView />}
+      />
+      {elevenLabsEnabled && (
+        <>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route
+            path="/agent-conversations"
+            element={<AgentConversationListView />}
+          />
+          <Route
+            path="/agent-conversation/:conversationId"
+            element={<AgentConversationDetailView />}
+          />
+          <Route path="/agent-config" element={<AgentConfigView />} />
+        </>
+      )}
+      <Route path="/task-dashboard" element={<TaskDashboard />} />
+      <Route path="/tasks" element={<TaskListView />} />
+      <Route path="/task/:id" element={<TaskDetailView />} />
+    </Routes>
   );
 };
 

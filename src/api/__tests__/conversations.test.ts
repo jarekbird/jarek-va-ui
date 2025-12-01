@@ -119,7 +119,7 @@ describe('conversations API', () => {
       });
 
       await expect(getConversationById('nonexistent')).rejects.toThrow(
-        'Conversation not found'
+        'Note session not found'
       );
     });
 

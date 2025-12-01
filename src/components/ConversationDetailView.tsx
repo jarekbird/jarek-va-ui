@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ConversationDetails } from './ConversationDetails';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
+import { Navigation } from './Navigation';
 import { getConversationById } from '../api/conversations';
 import type { Conversation } from '../types';
 
@@ -30,7 +31,7 @@ export const ConversationDetailView: React.FC = () => {
       setError(
         err instanceof Error
           ? err.message
-          : 'An error occurred while loading the conversation'
+          : 'An error occurred while loading the note session'
       );
       setConversation(null);
     } finally {
@@ -40,9 +41,10 @@ export const ConversationDetailView: React.FC = () => {
 
   return (
     <div className="container">
+      <Navigation />
       <div style={{ marginBottom: '1rem' }}>
         <Link to="/" style={{ color: '#3498db', textDecoration: 'none' }}>
-          ← Back to Conversations
+          ← Back to Note Taking History
         </Link>
       </div>
       {loading && <LoadingSpinner />}
@@ -55,7 +57,7 @@ export const ConversationDetailView: React.FC = () => {
       )}
       {!loading && !error && !conversation && (
         <p style={{ textAlign: 'center', color: '#7f8c8d' }}>
-          Conversation not found.
+          Note session not found.
         </p>
       )}
     </div>

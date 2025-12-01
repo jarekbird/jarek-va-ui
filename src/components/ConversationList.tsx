@@ -1,22 +1,19 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import type { Conversation } from '../types';
-import { ConversationListItem } from './ConversationListItem';
 
 interface ConversationListProps {
   conversations: Conversation[];
   activeConversationId: string | null;
   onSelectConversation: (conversationId: string) => void;
+  onConversationSelect?: (conversationId: string) => void; // Optional callback for Dashboard mode
 }
 
-/**
- * Presentational component that renders a list of conversation items.
- * Handles sorting and active state determination.
- */
 export const ConversationList: React.FC<ConversationListProps> = ({
   conversations,
   activeConversationId,
   onSelectConversation,
+  onConversationSelect,
 }) => {
   const location = useLocation();
   const sortedConversations = [...conversations].sort(
@@ -26,8 +23,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   // Determine active conversation from URL if not provided
   const currentConversationId =
     activeConversationId ||
-    (location.pathname.startsWith('/conversations/')
-      ? location.pathname.split('/conversations/')[1]
+    (location.pathname.startsWith('/conversation/')
+      ? location.pathname.split('/conversation/')[1]
       : null);
 
   return (
@@ -35,12 +32,37 @@ export const ConversationList: React.FC<ConversationListProps> = ({
       {sortedConversations.map((conv) => {
         const isActive = currentConversationId === conv.conversationId;
         return (
-          <ConversationListItem
-            key={conv.conversationId}
-            conversation={conv}
-            isActive={isActive}
-            onSelectConversation={onSelectConversation}
-          />
+          <li key={conv.conversationId} className={isActive ? 'active' : ''}>
+            <Link
+              to={
+                onConversationSelect
+                  ? '#'
+                  : `/conversation/${conv.conversationId}`
+              }
+              style={{
+                textDecoration: 'none',
+                color: 'inherit',
+                display: 'block',
+              }}
+              onClick={(e) => {
+                if (onConversationSelect) {
+                  e.preventDefault();
+                  onConversationSelect(conv.conversationId);
+                }
+                onSelectConversation(conv.conversationId);
+              }}
+            >
+              <div className="conversation-meta">
+                <span className="conversation-id">
+                  ID: {conv.conversationId}
+                </span>
+                <span className="conversation-date">
+                  Last accessed:{' '}
+                  {new Date(conv.lastAccessedAt).toLocaleString()}
+                </span>
+              </div>
+            </Link>
+          </li>
         );
       })}
     </ul>

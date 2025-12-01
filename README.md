@@ -54,10 +54,21 @@ The API base URL can be configured via environment variable:
 
 - `VITE_API_BASE_URL` - Defaults to `/conversations/api` (relative path)
 
+### ElevenLabs Agent Configuration
+
+The following environment variables control ElevenLabs agent functionality:
+
+- `VITE_ELEVENLABS_AGENT_ENABLED` - Feature flag to enable/disable ElevenLabs agent functionality (default: `false`). When disabled, all agent-specific UI and functionality will be hidden.
+- `VITE_ELEVENLABS_AGENT_URL` - Base URL for the ElevenLabs agent service API. Used for fetching signed URLs and registering sessions.
+- `VITE_ELEVENLABS_AGENT_ID` - (Optional) ElevenLabs agent ID for private agents. If not provided, the default agent will be used.
+- `VITE_ELEVENLABS_AGENT_PUBLIC` - (Optional) Public key for ElevenLabs agent authentication.
+
 For development, you can create a `.env` file:
 
 ```env
 VITE_API_BASE_URL=http://localhost:3001/conversations/api
+VITE_ELEVENLABS_AGENT_ENABLED=false
+VITE_ELEVENLABS_AGENT_URL=http://localhost:3004
 ```
 
 ## API Endpoints

@@ -64,6 +64,7 @@
     - Provides a basic text input to send text-only messages (stubbed for now if backend not ready).
   - Add navigation to “Agent Conversations” in the main app layout or side nav.
   - Add routes for list and detail views in `App.tsx` or router configuration.
+  - Treat these views as building blocks that will be embedded into the **Dashboard** (AgentChatPanel) rather than as the final standalone UI.
 
 ### 7 Add Repository File Browser Backend Endpoint
 
@@ -83,7 +84,7 @@
     - File/folder icons.
     - Display full paths or tooltips for deep paths.
   - Create an `api` helper for `/repositories/api/:repository/files`.
-  - Add the file browser to the note-taking detail view (or a dedicated tab) with clear “browse-only” messaging.
+  - Add the file browser to the note-taking detail view (or a dedicated tab) with clear “browse-only” messaging; this will later surface primarily via the Dashboard’s **NoteTakingPanel**.
   - Add minimal styling to fit existing layout (no UX regressions on smaller screens).
 
 ### 9 Wire File Browser to the Correct Repository Context
@@ -123,6 +124,13 @@
     - Store `sessionPayload`, `wsUrl`, `createdAt`, and `ttl` as described in the plan.
   - Enforce the “raw push-capable payload” rule and document it in code comments.
   - Add tests for TTL behavior and schema backwards compatibility.
+  - Implement an **Agent Conversation Service** (e.g., `services/agent-conversation-service.ts`) that stores `elevenlabs:conversation:{conversationId}` documents in Redis as described in the master plan.
+  - Implement `/agent-conversations/api/*` routes in a dedicated route file (e.g., `routes/agent-conversation-routes.ts`) to:
+    - List conversations.
+    - Get a specific conversation.
+    - Create a new conversation.
+    - Append messages to a conversation.
+  - Ensure these routes are protected by `ELEVENLABS_AGENT_ENABLED` and align their shapes with the frontend types in `src/types/agent-conversation.ts`.
 
 ### 13 Implement Callback Queue Service
 
@@ -298,14 +306,30 @@
   - Track active session in `localStorage`/`sessionStorage` to warn when multiple tabs use the same agent.
   - Display human-friendly messages for these edge cases.
 
-### 30 Integrate Voice Service with AgentConversationDetails UI
+### 29a Create Dashboard Layout Skeleton
 
 - **Scope:** `jarek-va-ui`.
 - **Subtasks:**
-  - Add voice-mode state and connection state to `AgentConversationDetails.tsx`.
-  - Add voice controls (Start/Stop, status indicators, mic activity visualization).
-  - Wire voice session messages into the conversation message list.
-  - Respect `VITE_ELEVENLABS_AGENT_ENABLED` by hiding controls when disabled.
+  - Create `Dashboard.tsx` that lays out three regions:
+    - Upper left: placeholder for the voice indicator.
+    - Lower left: placeholder for the agent chat panel.
+    - Right side: placeholder for the note-taking panel.
+  - Create initial component shells:
+    - `VoiceIndicator.tsx` (static circle, no live state yet).
+    - `AgentChatPanel.tsx` (wraps `AgentConversationListView` / `AgentConversationDetailView` or a simplified stub).
+    - `NoteTakingPanel.tsx` (wraps existing note-taking list/detail views).
+  - Implement responsive CSS (grid/flex) so that on desktop the three regions match the target layout, and on mobile they stack vertically.
+  - Add a temporary Dashboard route in `App.tsx` guarded by `VITE_ELEVENLABS_AGENT_ENABLED`, even before voice wiring is complete.
+
+### 30 Integrate Voice Service with Dashboard (VoiceIndicator + AgentChatPanel)
+
+- **Scope:** `jarek-va-ui`.
+- **Subtasks:**
+  - Wire `ElevenLabsVoiceService` into the `Dashboard` component and `AgentChatPanel`.
+  - Add voice-mode state and connection/agent-mode state to `AgentChatPanel` and expose them to `VoiceIndicator`.
+  - Implement the `VoiceIndicator` circle animation (idle/listening/speaking/connecting/error) driven by voice service state.
+  - Wire voice session messages into the agent conversation message list (via `AgentConversationDetails` or equivalent, embedded inside `AgentChatPanel`).
+  - Respect `VITE_ELEVENLABS_AGENT_ENABLED` by hiding voice-related controls and the dashboard route when disabled.
 
 ### 31 Implement Text Message Flow for Agent Conversations
 
@@ -321,8 +345,9 @@
 - **Scope:** `jarek-va-ui`.
 - **Subtasks:**
   - Add an “Agent Conversations” entry in the main navigation.
-  - Ensure note-taking and agent conversation routes are clearly separated.
-  - Provide clear breadcrumbs or page titles for each mode.
+  - Add a **Dashboard** route (`/dashboard` or `/`) that becomes the primary entry point when ElevenLabs is enabled.
+  - Ensure note-taking and agent conversation list routes are clearly separated from, but consistent with, the dashboard (e.g., `/`, `/agent-conversations`, `/dashboard`).
+  - Provide clear breadcrumbs or page titles for each mode (Dashboard vs. list views).
 
 ### 33 Validate Data Model Alignment Across Services
 
@@ -350,12 +375,12 @@
   - Include fields like `summary`, `branch`, `files_changed`, and `duration`.
   - Keep MVP default as simple-text until proven stable.
 
-### 36 Integrate Repository File Browser into Note-Taking Detail View
+### 36 Integrate Repository File Browser into Note-Taking Panel / Dashboard
 
 - **Scope:** `jarek-va-ui`.
 - **Subtasks:**
-  - Add the `RepositoryFileBrowser` component to the existing `ConversationDetails` (note-taking) view.
-  - Ensure layout remains readable when conversations are long.
+  - Add the `RepositoryFileBrowser` component to the **NoteTakingPanel** (which may internally compose `ConversationDetails`) on the right side of the Dashboard.
+  - Ensure layout remains readable when conversations are long and the file tree is deep (both desktop and mobile/stacked layouts).
   - Provide clear labeling (e.g., “Repository Structure (read-only)”).
 
 ### 37 Add Styles for Voice and Agent UI Elements

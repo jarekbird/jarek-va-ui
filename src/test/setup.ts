@@ -7,8 +7,8 @@ import { afterEach, vi } from 'vitest';
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  // Restore real timers if fake timers were used
+  if (vi.isFakeTimers()) {
+    vi.useRealTimers();
+  }
 });
-
-// Note: QueryClient cleanup must be done per-test since each test
-// creates its own QueryClient instance. Tests that use QueryClient
-// should call queryClient.clear() in their own afterEach hooks.

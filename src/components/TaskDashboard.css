@@ -1,0 +1,122 @@
+.task-dashboard {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.task-dashboard__content {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 250px 1fr 1fr 300px;
+  grid-template-rows: 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.task-dashboard__file-viewer {
+  grid-column: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.task-dashboard__left {
+  grid-column: 2;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.task-dashboard__middle-right {
+  grid-column: 3;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.task-dashboard__right {
+  grid-column: 4;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Compressed/Tablet view: Stack file viewer and tasks, Bull MQ at bottom */
+@media (max-width: 1400px) {
+  .task-dashboard__content {
+    grid-template-columns: 250px 1fr 1fr;
+    grid-template-rows: 1fr auto;
+  }
+
+  .task-dashboard__file-viewer {
+    grid-column: 1;
+    grid-row: 1 / -1;
+  }
+
+  .task-dashboard__left {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .task-dashboard__middle-right {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .task-dashboard__right {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    max-height: 300px;
+  }
+}
+
+/* Mobile/Tablet: Stack vertically */
+@media (max-width: 768px) {
+  .task-dashboard__content {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto;
+    gap: 1rem;
+  }
+
+  .task-dashboard__file-viewer {
+    grid-column: 1;
+    grid-row: 1;
+    min-height: 200px;
+  }
+
+  .task-dashboard__left {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 300px;
+  }
+
+  .task-dashboard__middle-right {
+    grid-column: 1;
+    grid-row: 3;
+    min-height: 300px;
+  }
+
+  .task-dashboard__right {
+    grid-column: 1;
+    grid-row: 4;
+    min-height: 250px;
+    max-height: none;
+  }
+}
+
+/* Small mobile: Further optimize spacing */
+@media (max-width: 480px) {
+  .task-dashboard {
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
+}
+

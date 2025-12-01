@@ -1,3 +1,8 @@
+/**
+ * API client for note-taking conversations.
+ * Note: These endpoints use the legacy "/conversations/api" path for backward compatibility.
+ * The UI displays these as "Note Taking History" but the API endpoints remain unchanged.
+ */
 import type { Conversation } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/conversations/api';
@@ -167,7 +172,7 @@ export async function getConversationById(
 
   if (!response.ok) {
     if (response.status === 404) {
-      throw new Error('Conversation not found');
+      throw new Error('Note session not found');
     }
     const errorData = await response
       .json()

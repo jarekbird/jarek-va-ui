@@ -1,0 +1,149 @@
+.bullmq-queue-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+}
+
+.bullmq-queue-view__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.bullmq-queue-view__header h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.bullmq-queue-view__refresh {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.bullmq-queue-view__refresh:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.bullmq-queue-view__empty {
+  text-align: center;
+  color: #6b7280;
+  padding: 2rem;
+}
+
+.bullmq-queue-view__queues {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.bullmq-queue-view__queue {
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: #f9fafb;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.bullmq-queue-view__queue--active {
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+}
+
+.bullmq-queue-view__queue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.bullmq-queue-view__queue-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.bullmq-queue-view__queue-agents {
+  font-size: 0.75rem;
+  color: #6b7280;
+  background-color: #e5e7eb;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.bullmq-queue-view__queue-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.bullmq-queue-view__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.bullmq-queue-view__stat-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bullmq-queue-view__stat-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.bullmq-queue-view__queue-agents-list {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.bullmq-queue-view__agents-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bullmq-queue-view__agents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.bullmq-queue-view__agent-tag {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  background-color: #dbeafe;
+  color: #1e40af;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+

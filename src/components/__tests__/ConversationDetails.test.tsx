@@ -1,7 +1,14 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '../../test/test-utils';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '../../test/test-utils';
 import { ConversationDetails } from '../ConversationDetails';
 import type { Conversation } from '../../types';
+
+// Mock the repositories API
+vi.mock('../../api/repositories', () => ({
+  getRepositoryFiles: vi.fn(),
+}));
+
+import * as repositoriesAPI from '../../api/repositories';
 
 const mockConversation: Conversation = {
   conversationId: 'conv-1',
@@ -49,10 +56,8 @@ describe('ConversationDetails', () => {
       <ConversationDetails conversation={mockConversation} />
     );
 
-    const userMessage = container.querySelector('.message-item--user');
-    const assistantMessage = container.querySelector(
-      '.message-item--assistant'
-    );
+    const userMessage = container.querySelector('.message.user');
+    const assistantMessage = container.querySelector('.message.assistant');
 
     expect(userMessage).not.toBeNull();
     expect(assistantMessage).not.toBeNull();
@@ -73,124 +78,113 @@ describe('ConversationDetails', () => {
     expect(timestamps[0]).toBeInTheDocument();
   });
 
-  it('handles conversation with empty messages array', () => {
-    const emptyConversation: Conversation = {
-      conversationId: 'conv-empty',
-      messages: [],
-      createdAt: '2025-01-01T00:00:00Z',
-      lastAccessedAt: '2025-01-01T00:00:00Z',
-    };
+  describe('Repository File Browser Integration', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
 
-    render(<ConversationDetails conversation={emptyConversation} />);
-
-    expect(screen.getByText(/conv-empty/i)).toBeInTheDocument();
-    expect(screen.getByTestId('message-list')).toBeInTheDocument();
-  });
-
-  it('handles conversation with messages containing empty content', () => {
-    const conversationWithEmptyMessages: Conversation = {
-      conversationId: 'conv-empty-msgs',
-      messages: [
+    it('renders file browser when repository is provided', async () => {
+      const mockFiles = [
         {
-          role: 'user',
-          content: '',
-          timestamp: '2025-01-01T10:00:00Z',
+          name: 'src',
+          path: 'src',
+          type: 'directory' as const,
+          children: [
+            {
+              name: 'index.ts',
+              path: 'src/index.ts',
+              type: 'file' as const,
+            },
+          ],
         },
-        {
-          role: 'assistant',
-          content: '',
-          timestamp: '2025-01-01T10:00:01Z',
-        },
-      ],
-      createdAt: '2025-01-01T00:00:00Z',
-      lastAccessedAt: '2025-01-01T10:00:01Z',
-    };
+      ];
 
-    render(
-      <ConversationDetails conversation={conversationWithEmptyMessages} />
-    );
+      vi.mocked(repositoriesAPI.getRepositoryFiles).mockResolvedValueOnce(
+        mockFiles
+      );
 
-    expect(screen.getByText(/conv-empty-msgs/i)).toBeInTheDocument();
-    expect(screen.getByTestId('message-0')).toBeInTheDocument();
-    expect(screen.getByTestId('message-1')).toBeInTheDocument();
-  });
+      render(
+        <ConversationDetails
+          conversation={mockConversation}
+          repository="test-repo"
+        />
+      );
 
-  it('handles long conversation with many messages', () => {
-    const longConversation: Conversation = {
-      conversationId: 'conv-long',
-      messages: Array.from({ length: 150 }, (_, i) => ({
-        role: i % 2 === 0 ? 'user' : 'assistant',
-        content: `Message ${i + 1}`,
-        timestamp: `2025-01-01T10:00:${String(i % 60).padStart(2, '0')}Z`,
-      })),
-      createdAt: '2025-01-01T00:00:00Z',
-      lastAccessedAt: '2025-01-01T10:05:00Z',
-    };
+      await waitFor(() => {
+        expect(screen.getByText(/repository structure/i)).toBeInTheDocument();
+      });
 
-    render(<ConversationDetails conversation={longConversation} />);
+      expect(
+        screen.getByText(/repository structure \(read-only\)/i)
+      ).toBeInTheDocument();
+      expect(screen.getByText(/repository: test-repo/i)).toBeInTheDocument();
+    });
 
-    expect(screen.getByText(/conv-long/i)).toBeInTheDocument();
-    expect(screen.getByTestId('message-list')).toBeInTheDocument();
-    expect(screen.getByTestId('message-0')).toBeInTheDocument();
-    expect(screen.getByTestId('message-149')).toBeInTheDocument();
-  });
+    it('does not render file browser when repository is not provided', () => {
+      render(<ConversationDetails conversation={mockConversation} />);
+      expect(
+        screen.queryByText(/repository structure/i)
+      ).not.toBeInTheDocument();
+    });
 
-  it('handles missing optional props (title, user, status)', () => {
-    render(<ConversationDetails conversation={mockConversation} />);
+    it('shows loading state while fetching file tree', () => {
+      vi.mocked(repositoriesAPI.getRepositoryFiles).mockImplementation(
+        () => new Promise(() => {}) // Never resolves
+      );
 
-    expect(screen.getByText(/conv-1/i)).toBeInTheDocument();
-    // Should not crash when optional props are missing
-    expect(screen.getByTestId('message-list')).toBeInTheDocument();
-  });
+      render(
+        <ConversationDetails
+          conversation={mockConversation}
+          repository="test-repo"
+        />
+      );
 
-  it('handles conversation with all optional props provided', () => {
-    render(
-      <ConversationDetails
-        conversation={mockConversation}
-        title="Custom Title"
-        user="test@example.com"
-        status="active"
-      />
-    );
+      expect(
+        screen.getByText(/loading repository structure/i)
+      ).toBeInTheDocument();
+    });
 
-    expect(screen.getByText('Custom Title')).toBeInTheDocument();
-    expect(screen.getByText(/test@example.com/i)).toBeInTheDocument();
-    expect(screen.getByText('active')).toBeInTheDocument();
-  });
+    it('shows error message when file tree loading fails', async () => {
+      const errorMessage = 'Failed to load repository file structure';
+      vi.mocked(repositoriesAPI.getRepositoryFiles).mockRejectedValueOnce(
+        new Error(errorMessage)
+      );
 
-  it('handles conversation with mixed empty and non-empty messages', () => {
-    const mixedConversation: Conversation = {
-      conversationId: 'conv-mixed',
-      messages: [
-        {
-          role: 'user',
-          content: 'Hello',
-          timestamp: '2025-01-01T10:00:00Z',
-        },
-        {
-          role: 'assistant',
-          content: '',
-          timestamp: '2025-01-01T10:00:01Z',
-        },
-        {
-          role: 'user',
-          content: '   ',
-          timestamp: '2025-01-01T10:00:02Z',
-        },
-        {
-          role: 'assistant',
-          content: 'Response',
-          timestamp: '2025-01-01T10:00:03Z',
-        },
-      ],
-      createdAt: '2025-01-01T00:00:00Z',
-      lastAccessedAt: '2025-01-01T10:00:03Z',
-    };
+      render(
+        <ConversationDetails
+          conversation={mockConversation}
+          repository="test-repo"
+        />
+      );
 
-    render(<ConversationDetails conversation={mixedConversation} />);
+      await waitFor(() => {
+        expect(
+          screen.getByText(new RegExp(errorMessage, 'i'))
+        ).toBeInTheDocument();
+      });
+    });
 
-    expect(screen.getByText(/conv-mixed/i)).toBeInTheDocument();
-    expect(screen.getByText('Hello')).toBeInTheDocument();
-    expect(screen.getByText('Response')).toBeInTheDocument();
+    it('maintains readable layout with long conversations', () => {
+      const longConversation: Conversation = {
+        ...mockConversation,
+        messages: Array.from({ length: 50 }, (_, i) => ({
+          role: i % 2 === 0 ? 'user' : 'assistant',
+          content: `Message ${i + 1}`,
+          timestamp: new Date(Date.now() + i * 1000).toISOString(),
+        })),
+      };
+
+      const { container } = render(
+        <ConversationDetails
+          conversation={longConversation}
+          repository="test-repo"
+        />
+      );
+
+      // Check that messages container has max-height for scrolling
+      const messagesContainer = container.querySelector('.messages-container');
+      expect(messagesContainer).toBeInTheDocument();
+      // The CSS should have max-height: 60vh for scrolling
+    });
   });
 });

@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { TaskList } from './TaskList';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
+import { Navigation } from './Navigation';
 import { listTasks } from '../api/tasks';
 import type { Task } from '../types';
 
@@ -47,6 +48,7 @@ export const TaskListView: React.FC = () => {
 
   return (
     <div className="container">
+      <Navigation />
       <h1>Tasks</h1>
       {loading && tasks.length === 0 && <LoadingSpinner />}
       {error && <ErrorMessage message={error} />}

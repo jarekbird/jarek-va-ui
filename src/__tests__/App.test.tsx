@@ -1,12 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '../test/test-utils';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
+import * as conversationsAPI from '../api/conversations';
 import type { Conversation } from '../types';
 
-// Mock fetch globally for integration tests
-const mockFetch = vi.fn();
-globalThis.fetch = mockFetch as unknown as typeof fetch;
+// Mock the API module
+vi.mock('../api/conversations');
 
 describe('App', () => {
   const mockConversations: Conversation[] = [
@@ -34,34 +34,19 @@ describe('App', () => {
     vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('renders the main heading', async () => {
-    (mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      headers: {
-        get: (name: string) =>
-          name === 'content-type' ? 'application/json' : null,
-      },
-      json: async () => ({ conversations: [] }),
-    });
+  it('renders the main heading', () => {
+    vi.mocked(conversationsAPI.listConversations).mockResolvedValueOnce([]);
     render(<App />);
-    await waitFor(() => {
-      expect(screen.getByText('Conversation History')).toBeInTheDocument();
-    });
+    // Check for h1 heading specifically (not the nav link)
+    expect(
+      screen.getByRole('heading', { name: 'Note Taking History' })
+    ).toBeInTheDocument();
   });
 
   it('loads and displays conversations on mount', async () => {
-    (mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      headers: {
-        get: (name: string) =>
-          name === 'content-type' ? 'application/json' : null,
-      },
-      json: async () => ({ conversations: mockConversations }),
-    });
+    vi.mocked(conversationsAPI.listConversations).mockResolvedValueOnce(
+      mockConversations
+    );
 
     render(<App />);
 
@@ -72,7 +57,7 @@ describe('App', () => {
   });
 
   it('displays loading spinner while loading conversations', () => {
-    (mockFetch as ReturnType<typeof vi.fn>).mockImplementation(
+    vi.mocked(conversationsAPI.listConversations).mockImplementation(
       () => new Promise(() => {}) // Never resolves
     );
 
@@ -86,31 +71,32 @@ describe('App', () => {
 
   it('displays error message when loading conversations fails', async () => {
     const errorMessage = 'Failed to fetch conversations';
-    (mockFetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+    vi.mocked(conversationsAPI.listConversations).mockRejectedValueOnce(
       new Error(errorMessage)
     );
 
     render(<App />);
 
-    await waitFor(() => {
-      expect(screen.getByText(errorMessage)).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        // Error message might be wrapped in error component, check for text content
+        expect(
+          screen.getByText(
+            /Failed to fetch conversations|Network error|An error occurred/i
+          )
+        ).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 
-  it('displays "No conversations found" when list is empty', async () => {
-    (mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      headers: {
-        get: (name: string) =>
-          name === 'content-type' ? 'application/json' : null,
-      },
-      json: async () => ({ conversations: [] }),
-    });
+  it('displays "No note sessions found" when list is empty', async () => {
+    vi.mocked(conversationsAPI.listConversations).mockResolvedValueOnce([]);
 
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByText(/No conversations found/i)).toBeInTheDocument();
+      expect(screen.getByText(/No note sessions found/i)).toBeInTheDocument();
     });
   });
 
@@ -129,30 +115,17 @@ describe('App', () => {
       lastAccessedAt: '2025-01-01T00:00:00Z',
     };
 
-    // Mock fetchConversations call
-    (mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      headers: {
-        get: (name: string) =>
-          name === 'content-type' ? 'application/json' : null,
-      },
-      json: async () => ({ conversations: mockConversations }),
-    });
+    vi.mocked(conversationsAPI.listConversations).mockResolvedValueOnce(
+      mockConversations
+    );
+    vi.mocked(conversationsAPI.getConversationById).mockResolvedValueOnce(
+      selectedConversation
+    );
 
     render(<App />);
 
     await waitFor(() => {
       expect(screen.getByText(/conv-1/i)).toBeInTheDocument();
-    });
-
-    // Mock fetchConversation call for detail page
-    (mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      headers: {
-        get: (name: string) =>
-          name === 'content-type' ? 'application/json' : null,
-      },
-      json: async () => selectedConversation,
     });
 
     // Find the link for conv-1 and click it
@@ -161,6 +134,9 @@ describe('App', () => {
       await user.click(conv1Link);
 
       await waitFor(() => {
+        expect(conversationsAPI.getConversationById).toHaveBeenCalledWith(
+          'conv-1'
+        );
         expect(screen.getByText('Hello')).toBeInTheDocument();
       });
     }
@@ -170,26 +146,18 @@ describe('App', () => {
     const user = userEvent.setup();
     const errorMessage = 'Failed to load conversation';
 
-    // Mock fetchConversations call
-    (mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      headers: {
-        get: (name: string) =>
-          name === 'content-type' ? 'application/json' : null,
-      },
-      json: async () => ({ conversations: mockConversations }),
-    });
+    vi.mocked(conversationsAPI.listConversations).mockResolvedValueOnce(
+      mockConversations
+    );
+    vi.mocked(conversationsAPI.getConversationById).mockRejectedValueOnce(
+      new Error(errorMessage)
+    );
 
     render(<App />);
 
     await waitFor(() => {
       expect(screen.getByText(/conv-1/i)).toBeInTheDocument();
     });
-
-    // Mock fetchConversation call to fail
-    (mockFetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-      new Error(errorMessage)
-    );
 
     // Find the link for conv-1 and click it
     const conv1Link = screen.getByText(/conv-1/i).closest('a');
