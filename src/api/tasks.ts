@@ -72,7 +72,7 @@ export async function fetchTasks(
   }
 
   const queryString = queryParams.toString();
-  const url = `${API_BASE_URL}/api/tasks${queryString ? `?${queryString}` : ''}`;
+  const url = `${TASKS_API_BASE}/tasks${queryString ? `?${queryString}` : ''}`;
 
   const response = await fetch(url);
 

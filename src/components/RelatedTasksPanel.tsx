@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useRelatedTasksQuery } from '../hooks/useRelatedTasksQuery';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
+import type { Task } from '../types';
 import './RelatedTasksPanel.css';
 
 interface RelatedTasksPanelProps {
@@ -67,7 +68,7 @@ export const RelatedTasksPanel: React.FC<RelatedTasksPanelProps> = ({
     <div className="related-tasks-panel" data-testid="related-tasks-panel">
       <h3 className="related-tasks-panel__title">Related Tasks</h3>
       <ul className="related-tasks-panel__list">
-        {tasks.map((task) => (
+        {tasks.map((task: Task) => (
           <li key={task.id} className="related-tasks-panel__item">
             <Link
               to={`/tasks/${task.id}`}
