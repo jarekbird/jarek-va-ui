@@ -102,12 +102,9 @@ export async function registerSession(
   sessionData: RegisterSessionRequest
 ): Promise<RegisterSessionResponse> {
   const baseUrl = getElevenLabsApiBaseUrl();
-  // When using relative paths (dev mode), use the special /agent-session path
-  // that gets proxied to elevenlabs-agent
-  // When using absolute URL (production), use the full path
-  const url = baseUrl
-    ? `${baseUrl}/agent-conversations/api/${conversationId}/session`
-    : `/agent-session/${conversationId}`;
+  // Always use the agent-conversations API path for consistency across environments
+  // When baseUrl is empty (dev), this results in a relative path starting with '/...'
+  const url = `${baseUrl}/agent-conversations/api/${conversationId}/session`;
 
   const response = await fetch(url, {
     method: 'POST',
