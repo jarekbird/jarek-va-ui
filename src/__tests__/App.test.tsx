@@ -1,12 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '../test/test-utils';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
-import * as conversationsAPI from '../api/conversations';
 import type { Conversation } from '../types';
 
-// Mock the API module
-vi.mock('../api/conversations');
+// Mock fetch globally for integration tests
+const mockFetch = vi.fn();
+globalThis.fetch = mockFetch as unknown as typeof fetch;
 
 describe('App', () => {
   const mockConversations: Conversation[] = [
@@ -34,16 +34,34 @@ describe('App', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the main heading', () => {
-    vi.mocked(conversationsAPI.listConversations).mockResolvedValueOnce([]);
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders the main heading', async () => {
+    (mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      headers: {
+        get: (name: string) =>
+          name === 'content-type' ? 'application/json' : null,
+      },
+      json: async () => ({ conversations: [] }),
+    });
     render(<App />);
-    expect(screen.getByText('Conversation History')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Conversation History')).toBeInTheDocument();
+    });
   });
 
   it('loads and displays conversations on mount', async () => {
-    vi.mocked(conversationsAPI.listConversations).mockResolvedValueOnce(
-      mockConversations
-    );
+    (mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      headers: {
+        get: (name: string) =>
+          name === 'content-type' ? 'application/json' : null,
+      },
+      json: async () => ({ conversations: mockConversations }),
+    });
 
     render(<App />);
 
@@ -54,7 +72,7 @@ describe('App', () => {
   });
 
   it('displays loading spinner while loading conversations', () => {
-    vi.mocked(conversationsAPI.listConversations).mockImplementation(
+    (mockFetch as ReturnType<typeof vi.fn>).mockImplementation(
       () => new Promise(() => {}) // Never resolves
     );
 
@@ -68,7 +86,7 @@ describe('App', () => {
 
   it('displays error message when loading conversations fails', async () => {
     const errorMessage = 'Failed to fetch conversations';
-    vi.mocked(conversationsAPI.listConversations).mockRejectedValueOnce(
+    (mockFetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
       new Error(errorMessage)
     );
 
@@ -80,7 +98,14 @@ describe('App', () => {
   });
 
   it('displays "No conversations found" when list is empty', async () => {
-    vi.mocked(conversationsAPI.listConversations).mockResolvedValueOnce([]);
+    (mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      headers: {
+        get: (name: string) =>
+          name === 'content-type' ? 'application/json' : null,
+      },
+      json: async () => ({ conversations: [] }),
+    });
 
     render(<App />);
 
@@ -104,17 +129,30 @@ describe('App', () => {
       lastAccessedAt: '2025-01-01T00:00:00Z',
     };
 
-    vi.mocked(conversationsAPI.listConversations).mockResolvedValueOnce(
-      mockConversations
-    );
-    vi.mocked(conversationsAPI.getConversationById).mockResolvedValueOnce(
-      selectedConversation
-    );
+    // Mock fetchConversations call
+    (mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      headers: {
+        get: (name: string) =>
+          name === 'content-type' ? 'application/json' : null,
+      },
+      json: async () => ({ conversations: mockConversations }),
+    });
 
     render(<App />);
 
     await waitFor(() => {
       expect(screen.getByText(/conv-1/i)).toBeInTheDocument();
+    });
+
+    // Mock fetchConversation call for detail page
+    (mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      headers: {
+        get: (name: string) =>
+          name === 'content-type' ? 'application/json' : null,
+      },
+      json: async () => selectedConversation,
     });
 
     // Find the link for conv-1 and click it
@@ -123,9 +161,6 @@ describe('App', () => {
       await user.click(conv1Link);
 
       await waitFor(() => {
-        expect(conversationsAPI.getConversationById).toHaveBeenCalledWith(
-          'conv-1'
-        );
         expect(screen.getByText('Hello')).toBeInTheDocument();
       });
     }
@@ -135,18 +170,26 @@ describe('App', () => {
     const user = userEvent.setup();
     const errorMessage = 'Failed to load conversation';
 
-    vi.mocked(conversationsAPI.listConversations).mockResolvedValueOnce(
-      mockConversations
-    );
-    vi.mocked(conversationsAPI.getConversationById).mockRejectedValueOnce(
-      new Error(errorMessage)
-    );
+    // Mock fetchConversations call
+    (mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      headers: {
+        get: (name: string) =>
+          name === 'content-type' ? 'application/json' : null,
+      },
+      json: async () => ({ conversations: mockConversations }),
+    });
 
     render(<App />);
 
     await waitFor(() => {
       expect(screen.getByText(/conv-1/i)).toBeInTheDocument();
     });
+
+    // Mock fetchConversation call to fail
+    (mockFetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error(errorMessage)
+    );
 
     // Find the link for conv-1 and click it
     const conv1Link = screen.getByText(/conv-1/i).closest('a');

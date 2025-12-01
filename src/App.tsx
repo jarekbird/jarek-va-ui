@@ -1,22 +1,25 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { ConversationListView } from './components/ConversationListView';
-import { ConversationDetailView } from './components/ConversationDetailView';
+import { Layout } from './components/layout/Layout';
+import { ConversationsPage } from './routes/conversations/ConversationsPage';
+import { ConversationDetailPage } from './routes/conversations/ConversationDetailPage';
 import { TaskListView } from './components/TaskListView';
-import { TaskDetailView } from './components/TaskDetailView';
+import { TaskDetailPage } from './routes/tasks/TaskDetailPage';
 import './styles/App.css';
 
 const App: React.FC = () => {
   return (
-    <Routes>
-      <Route path="/" element={<ConversationListView />} />
-      <Route
-        path="/conversation/:conversationId"
-        element={<ConversationDetailView />}
-      />
-      <Route path="/tasks" element={<TaskListView />} />
-      <Route path="/task/:id" element={<TaskDetailView />} />
-    </Routes>
+    <Layout>
+      <Routes>
+        <Route path="/conversations" element={<ConversationsPage />} />
+        <Route
+          path="/conversations/:conversationId"
+          element={<ConversationDetailPage />}
+        />
+        <Route path="/tasks" element={<TaskListView />} />
+        <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
+      </Routes>
+    </Layout>
   );
 };
 

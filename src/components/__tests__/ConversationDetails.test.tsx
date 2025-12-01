@@ -49,8 +49,10 @@ describe('ConversationDetails', () => {
       <ConversationDetails conversation={mockConversation} />
     );
 
-    const userMessage = container.querySelector('.message.user');
-    const assistantMessage = container.querySelector('.message.assistant');
+    const userMessage = container.querySelector('.message-item--user');
+    const assistantMessage = container.querySelector(
+      '.message-item--assistant'
+    );
 
     expect(userMessage).not.toBeNull();
     expect(assistantMessage).not.toBeNull();
@@ -69,5 +71,126 @@ describe('ConversationDetails', () => {
     const timestamps = screen.getAllByText(/2025/i);
     expect(timestamps.length).toBeGreaterThan(0);
     expect(timestamps[0]).toBeInTheDocument();
+  });
+
+  it('handles conversation with empty messages array', () => {
+    const emptyConversation: Conversation = {
+      conversationId: 'conv-empty',
+      messages: [],
+      createdAt: '2025-01-01T00:00:00Z',
+      lastAccessedAt: '2025-01-01T00:00:00Z',
+    };
+
+    render(<ConversationDetails conversation={emptyConversation} />);
+
+    expect(screen.getByText(/conv-empty/i)).toBeInTheDocument();
+    expect(screen.getByTestId('message-list')).toBeInTheDocument();
+  });
+
+  it('handles conversation with messages containing empty content', () => {
+    const conversationWithEmptyMessages: Conversation = {
+      conversationId: 'conv-empty-msgs',
+      messages: [
+        {
+          role: 'user',
+          content: '',
+          timestamp: '2025-01-01T10:00:00Z',
+        },
+        {
+          role: 'assistant',
+          content: '',
+          timestamp: '2025-01-01T10:00:01Z',
+        },
+      ],
+      createdAt: '2025-01-01T00:00:00Z',
+      lastAccessedAt: '2025-01-01T10:00:01Z',
+    };
+
+    render(
+      <ConversationDetails conversation={conversationWithEmptyMessages} />
+    );
+
+    expect(screen.getByText(/conv-empty-msgs/i)).toBeInTheDocument();
+    expect(screen.getByTestId('message-0')).toBeInTheDocument();
+    expect(screen.getByTestId('message-1')).toBeInTheDocument();
+  });
+
+  it('handles long conversation with many messages', () => {
+    const longConversation: Conversation = {
+      conversationId: 'conv-long',
+      messages: Array.from({ length: 150 }, (_, i) => ({
+        role: i % 2 === 0 ? 'user' : 'assistant',
+        content: `Message ${i + 1}`,
+        timestamp: `2025-01-01T10:00:${String(i % 60).padStart(2, '0')}Z`,
+      })),
+      createdAt: '2025-01-01T00:00:00Z',
+      lastAccessedAt: '2025-01-01T10:05:00Z',
+    };
+
+    render(<ConversationDetails conversation={longConversation} />);
+
+    expect(screen.getByText(/conv-long/i)).toBeInTheDocument();
+    expect(screen.getByTestId('message-list')).toBeInTheDocument();
+    expect(screen.getByTestId('message-0')).toBeInTheDocument();
+    expect(screen.getByTestId('message-149')).toBeInTheDocument();
+  });
+
+  it('handles missing optional props (title, user, status)', () => {
+    render(<ConversationDetails conversation={mockConversation} />);
+
+    expect(screen.getByText(/conv-1/i)).toBeInTheDocument();
+    // Should not crash when optional props are missing
+    expect(screen.getByTestId('message-list')).toBeInTheDocument();
+  });
+
+  it('handles conversation with all optional props provided', () => {
+    render(
+      <ConversationDetails
+        conversation={mockConversation}
+        title="Custom Title"
+        user="test@example.com"
+        status="active"
+      />
+    );
+
+    expect(screen.getByText('Custom Title')).toBeInTheDocument();
+    expect(screen.getByText(/test@example.com/i)).toBeInTheDocument();
+    expect(screen.getByText('active')).toBeInTheDocument();
+  });
+
+  it('handles conversation with mixed empty and non-empty messages', () => {
+    const mixedConversation: Conversation = {
+      conversationId: 'conv-mixed',
+      messages: [
+        {
+          role: 'user',
+          content: 'Hello',
+          timestamp: '2025-01-01T10:00:00Z',
+        },
+        {
+          role: 'assistant',
+          content: '',
+          timestamp: '2025-01-01T10:00:01Z',
+        },
+        {
+          role: 'user',
+          content: '   ',
+          timestamp: '2025-01-01T10:00:02Z',
+        },
+        {
+          role: 'assistant',
+          content: 'Response',
+          timestamp: '2025-01-01T10:00:03Z',
+        },
+      ],
+      createdAt: '2025-01-01T00:00:00Z',
+      lastAccessedAt: '2025-01-01T10:00:03Z',
+    };
+
+    render(<ConversationDetails conversation={mixedConversation} />);
+
+    expect(screen.getByText(/conv-mixed/i)).toBeInTheDocument();
+    expect(screen.getByText('Hello')).toBeInTheDocument();
+    expect(screen.getByText('Response')).toBeInTheDocument();
   });
 });
