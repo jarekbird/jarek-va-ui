@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '../../test/test-utils';
 import { render as renderWithRouter } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 import { ConversationList } from '../ConversationList';
 import type { Conversation } from '../../types';
@@ -124,19 +123,14 @@ describe('ConversationList', () => {
 
   it('determines active conversation from URL when activeConversationId is null', () => {
     const onSelect = vi.fn();
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
     const { container } = renderWithRouter(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/conversations/conv-2']}>
-          <ConversationList
-            conversations={mockConversations}
-            activeConversationId={null}
-            onSelectConversation={onSelect}
-          />
-        </MemoryRouter>
-      </QueryClientProvider>
+      <MemoryRouter initialEntries={['/conversation/conv-2']}>
+        <ConversationList
+          conversations={mockConversations}
+          activeConversationId={null}
+          onSelectConversation={onSelect}
+        />
+      </MemoryRouter>
     );
 
     const activeItem = container.querySelector('li.active');
@@ -148,19 +142,14 @@ describe('ConversationList', () => {
 
   it('prioritizes activeConversationId prop over URL', () => {
     const onSelect = vi.fn();
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
     const { container } = renderWithRouter(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/conversations/conv-2']}>
-          <ConversationList
-            conversations={mockConversations}
-            activeConversationId="conv-1"
-            onSelectConversation={onSelect}
-          />
-        </MemoryRouter>
-      </QueryClientProvider>
+      <MemoryRouter initialEntries={['/conversation/conv-2']}>
+        <ConversationList
+          conversations={mockConversations}
+          activeConversationId="conv-1"
+          onSelectConversation={onSelect}
+        />
+      </MemoryRouter>
     );
 
     const activeItem = container.querySelector('li.active');

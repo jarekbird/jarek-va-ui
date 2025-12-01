@@ -1,52 +1,40 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useParams } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from '../App';
 
 describe('Routing', () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-        gcTime: 0,
-      },
-    },
-  });
-
   describe('route definitions', () => {
-    it('renders ConversationListView at /conversations', () => {
+    it('renders ConversationListView at /', () => {
       render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={['/conversations']}>
-            <App />
-          </MemoryRouter>
-        </QueryClientProvider>
+        <MemoryRouter initialEntries={['/']}>
+          <App />
+        </MemoryRouter>
       );
-      expect(screen.getByText('Conversation History')).toBeInTheDocument();
+      // Check for h1 heading in main content (not navigation)
+      const h1 = screen.getByRole('heading', { name: 'Note Taking History' });
+      expect(h1).toBeInTheDocument();
     });
 
-    it('renders ConversationDetailView at /conversations/:conversationId', () => {
+    it('renders ConversationDetailView at /conversation/:conversationId', () => {
       render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={['/conversations/conv-123']}>
-            <App />
-          </MemoryRouter>
-        </QueryClientProvider>
+        <MemoryRouter initialEntries={['/conversation/conv-123']}>
+          <App />
+        </MemoryRouter>
       );
       // ConversationDetailView should be rendered (it will show loading/error initially)
-      expect(
-        screen.queryByText('Conversation History')
-      ).not.toBeInTheDocument();
+      // Navigation will have "Note Taking History" link, but the h1 heading should not be present
+      const headings = screen.queryAllByRole('heading', {
+        name: 'Note Taking History',
+      });
+      expect(headings.length).toBe(0);
     });
 
     it('renders TaskListView at /tasks', () => {
       render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={['/tasks']}>
-            <App />
-          </MemoryRouter>
-        </QueryClientProvider>
+        <MemoryRouter initialEntries={['/tasks']}>
+          <App />
+        </MemoryRouter>
       );
       // Check for h1 heading in main content (not navigation)
       const headings = screen.getAllByText('Tasks');
@@ -58,11 +46,9 @@ describe('Routing', () => {
 
     it('renders TaskDetailView at /tasks/:taskId', () => {
       render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={['/tasks/123']}>
-            <App />
-          </MemoryRouter>
-        </QueryClientProvider>
+        <MemoryRouter initialEntries={['/tasks/123']}>
+          <App />
+        </MemoryRouter>
       );
       // TaskDetailView should be rendered (it will show loading/error initially)
       // Navigation will have "Tasks" link, but the h1 heading should not be present
@@ -72,23 +58,21 @@ describe('Routing', () => {
   });
 
   describe('route parameters', () => {
-    it('extracts conversationId from /conversations/:conversationId', () => {
+    it('extracts conversationId from /conversation/:conversationId', () => {
       const TestComponent = () => {
         const { conversationId } = useParams<{ conversationId: string }>();
         return <div data-testid="conversation-id">{conversationId}</div>;
       };
 
       render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={['/conversations/test-conv-123']}>
-            <Routes>
-              <Route
-                path="/conversations/:conversationId"
-                element={<TestComponent />}
-              />
-            </Routes>
-          </MemoryRouter>
-        </QueryClientProvider>
+        <MemoryRouter initialEntries={['/conversation/test-conv-123']}>
+          <Routes>
+            <Route
+              path="/conversation/:conversationId"
+              element={<TestComponent />}
+            />
+          </Routes>
+        </MemoryRouter>
       );
 
       expect(screen.getByTestId('conversation-id')).toHaveTextContent(
@@ -96,20 +80,18 @@ describe('Routing', () => {
       );
     });
 
-    it('extracts taskId from /tasks/:taskId', () => {
+    it('extracts taskId from /task/:id', () => {
       const TestComponent = () => {
-        const { taskId } = useParams<{ taskId: string }>();
-        return <div data-testid="task-id">{taskId}</div>;
+        const { id } = useParams<{ id: string }>();
+        return <div data-testid="task-id">{id}</div>;
       };
 
       render(
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={['/tasks/456']}>
-            <Routes>
-              <Route path="/tasks/:taskId" element={<TestComponent />} />
-            </Routes>
-          </MemoryRouter>
-        </QueryClientProvider>
+        <MemoryRouter initialEntries={['/task/456']}>
+          <Routes>
+            <Route path="/task/:id" element={<TestComponent />} />
+          </Routes>
+        </MemoryRouter>
       );
 
       expect(screen.getByTestId('task-id')).toHaveTextContent('456');

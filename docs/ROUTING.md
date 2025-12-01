@@ -18,10 +18,16 @@
 
 ### Current Setup
 
-The router is configured in `src/main.tsx`:
+The router is configured in `src/main.tsx` with automatic basename detection.  
+When the UI is served behind Traefik at `/conversations`, the browser pathname will
+start with `/conversations`, so the router trims that prefix before matching routes.
+When running locally (e.g. `http://localhost:3002`), the basename falls back to `/`.
 
 ```tsx
-<BrowserRouter basename="/conversations">
+const SUPPORTED_BASENAMES = ['/conversations'];
+const basename = detectBasename(); // returns '/conversations' or '/'
+
+<BrowserRouter basename={basename === '/' ? undefined : basename}>
   <App />
 </BrowserRouter>
 ```
