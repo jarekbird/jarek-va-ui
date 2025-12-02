@@ -219,13 +219,18 @@ UPSTREAM=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || e
 
 if [ -z "$UPSTREAM" ]; then
   echo -e "${YELLOW}⚠ Warning: No upstream branch set for current branch: $CURRENT_BRANCH${NC}"
-  read -p "Do you want to push to origin/$CURRENT_BRANCH? (y/N): " -n 1 -r
-  echo ""
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo -e "${YELLOW}Deployment cancelled by user${NC}"
-    exit 0
+  if [ -t 0 ]; then
+    read -p "Do you want to push to origin/$CURRENT_BRANCH? (y/N): " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      echo -e "${YELLOW}Deployment cancelled by user${NC}"
+      exit 0
+    fi
+    UPSTREAM="origin/$CURRENT_BRANCH"
+  else
+    echo -e "${YELLOW}Non-interactive mode detected. Defaulting to origin/$CURRENT_BRANCH without prompt.${NC}"
+    UPSTREAM="origin/$CURRENT_BRANCH"
   fi
-  UPSTREAM="origin/$CURRENT_BRANCH"
 fi
 
 LOCAL=$(git rev-parse @)
@@ -237,11 +242,15 @@ if [ "$LOCAL" = "$REMOTE" ]; then
   exit 0
 elif [ "$LOCAL" = "$BASE" ]; then
   echo -e "${YELLOW}⚠ Local branch is behind $UPSTREAM. Consider pulling first.${NC}"
-  read -p "Do you want to continue anyway? (y/N): " -n 1 -r
-  echo ""
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo -e "${YELLOW}Deployment cancelled by user${NC}"
-    exit 0
+  if [ -t 0 ]; then
+    read -p "Do you want to continue anyway? (y/N): " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      echo -e "${YELLOW}Deployment cancelled by user${NC}"
+      exit 0
+    fi
+  else
+    echo -e "${YELLOW}Non-interactive mode detected. Continuing without prompt.${NC}"
   fi
 fi
 
