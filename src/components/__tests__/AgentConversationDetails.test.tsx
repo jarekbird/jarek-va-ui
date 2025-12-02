@@ -10,7 +10,19 @@ vi.mock('../../api/agent-conversations', () => ({
   getAgentConversation: vi.fn(),
 }));
 
+// Mock the feature flags utility
+vi.mock('../../utils/feature-flags', () => ({
+  isElevenLabsEnabled: vi.fn(),
+}));
+
+// Mock the ElevenLabs API
+vi.mock('../../api/elevenlabs', () => ({
+  getAgentConfig: vi.fn(),
+}));
+
 import * as agentConversationsAPI from '../../api/agent-conversations';
+import * as featureFlags from '../../utils/feature-flags';
+import * as elevenlabsAPI from '../../api/elevenlabs';
 
 const mockAgentConversation: AgentConversation = {
   conversationId: 'agent-conv-1',
@@ -35,6 +47,11 @@ const mockAgentConversation: AgentConversation = {
 describe('AgentConversationDetails', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: feature flag disabled
+    vi.mocked(featureFlags.isElevenLabsEnabled).mockReturnValue(false);
+    vi.mocked(elevenlabsAPI.getAgentConfig).mockResolvedValue({
+      agentId: 'test-agent-id',
+    });
   });
 
   it('renders nothing when conversation is null', () => {
@@ -265,25 +282,135 @@ describe('AgentConversationDetails', () => {
     expect(screen.getByText('Message 100')).toBeInTheDocument();
   });
 
-  describe('Performance', () => {
-    it('renders long conversation history efficiently', () => {
-      const longConversation: AgentConversation = {
-        ...mockAgentConversation,
-        messages: Array.from({ length: 1000 }, (_, i) => ({
-          role: i % 2 === 0 ? 'user' : 'assistant',
-          content: `Message ${i + 1}`,
-          timestamp: new Date(Date.now() + i * 1000).toISOString(),
-          source: i % 2 === 0 ? 'text' : 'voice',
-        })),
+  describe('Feature Flag Gating', () => {
+    it('hides voice controls when feature flag is disabled', () => {
+      vi.mocked(featureFlags.isElevenLabsEnabled).mockReturnValue(false);
+
+      const mockVoiceService = {
+        configure: vi.fn(),
+        startVoiceSession: vi.fn(),
+        endVoiceSession: vi.fn(),
       };
 
-      const start = performance.now();
-      render(<AgentConversationDetails conversation={longConversation} />);
-      const duration = performance.now() - start;
+      render(
+        <AgentConversationDetails
+          conversation={mockAgentConversation}
+          voiceService={mockVoiceService as any}
+          voiceStatus="disconnected"
+        />
+      );
 
-      // Should render 1000 messages in less than 500ms
-      expect(duration).toBeLessThan(500);
-      expect(screen.getByText('Message 1')).toBeInTheDocument();
+      // Voice controls should not be visible when feature flag is disabled
+      expect(screen.queryByText(/voice session/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/start voice/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/stop voice/i)).not.toBeInTheDocument();
     });
+
+    it('shows voice controls when feature flag is enabled and voice service is provided', () => {
+      vi.mocked(featureFlags.isElevenLabsEnabled).mockReturnValue(true);
+
+      const mockVoiceService = {
+        configure: vi.fn(),
+        startVoiceSession: vi.fn(),
+        endVoiceSession: vi.fn(),
+      };
+
+      render(
+        <AgentConversationDetails
+          conversation={mockAgentConversation}
+          voiceService={mockVoiceService as any}
+          voiceStatus="disconnected"
+        />
+      );
+
+      // Voice controls should be visible when feature flag is enabled
+      expect(screen.getByText(/voice session/i)).toBeInTheDocument();
+      expect(screen.getByText(/start voice/i)).toBeInTheDocument();
+    });
+
+    it('hides voice controls when feature flag is enabled but voice service is not provided', () => {
+      vi.mocked(featureFlags.isElevenLabsEnabled).mockReturnValue(true);
+
+      render(
+        <AgentConversationDetails
+          conversation={mockAgentConversation}
+          voiceService={null}
+          voiceStatus="disconnected"
+        />
+      );
+
+      // Voice controls should not be visible when voice service is null
+      expect(screen.queryByText(/voice session/i)).not.toBeInTheDocument();
+    });
+
+    it('shows correct voice status when connected', () => {
+      vi.mocked(featureFlags.isElevenLabsEnabled).mockReturnValue(true);
+
+      const mockVoiceService = {
+        configure: vi.fn(),
+        startVoiceSession: vi.fn(),
+        endVoiceSession: vi.fn(),
+      };
+
+      render(
+        <AgentConversationDetails
+          conversation={mockAgentConversation}
+          voiceService={mockVoiceService as any}
+          voiceStatus="connected"
+          voiceMode="conversation"
+        />
+      );
+
+      expect(screen.getByText(/connected/i)).toBeInTheDocument();
+      expect(screen.getByText(/stop voice/i)).toBeInTheDocument();
+      expect(screen.getByText(/mode: conversation/i)).toBeInTheDocument();
+    });
+
+    it('shows correct voice status when disconnected', () => {
+      vi.mocked(featureFlags.isElevenLabsEnabled).mockReturnValue(true);
+
+      const mockVoiceService = {
+        configure: vi.fn(),
+        startVoiceSession: vi.fn(),
+        endVoiceSession: vi.fn(),
+      };
+
+      render(
+        <AgentConversationDetails
+          conversation={mockAgentConversation}
+          voiceService={mockVoiceService as any}
+          voiceStatus="disconnected"
+        />
+      );
+
+      expect(screen.getByText(/disconnected/i)).toBeInTheDocument();
+      expect(screen.getByText(/start voice/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('Performance', () => {
+    it(
+      'renders long conversation history efficiently',
+      () => {
+        const longConversation: AgentConversation = {
+          ...mockAgentConversation,
+          messages: Array.from({ length: 1000 }, (_, i) => ({
+            role: i % 2 === 0 ? 'user' : 'assistant',
+            content: `Message ${i + 1}`,
+            timestamp: new Date(Date.now() + i * 1000).toISOString(),
+            source: i % 2 === 0 ? 'text' : 'voice',
+          })),
+        };
+
+        const start = performance.now();
+        render(<AgentConversationDetails conversation={longConversation} />);
+        const duration = performance.now() - start;
+
+        // Should render 1000 messages in less than 500ms
+        expect(duration).toBeLessThan(500);
+        expect(screen.getByText('Message 1')).toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
   });
 });

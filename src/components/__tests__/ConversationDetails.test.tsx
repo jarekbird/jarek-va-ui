@@ -187,4 +187,62 @@ describe('ConversationDetails', () => {
       // The CSS should have max-height: 60vh for scrolling
     });
   });
+
+  describe('Performance', () => {
+    it(
+      'renders long conversation history efficiently',
+      () => {
+        const longConversation: Conversation = {
+          ...mockConversation,
+          messages: Array.from({ length: 1000 }, (_, i) => ({
+            role: i % 2 === 0 ? 'user' : 'assistant',
+            content: `Message ${i + 1}`,
+            timestamp: new Date(Date.now() + i * 1000).toISOString(),
+          })),
+        };
+
+        const start = performance.now();
+        render(
+          <ConversationDetails
+            conversation={longConversation}
+            repository="test-repo"
+          />
+        );
+        const duration = performance.now() - start;
+
+        // Should render 1000 messages in less than 500ms
+        expect(duration).toBeLessThan(500);
+        expect(screen.getByText('Message 1')).toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
+
+    it(
+      'handles very long conversation history without performance regression',
+      () => {
+        const veryLongConversation: Conversation = {
+          ...mockConversation,
+          messages: Array.from({ length: 2000 }, (_, i) => ({
+            role: i % 2 === 0 ? 'user' : 'assistant',
+            content: `Message ${i + 1}: ${'x'.repeat(100)}`, // Longer messages
+            timestamp: new Date(Date.now() + i * 1000).toISOString(),
+          })),
+        };
+
+        const start = performance.now();
+        render(
+          <ConversationDetails
+            conversation={veryLongConversation}
+            repository="test-repo"
+          />
+        );
+        const duration = performance.now() - start;
+
+        // Should render 2000 messages in less than 1000ms
+        expect(duration).toBeLessThan(1000);
+        expect(screen.getByText(/Message 1:/)).toBeInTheDocument();
+      },
+      { timeout: 15000 }
+    );
+  });
 });

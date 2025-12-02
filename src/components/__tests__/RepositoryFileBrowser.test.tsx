@@ -139,77 +139,125 @@ describe('RepositoryFileBrowser', () => {
   });
 
   describe('Performance', () => {
-    it('renders large file tree efficiently', () => {
-      // Generate a large file tree
-      const generateLargeTree = (
-        depth: number,
-        filesPerDir: number
-      ): FileNode[] => {
-        if (depth === 0) {
+    it(
+      'renders large file tree efficiently',
+      () => {
+        // Generate a large file tree
+        const generateLargeTree = (
+          depth: number,
+          filesPerDir: number
+        ): FileNode[] => {
+          if (depth === 0) {
+            return Array.from({ length: filesPerDir }, (_, i) => ({
+              name: `file${i}.ts`,
+              path: `file${i}.ts`,
+              type: 'file' as const,
+            }));
+          }
+
           return Array.from({ length: filesPerDir }, (_, i) => ({
-            name: `file${i}.ts`,
-            path: `file${i}.ts`,
-            type: 'file' as const,
+            name: `dir${i}`,
+            path: `dir${i}`,
+            type: 'directory' as const,
+            children: generateLargeTree(depth - 1, filesPerDir),
           }));
-        }
+        };
 
-        return Array.from({ length: filesPerDir }, (_, i) => ({
-          name: `dir${i}`,
-          path: `dir${i}`,
-          type: 'directory' as const,
-          children: generateLargeTree(depth - 1, filesPerDir),
-        }));
-      };
+        const largeTree = generateLargeTree(3, 10); // 3 levels, 10 items per level = ~1000 nodes
 
-      const largeTree = generateLargeTree(3, 10); // 3 levels, 10 items per level = ~1000 nodes
+        const start = performance.now();
+        render(
+          <RepositoryFileBrowser repository="test-repo" files={largeTree} />
+        );
+        const duration = performance.now() - start;
 
-      const start = performance.now();
-      render(
-        <RepositoryFileBrowser repository="test-repo" files={largeTree} />
-      );
-      const duration = performance.now() - start;
+        // Should render large tree in less than 1000ms (increased threshold for CI environments)
+        expect(duration).toBeLessThan(1000);
+        // Use getAllByText since there are multiple dir0 elements in the tree
+        const dir0Elements = screen.getAllByText('dir0');
+        expect(dir0Elements.length).toBeGreaterThan(0);
+      },
+      { timeout: 10000 }
+    );
 
-      // Should render large tree in less than 1000ms (increased threshold for CI environments)
-      expect(duration).toBeLessThan(1000);
-      // Use getAllByText since there are multiple dir0 elements in the tree
-      const dir0Elements = screen.getAllByText('dir0');
-      expect(dir0Elements.length).toBeGreaterThan(0);
-    });
-
-    it('handles very deep directory nesting', () => {
-      // Create a deeply nested structure
-      const deepTree: FileNode = {
-        name: 'root',
-        path: 'root',
-        type: 'directory',
-        children: [],
-      };
-
-      let current = deepTree;
-      for (let i = 0; i < 20; i++) {
-        const child: FileNode = {
-          name: `level${i}`,
-          path: `root/level${i}`,
+    it(
+      'handles very deep directory nesting',
+      () => {
+        // Create a deeply nested structure
+        const deepTree: FileNode = {
+          name: 'root',
+          path: 'root',
           type: 'directory',
           children: [],
         };
-        if (!current.children) {
-          current.children = [];
+
+        let current = deepTree;
+        for (let i = 0; i < 20; i++) {
+          const child: FileNode = {
+            name: `level${i}`,
+            path: `root/level${i}`,
+            type: 'directory',
+            children: [],
+          };
+          if (!current.children) {
+            current.children = [];
+          }
+          current.children.push(child);
+          current = child;
         }
-        current.children.push(child);
-        current = child;
-      }
 
-      const start = performance.now();
-      render(
-        <RepositoryFileBrowser repository="test-repo" files={[deepTree]} />
-      );
-      const duration = performance.now() - start;
+        const start = performance.now();
+        render(
+          <RepositoryFileBrowser repository="test-repo" files={[deepTree]} />
+        );
+        const duration = performance.now() - start;
 
-      // Should handle deep nesting efficiently
-      expect(duration).toBeLessThan(300);
-      expect(screen.getByText('root')).toBeInTheDocument();
-    });
+        // Should handle deep nesting efficiently
+        expect(duration).toBeLessThan(300);
+        expect(screen.getByText('root')).toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
+
+    it(
+      'renders very large file tree without performance regression',
+      () => {
+        // Generate a very large file tree (more nodes)
+        const generateVeryLargeTree = (
+          depth: number,
+          filesPerDir: number
+        ): FileNode[] => {
+          if (depth === 0) {
+            return Array.from({ length: filesPerDir }, (_, i) => ({
+              name: `file${i}.ts`,
+              path: `file${i}.ts`,
+              type: 'file' as const,
+            }));
+          }
+
+          return Array.from({ length: filesPerDir }, (_, i) => ({
+            name: `dir${i}`,
+            path: `dir${i}`,
+            type: 'directory' as const,
+            children: generateVeryLargeTree(depth - 1, filesPerDir),
+          }));
+        };
+
+        const veryLargeTree = generateVeryLargeTree(4, 15); // 4 levels, 15 items per level = ~50k nodes
+
+        const start = performance.now();
+        render(
+          <RepositoryFileBrowser repository="test-repo" files={veryLargeTree} />
+        );
+        const duration = performance.now() - start;
+
+        // Should render very large tree in less than 2000ms
+        expect(duration).toBeLessThan(2000);
+        const dir0Elements = screen.getAllByText('dir0');
+        expect(dir0Elements.length).toBeGreaterThan(0);
+      },
+      { timeout: 15000 }
+    );
   });
 
   describe('Accessibility', () => {
