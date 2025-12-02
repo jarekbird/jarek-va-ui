@@ -23,6 +23,7 @@ vi.mock('../../api/elevenlabs', () => ({
 import * as agentConversationsAPI from '../../api/agent-conversations';
 import * as featureFlags from '../../utils/feature-flags';
 import * as elevenlabsAPI from '../../api/elevenlabs';
+import type { ElevenLabsVoiceService } from '../../services/elevenlabs-voice';
 
 const mockAgentConversation: AgentConversation = {
   conversationId: 'agent-conv-1',
@@ -290,12 +291,12 @@ describe('AgentConversationDetails', () => {
         configure: vi.fn(),
         startVoiceSession: vi.fn(),
         endVoiceSession: vi.fn(),
-      };
+      } as unknown as ElevenLabsVoiceService;
 
       render(
         <AgentConversationDetails
           conversation={mockAgentConversation}
-          voiceService={mockVoiceService as any}
+          voiceService={mockVoiceService}
           voiceStatus="disconnected"
         />
       );
@@ -313,12 +314,12 @@ describe('AgentConversationDetails', () => {
         configure: vi.fn(),
         startVoiceSession: vi.fn(),
         endVoiceSession: vi.fn(),
-      };
+      } as unknown as ElevenLabsVoiceService;
 
       render(
         <AgentConversationDetails
           conversation={mockAgentConversation}
-          voiceService={mockVoiceService as any}
+          voiceService={mockVoiceService}
           voiceStatus="disconnected"
         />
       );
@@ -350,12 +351,12 @@ describe('AgentConversationDetails', () => {
         configure: vi.fn(),
         startVoiceSession: vi.fn(),
         endVoiceSession: vi.fn(),
-      };
+      } as unknown as ElevenLabsVoiceService;
 
       render(
         <AgentConversationDetails
           conversation={mockAgentConversation}
-          voiceService={mockVoiceService as any}
+          voiceService={mockVoiceService}
           voiceStatus="connected"
           voiceMode="conversation"
         />
@@ -373,12 +374,12 @@ describe('AgentConversationDetails', () => {
         configure: vi.fn(),
         startVoiceSession: vi.fn(),
         endVoiceSession: vi.fn(),
-      };
+      } as unknown as ElevenLabsVoiceService;
 
       render(
         <AgentConversationDetails
           conversation={mockAgentConversation}
-          voiceService={mockVoiceService as any}
+          voiceService={mockVoiceService}
           voiceStatus="disconnected"
         />
       );
