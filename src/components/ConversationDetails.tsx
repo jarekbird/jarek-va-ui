@@ -191,7 +191,7 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
           // Update refs before stopping to ensure they're current
           lastMessageCountRef.current = serverMessageCount;
           lastMessageContentRef.current = lastServerMessage.content;
-          
+
           setIsPolling(false);
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current);

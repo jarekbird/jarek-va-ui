@@ -19,8 +19,3 @@ export function getApiBasePath(): string {
   // Otherwise use /api (works locally and when served at root)
   return '/api';
 }
-
-
-
-
-
