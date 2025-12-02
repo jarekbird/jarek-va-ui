@@ -177,20 +177,25 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
           if (onConversationUpdate) {
             onConversationUpdate(mergedConversation);
           }
+        }
 
-          // Stop polling if we have an assistant response (last message is from assistant)
-          // AND the message content hasn't changed (streaming has completed)
-          // We detect completion by checking if content is stable (same as last poll)
-          if (
-            mergedMessages.length > 0 &&
-            mergedMessages[mergedMessages.length - 1].role === 'assistant' &&
-            !hasUpdatedMessages // Content hasn't changed since last poll = streaming complete
-          ) {
-            setIsPolling(false);
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current);
-              pollingIntervalRef.current = null;
-            }
+        // Always check for completion on every poll (not just when there are updates)
+        // Stop polling if we have an assistant response (last message is from assistant)
+        // AND the message content hasn't changed (streaming has completed)
+        // We detect completion by checking if content is stable (same as last poll)
+        if (
+          lastServerMessage &&
+          lastServerMessage.role === 'assistant' &&
+          !hasUpdatedMessages // Content hasn't changed since last poll = streaming complete
+        ) {
+          // Update refs before stopping to ensure they're current
+          lastMessageCountRef.current = serverMessageCount;
+          lastMessageContentRef.current = lastServerMessage.content;
+          
+          setIsPolling(false);
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
           }
         }
       } catch (err) {
