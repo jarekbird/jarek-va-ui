@@ -11,7 +11,8 @@ import { getApiBasePath } from '../utils/api-base';
  */
 export async function getWorkingDirectoryFiles(): Promise<FileNode[]> {
   // Use /api/working-directory/files endpoint
-  // This endpoint uses TARGET_APP_PATH from cursor-runner (set to /cursor)
+  // This endpoint uses TARGET_APP_PATH from cursor-runner
+  // REPOSITORIES_PATH, SCRIPTS_PATH, and CURSOR_AGENTS_TOOLS_PATH are now relative to TARGET_APP_PATH
   const apiBase = getApiBasePath();
   const response = await fetch(`${apiBase}/working-directory/files`);
 

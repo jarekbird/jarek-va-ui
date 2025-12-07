@@ -167,6 +167,69 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  // Debug: Log the feature flag value (only in development)
+  useEffect(() => {
+    const flagValue = import.meta.env.VITE_ELEVENLABS_AGENT_ENABLED;
+    console.log('[Dashboard] VITE_ELEVENLABS_AGENT_ENABLED:', flagValue);
+    console.log('[Dashboard] isElevenLabsEnabled():', isElevenLabsEnabled());
+  }, []);
+
+  // Show disabled message when feature flag is off
+  if (!isElevenLabsEnabled()) {
+    const flagValue = import.meta.env.VITE_ELEVENLABS_AGENT_ENABLED;
+    return (
+      <div className="dashboard" data-testid="dashboard">
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '60vh',
+            padding: '2rem',
+            textAlign: 'center',
+          }}
+        >
+          <h2 style={{ color: '#2c3e50', marginBottom: '1rem' }}>
+            Dashboard Unavailable
+          </h2>
+          <p style={{ color: '#7f8c8d', marginBottom: '1rem', maxWidth: '600px' }}>
+            The Dashboard feature is currently disabled. To enable it, set the{' '}
+            <code
+              style={{
+                background: '#e9ecef',
+                padding: '2px 6px',
+                borderRadius: '3px',
+                fontFamily: 'monospace',
+              }}
+            >
+              VITE_ELEVENLABS_AGENT_ENABLED
+            </code>{' '}
+            environment variable to <code
+              style={{
+                background: '#e9ecef',
+                padding: '2px 6px',
+                borderRadius: '3px',
+                fontFamily: 'monospace',
+              }}
+            >
+              true
+            </code>
+            .
+          </p>
+          <p style={{ color: '#95a5a6', fontSize: '0.85rem', marginTop: '1rem' }}>
+            Current value: <code style={{ background: '#e9ecef', padding: '2px 6px', borderRadius: '3px', fontFamily: 'monospace' }}>
+              {flagValue ?? '(not set)'}
+            </code>
+          </p>
+          <p style={{ color: '#95a5a6', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+            Note: Vite environment variables are build-time. You must rebuild the Docker image after changing this value.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard" data-testid="dashboard">
       <div className="dashboard__content">

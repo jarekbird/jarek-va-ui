@@ -26,22 +26,36 @@ services:
       - "traefik.enable=true"
       # Path-based routing - accessible at /conversations/*, /tasks, and /task/* on the same domain
       # Priority ensures this router is evaluated before the general Rails app router
-      # Exclude /api/* paths explicitly - these are handled by Rails (API routes)
+      # Exclude /api/* paths explicitly - these are handled by cursor-runner (API routes)
+      # HTTPS router (for production domains only - exclude localhost)
       - "traefik.http.routers.jarek-va-ui.priority=10"
-      - "traefik.http.routers.jarek-va-ui.rule=Host(`${DOMAIN_NAME:-localhost}`) && (PathPrefix(`/conversations`) || (PathPrefix(`/tasks`) && !PathPrefix(`/api`)) || (PathPrefix(`/task`) && !PathPrefix(`/api`)))"
+      - "traefik.http.routers.jarek-va-ui.rule=Host(`${DOMAIN_NAME:-localhost}`) && ((PathPrefix(`/conversations`) && !PathPrefix(`/conversations/api`)) || (PathPrefix(`/tasks`) && !PathPrefix(`/api`)) || (PathPrefix(`/task`) && !PathPrefix(`/api`))) && !Host(`localhost`)"
       - "traefik.http.routers.jarek-va-ui.entrypoints=websecure"
       - "traefik.http.routers.jarek-va-ui.tls.certresolver=letsencrypt"
       - "traefik.http.services.jarek-va-ui.loadbalancer.server.port=80"
+      # HTTP router for localhost (no TLS, no redirect)
+      - "traefik.http.routers.jarek-va-ui-localhost.priority=10"
+      - "traefik.http.routers.jarek-va-ui-localhost.rule=Host(`localhost`) && ((PathPrefix(`/conversations`) && !PathPrefix(`/conversations/api`)) || (PathPrefix(`/tasks`) && !PathPrefix(`/api`)) || (PathPrefix(`/task`) && !PathPrefix(`/api`)))"
+      - "traefik.http.routers.jarek-va-ui-localhost.entrypoints=web"
+      - "traefik.http.routers.jarek-va-ui-localhost.service=jarek-va-ui"
+      - "traefik.http.routers.jarek-va-ui-localhost.middlewares=jarek-va-ui-stripprefix,jarek-va-ui-headers"
       # Static assets router (Vite build outputs under /assets and root-level files like /vite.svg)
+      # HTTPS router (for production domains only - exclude localhost)
       - "traefik.http.routers.jarek-va-ui-assets.priority=10"
-      - "traefik.http.routers.jarek-va-ui-assets.rule=Host(`${DOMAIN_NAME:-localhost}`) && (PathPrefix(`/assets`) || Path(`/vite.svg`))"
+      - "traefik.http.routers.jarek-va-ui-assets.rule=Host(`${DOMAIN_NAME:-localhost}`) && (PathPrefix(`/assets`) || Path(`/vite.svg`)) && !Host(`localhost`)"
       - "traefik.http.routers.jarek-va-ui-assets.entrypoints=websecure"
       - "traefik.http.routers.jarek-va-ui-assets.tls.certresolver=letsencrypt"
       - "traefik.http.routers.jarek-va-ui-assets.service=jarek-va-ui"
+      # HTTP router for localhost assets (no TLS)
+      - "traefik.http.routers.jarek-va-ui-assets-localhost.priority=10"
+      - "traefik.http.routers.jarek-va-ui-assets-localhost.rule=Host(`localhost`) && (PathPrefix(`/assets`) || Path(`/vite.svg`))"
+      - "traefik.http.routers.jarek-va-ui-assets-localhost.entrypoints=web"
+      - "traefik.http.routers.jarek-va-ui-assets-localhost.service=jarek-va-ui"
+      - "traefik.http.routers.jarek-va-ui-assets-localhost.middlewares=jarek-va-ui-headers"
       # Reuse security headers for assets, no prefix stripping
       - "traefik.http.routers.jarek-va-ui-assets.middlewares=jarek-va-ui-headers"
       # HTTP router for /conversations* that redirects to HTTPS
-      - "traefik.http.routers.jarek-va-ui-http.rule=Host(`${DOMAIN_NAME:-localhost}`) && (PathPrefix(`/conversations`) || (PathPrefix(`/tasks`) && !PathPrefix(`/api`)) || (PathPrefix(`/task`) && !PathPrefix(`/api`)))"
+      - "traefik.http.routers.jarek-va-ui-http.rule=Host(`${DOMAIN_NAME:-localhost}`) && ((PathPrefix(`/conversations`) && !PathPrefix(`/conversations/api`)) || (PathPrefix(`/tasks`) && !PathPrefix(`/api`)) || (PathPrefix(`/task`) && !PathPrefix(`/api`)))"
       - "traefik.http.routers.jarek-va-ui-http.entrypoints=web"
       - "traefik.http.routers.jarek-va-ui-http.middlewares=jarek-va-ui-https-redirect"
       - "traefik.http.routers.jarek-va-ui-http.priority=10"

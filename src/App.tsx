@@ -22,9 +22,10 @@ const App: React.FC = () => {
         path="/conversation/:conversationId"
         element={<ConversationDetailView />}
       />
+      {/* Dashboard route shows disabled message when feature flag is off */}
+      <Route path="/dashboard" element={<Dashboard />} />
       {elevenLabsEnabled && (
         <>
-          <Route path="/dashboard" element={<Dashboard />} />
           <Route
             path="/agent-conversations"
             element={<AgentConversationListView />}
