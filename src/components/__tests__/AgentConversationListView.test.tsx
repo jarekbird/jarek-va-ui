@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '../../test/test-utils';
+import userEvent from '@testing-library/user-event';
 import { AgentConversationListView } from '../AgentConversationListView';
 import { server } from '../../test/mocks/server';
 import { http, HttpResponse } from 'msw';
@@ -427,6 +428,451 @@ describe('AgentConversationListView', () => {
           expect(
             screen.getByText(/no agent conversations found/i)
           ).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+    });
+  });
+
+  describe('Pagination', () => {
+    it('shows pagination controls when totalCount > pageSize and no filters', async () => {
+      server.use(
+        http.get(/\/agent-conversations\/api\/list/, () => {
+          return HttpResponse.json(
+            {
+              conversations: mockAgentConversations,
+              pagination: {
+                total: 25,
+                limit: 20,
+                offset: 0,
+                hasMore: true,
+              },
+            },
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        })
+      );
+
+      render(<AgentConversationListView />);
+
+      await waitFor(
+        () => {
+          expect(
+            screen.getByRole('button', { name: /previous/i })
+          ).toBeInTheDocument();
+          expect(
+            screen.getByRole('button', { name: /next/i })
+          ).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+    });
+
+    it('hides pagination controls when filters are active', async () => {
+      server.use(
+        http.get(/\/agent-conversations\/api\/list/, () => {
+          return HttpResponse.json(
+            {
+              conversations: mockAgentConversations,
+              pagination: {
+                total: 25,
+                limit: 20,
+                offset: 0,
+                hasMore: true,
+              },
+            },
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        })
+      );
+
+      const user = userEvent.setup();
+      render(<AgentConversationListView />);
+
+      await waitFor(
+        () => {
+          expect(
+            screen.getByRole('button', { name: /next/i })
+          ).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+
+      // Apply a filter
+      const searchInput = screen.getByLabelText(/search:/i);
+      await user.type(searchInput, 'test');
+
+      await waitFor(
+        () => {
+          expect(
+            screen.queryByRole('button', { name: /next/i })
+          ).not.toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+    });
+
+    it('disables Previous button on first page', async () => {
+      server.use(
+        http.get(/\/agent-conversations\/api\/list/, () => {
+          return HttpResponse.json(
+            {
+              conversations: mockAgentConversations,
+              pagination: {
+                total: 25,
+                limit: 20,
+                offset: 0,
+                hasMore: true,
+              },
+            },
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        })
+      );
+
+      render(<AgentConversationListView />);
+
+      await waitFor(
+        () => {
+          const previousButton = screen.getByRole('button', {
+            name: /previous/i,
+          });
+          expect(previousButton).toBeDisabled();
+        },
+        { timeout: 3000 }
+      );
+    });
+
+    it('enables Previous button when not on first page', async () => {
+      server.use(
+        http.get(/\/agent-conversations\/api\/list/, ({ request }) => {
+          const url = new URL(request.url);
+          const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+          return HttpResponse.json(
+            {
+              conversations: mockAgentConversations,
+              pagination: {
+                total: 25,
+                limit: 20,
+                offset,
+                hasMore: offset + 20 < 25,
+              },
+            },
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        })
+      );
+
+      const user = userEvent.setup();
+      render(<AgentConversationListView />);
+
+      await waitFor(
+        () => {
+          expect(
+            screen.getByRole('button', { name: /next/i })
+          ).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+
+      // Click Next to go to page 2
+      const nextButton = screen.getByRole('button', { name: /next/i });
+      await user.click(nextButton);
+
+      await waitFor(
+        () => {
+          const previousButton = screen.getByRole('button', {
+            name: /previous/i,
+          });
+          expect(previousButton).not.toBeDisabled();
+        },
+        { timeout: 3000 }
+      );
+    });
+
+    it('disables Next button on last page', async () => {
+      // Create enough conversations to require pagination (totalCount > pageSize)
+      const manyConversations: AgentConversation[] = Array.from(
+        { length: 21 },
+        (_, i) => createMockAgentConversation(`agent-conv-${i + 1}`, 2)
+      );
+
+      let requestCount = 0;
+      server.use(
+        http.get(/\/agent-conversations\/api\/list/, () => {
+          requestCount++;
+          // On first call, return page 1. On second call (after clicking Next), return page 2 (last page)
+          if (requestCount === 1) {
+            return HttpResponse.json(
+              {
+                conversations: manyConversations.slice(0, 20),
+                pagination: {
+                  total: 21,
+                  limit: 20,
+                  offset: 0,
+                  hasMore: true,
+                },
+              },
+              {
+                headers: { 'Content-Type': 'application/json' },
+              }
+            );
+          } else {
+            // Last page
+            return HttpResponse.json(
+              {
+                conversations: manyConversations.slice(20, 21),
+                pagination: {
+                  total: 21,
+                  limit: 20,
+                  offset: 20,
+                  hasMore: false,
+                },
+              },
+              {
+                headers: { 'Content-Type': 'application/json' },
+              }
+            );
+          }
+        })
+      );
+
+      const user = userEvent.setup();
+      render(<AgentConversationListView />);
+
+      await waitFor(
+        () => {
+          expect(
+            screen.getByRole('button', { name: /next/i })
+          ).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+
+      // Click Next to go to last page
+      const nextButton = screen.getByRole('button', { name: /next/i });
+      await user.click(nextButton);
+
+      await waitFor(
+        () => {
+          const nextButtonAfter = screen.getByRole('button', { name: /next/i });
+          expect(nextButtonAfter).toBeDisabled();
+        },
+        { timeout: 3000 }
+      );
+    });
+
+    it('enables Next button when more pages available', async () => {
+      server.use(
+        http.get(/\/agent-conversations\/api\/list/, () => {
+          return HttpResponse.json(
+            {
+              conversations: mockAgentConversations,
+              pagination: {
+                total: 25,
+                limit: 20,
+                offset: 0,
+                hasMore: true,
+              },
+            },
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        })
+      );
+
+      render(<AgentConversationListView />);
+
+      await waitFor(
+        () => {
+          const nextButton = screen.getByRole('button', { name: /next/i });
+          expect(nextButton).not.toBeDisabled();
+        },
+        { timeout: 3000 }
+      );
+    });
+
+    it('displays page number and total pages correctly', async () => {
+      server.use(
+        http.get(/\/agent-conversations\/api\/list/, () => {
+          return HttpResponse.json(
+            {
+              conversations: mockAgentConversations,
+              pagination: {
+                total: 25,
+                limit: 20,
+                offset: 0,
+                hasMore: true,
+              },
+            },
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        })
+      );
+
+      render(<AgentConversationListView />);
+
+      await waitFor(
+        () => {
+          expect(screen.getByText(/page 1 of 2/i)).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+    });
+
+    it('calls API with correct offset when clicking Next', async () => {
+      let capturedOffset: number | null = null;
+      server.use(
+        http.get(/\/agent-conversations\/api\/list/, ({ request }) => {
+          const url = new URL(request.url);
+          capturedOffset = parseInt(url.searchParams.get('offset') || '0', 10);
+          return HttpResponse.json(
+            {
+              conversations: mockAgentConversations,
+              pagination: {
+                total: 25,
+                limit: 20,
+                offset: capturedOffset,
+                hasMore: capturedOffset + 20 < 25,
+              },
+            },
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        })
+      );
+
+      const user = userEvent.setup();
+      render(<AgentConversationListView />);
+
+      await waitFor(
+        () => {
+          expect(capturedOffset).toBe(0);
+        },
+        { timeout: 3000 }
+      );
+
+      const nextButton = screen.getByRole('button', { name: /next/i });
+      await user.click(nextButton);
+
+      await waitFor(
+        () => {
+          // Offset should be (page - 1) * limit = (2 - 1) * 20 = 20
+          expect(capturedOffset).toBe(20);
+        },
+        { timeout: 3000 }
+      );
+    });
+
+    it('calls API with correct offset when clicking Previous', async () => {
+      let capturedOffset: number | null = null;
+      server.use(
+        http.get(/\/agent-conversations\/api\/list/, ({ request }) => {
+          const url = new URL(request.url);
+          capturedOffset = parseInt(url.searchParams.get('offset') || '0', 10);
+          return HttpResponse.json(
+            {
+              conversations: mockAgentConversations,
+              pagination: {
+                total: 25,
+                limit: 20,
+                offset: capturedOffset,
+                hasMore: capturedOffset + 20 < 25,
+              },
+            },
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        })
+      );
+
+      const user = userEvent.setup();
+      render(<AgentConversationListView />);
+
+      // Wait for initial load, then click Next to go to page 2
+      await waitFor(
+        () => {
+          expect(
+            screen.getByRole('button', { name: /next/i })
+          ).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+
+      const nextButton = screen.getByRole('button', { name: /next/i });
+      await user.click(nextButton);
+
+      await waitFor(
+        () => {
+          expect(capturedOffset).toBe(20);
+        },
+        { timeout: 3000 }
+      );
+
+      // Now click Previous to go back to page 1
+      const previousButton = screen.getByRole('button', { name: /previous/i });
+      await user.click(previousButton);
+
+      await waitFor(
+        () => {
+          // Offset should be (page - 1) * limit = (1 - 1) * 20 = 0
+          expect(capturedOffset).toBe(0);
+        },
+        { timeout: 3000 }
+      );
+    });
+
+    it('updates page display when navigating', async () => {
+      server.use(
+        http.get(/\/agent-conversations\/api\/list/, ({ request }) => {
+          const url = new URL(request.url);
+          const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+          return HttpResponse.json(
+            {
+              conversations: mockAgentConversations,
+              pagination: {
+                total: 25,
+                limit: 20,
+                offset,
+                hasMore: offset + 20 < 25,
+              },
+            },
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        })
+      );
+
+      const user = userEvent.setup();
+      render(<AgentConversationListView />);
+
+      await waitFor(
+        () => {
+          expect(screen.getByText(/page 1 of 2/i)).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+
+      const nextButton = screen.getByRole('button', { name: /next/i });
+      await user.click(nextButton);
+
+      await waitFor(
+        () => {
+          expect(screen.getByText(/page 2 of 2/i)).toBeInTheDocument();
         },
         { timeout: 3000 }
       );
