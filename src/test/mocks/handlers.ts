@@ -615,4 +615,38 @@ export const handlers = [
       headers: { 'Content-Type': 'application/json' },
     });
   }),
+
+  // GET /config (Agent Config endpoint)
+  http.get(/\/config$/, () => {
+    const mockConfig = {
+      agentId: 'test-agent-id',
+      agentUrl: 'http://localhost:8000',
+      cursorRunnerUrl: 'http://localhost:3000',
+      webhookSecretConfigured: true,
+      redisUrl: 'redis://localhost:6379',
+      hasApiKey: true,
+    };
+    return HttpResponse.json(
+      { success: true, config: mockConfig },
+      {
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }),
+
+  // GET /config/health (Agent Health endpoint)
+  http.get(/\/config\/health$/, () => {
+    const mockHealth = {
+      service: 'ok',
+      status: 'ok',
+      dependencies: {
+        redis: 'connected',
+        cursorRunner: 'connected',
+      },
+      timestamp: new Date().toISOString(),
+    };
+    return HttpResponse.json(mockHealth, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }),
 ];
