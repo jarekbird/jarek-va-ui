@@ -878,4 +878,507 @@ describe('AgentConversationListView', () => {
       );
     });
   });
+
+  describe('Filtering', () => {
+    // Create mock conversations with different agent IDs and message content for filtering tests
+    const conversationsWithDifferentAgents: AgentConversation[] = [
+      {
+        ...createMockAgentConversation('agent-conv-1', 2),
+        agentId: 'agent-A',
+        messages: [
+          {
+            role: 'user',
+            content: 'Hello from agent A',
+            timestamp: new Date().toISOString(),
+            source: 'text',
+          },
+          {
+            role: 'assistant',
+            content: 'Response from agent A',
+            timestamp: new Date().toISOString(),
+            source: 'voice',
+          },
+        ],
+      },
+      {
+        ...createMockAgentConversation('agent-conv-2', 2),
+        agentId: 'agent-B',
+        messages: [
+          {
+            role: 'user',
+            content: 'Hello from agent B',
+            timestamp: new Date().toISOString(),
+            source: 'text',
+          },
+          {
+            role: 'assistant',
+            content: 'Response from agent B',
+            timestamp: new Date().toISOString(),
+            source: 'voice',
+          },
+        ],
+      },
+      {
+        ...createMockAgentConversation('agent-conv-3', 2),
+        agentId: 'agent-A',
+        messages: [
+          {
+            role: 'user',
+            content: 'Another message from agent A',
+            timestamp: new Date().toISOString(),
+            source: 'text',
+          },
+          {
+            role: 'assistant',
+            content: 'Another response from agent A',
+            timestamp: new Date().toISOString(),
+            source: 'voice',
+          },
+        ],
+      },
+    ];
+
+    beforeEach(() => {
+      server.use(
+        http.get(/\/agent-conversations\/api\/list/, () => {
+          return HttpResponse.json(
+            {
+              conversations: conversationsWithDifferentAgents,
+              pagination: {
+                total: 3,
+                limit: 20,
+                offset: 0,
+                hasMore: false,
+              },
+            },
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        })
+      );
+    });
+
+    describe('Agent dropdown filtering', () => {
+      it('filters conversations by agentId when agent is selected', async () => {
+        const user = userEvent.setup();
+        render(<AgentConversationListView />);
+
+        await waitFor(
+          () => {
+            expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+          },
+          { timeout: 3000 }
+        );
+
+        // All conversations should be visible initially
+        expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+        expect(screen.getByText(/ID: agent-conv-2/i)).toBeInTheDocument();
+        expect(screen.getByText(/ID: agent-conv-3/i)).toBeInTheDocument();
+
+        // Select agent-A from dropdown
+        const agentFilter = screen.getByLabelText(/filter by agent/i);
+        await user.selectOptions(agentFilter, 'agent-A');
+
+        // Only conversations with agent-A should be visible
+        await waitFor(() => {
+          expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+          expect(screen.getByText(/ID: agent-conv-3/i)).toBeInTheDocument();
+          expect(
+            screen.queryByText(/ID: agent-conv-2/i)
+          ).not.toBeInTheDocument();
+        });
+      });
+
+      it('shows all conversations when "All Agents" is selected', async () => {
+        const user = userEvent.setup();
+        render(<AgentConversationListView />);
+
+        await waitFor(
+          () => {
+            expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+          },
+          { timeout: 3000 }
+        );
+
+        // Select agent-A first
+        const agentFilter = screen.getByLabelText(/filter by agent/i);
+        await user.selectOptions(agentFilter, 'agent-A');
+
+        await waitFor(() => {
+          expect(
+            screen.queryByText(/ID: agent-conv-2/i)
+          ).not.toBeInTheDocument();
+        });
+
+        // Select "All Agents" to clear filter
+        await user.selectOptions(agentFilter, '');
+
+        // All conversations should be visible again
+        await waitFor(() => {
+          expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+          expect(screen.getByText(/ID: agent-conv-2/i)).toBeInTheDocument();
+          expect(screen.getByText(/ID: agent-conv-3/i)).toBeInTheDocument();
+        });
+      });
+    });
+
+    describe('Search input filtering', () => {
+      it('filters conversations by conversation ID', async () => {
+        const user = userEvent.setup();
+        render(<AgentConversationListView />);
+
+        await waitFor(
+          () => {
+            expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+          },
+          { timeout: 3000 }
+        );
+
+        // Type conversation ID in search
+        const searchInput = screen.getByLabelText(/search/i);
+        await user.type(searchInput, 'agent-conv-2');
+
+        // Only matching conversation should be visible
+        await waitFor(() => {
+          expect(screen.getByText(/ID: agent-conv-2/i)).toBeInTheDocument();
+          expect(
+            screen.queryByText(/ID: agent-conv-1/i)
+          ).not.toBeInTheDocument();
+          expect(
+            screen.queryByText(/ID: agent-conv-3/i)
+          ).not.toBeInTheDocument();
+        });
+      });
+
+      it('filters conversations by agent ID', async () => {
+        const user = userEvent.setup();
+        render(<AgentConversationListView />);
+
+        await waitFor(
+          () => {
+            expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+          },
+          { timeout: 3000 }
+        );
+
+        // Type agent ID in search
+        const searchInput = screen.getByLabelText(/search/i);
+        await user.type(searchInput, 'agent-B');
+
+        // Only conversations with agent-B should be visible
+        await waitFor(() => {
+          expect(screen.getByText(/ID: agent-conv-2/i)).toBeInTheDocument();
+          expect(
+            screen.queryByText(/ID: agent-conv-1/i)
+          ).not.toBeInTheDocument();
+          expect(
+            screen.queryByText(/ID: agent-conv-3/i)
+          ).not.toBeInTheDocument();
+        });
+      });
+
+      it('filters conversations by message content', async () => {
+        const user = userEvent.setup();
+        render(<AgentConversationListView />);
+
+        await waitFor(
+          () => {
+            expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+          },
+          { timeout: 3000 }
+        );
+
+        // Type message content in search
+        const searchInput = screen.getByLabelText(/search/i);
+        await user.type(searchInput, 'Another message');
+
+        // Only conversations with matching message content should be visible
+        await waitFor(() => {
+          expect(screen.getByText(/ID: agent-conv-3/i)).toBeInTheDocument();
+          expect(
+            screen.queryByText(/ID: agent-conv-1/i)
+          ).not.toBeInTheDocument();
+          expect(
+            screen.queryByText(/ID: agent-conv-2/i)
+          ).not.toBeInTheDocument();
+        });
+      });
+
+      it('performs case-insensitive search', async () => {
+        const user = userEvent.setup();
+        render(<AgentConversationListView />);
+
+        await waitFor(
+          () => {
+            expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+          },
+          { timeout: 3000 }
+        );
+
+        // Type uppercase search query
+        const searchInput = screen.getByLabelText(/search/i);
+        await user.type(searchInput, 'AGENT-A');
+
+        // Should find conversations with lowercase agent-A
+        await waitFor(() => {
+          expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+          expect(screen.getByText(/ID: agent-conv-3/i)).toBeInTheDocument();
+          expect(
+            screen.queryByText(/ID: agent-conv-2/i)
+          ).not.toBeInTheDocument();
+        });
+      });
+    });
+
+    describe('Filter combinations', () => {
+      it('applies both agent filter and search filter together', async () => {
+        const user = userEvent.setup();
+        render(<AgentConversationListView />);
+
+        await waitFor(
+          () => {
+            expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+          },
+          { timeout: 3000 }
+        );
+
+        // Select agent-A
+        const agentFilter = screen.getByLabelText(/filter by agent/i);
+        await user.selectOptions(agentFilter, 'agent-A');
+
+        // Type search query
+        const searchInput = screen.getByLabelText(/search/i);
+        await user.type(searchInput, 'Another');
+
+        // Only conversations matching both filters should be visible
+        await waitFor(() => {
+          expect(screen.getByText(/ID: agent-conv-3/i)).toBeInTheDocument();
+          expect(
+            screen.queryByText(/ID: agent-conv-1/i)
+          ).not.toBeInTheDocument();
+          expect(
+            screen.queryByText(/ID: agent-conv-2/i)
+          ).not.toBeInTheDocument();
+        });
+      });
+
+      it('shows correct filter count when filters are active', async () => {
+        const user = userEvent.setup();
+        render(<AgentConversationListView />);
+
+        await waitFor(
+          () => {
+            expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+          },
+          { timeout: 3000 }
+        );
+
+        // Select agent-A (should show 2 of 3 conversations)
+        const agentFilter = screen.getByLabelText(/filter by agent/i);
+        await user.selectOptions(agentFilter, 'agent-A');
+
+        await waitFor(() => {
+          expect(
+            screen.getByText(/showing 2 of 3 conversations/i)
+          ).toBeInTheDocument();
+        });
+      });
+
+      it('shows total count when no filters are active', async () => {
+        render(<AgentConversationListView />);
+
+        await waitFor(
+          () => {
+            expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+          },
+          { timeout: 3000 }
+        );
+
+        // Should show total count from API
+        expect(
+          screen.getByText(/showing 3 of 3 conversations/i)
+        ).toBeInTheDocument();
+      });
+    });
+
+    describe('Clear filters', () => {
+      it('shows Clear Filters button when filters are active', async () => {
+        const user = userEvent.setup();
+        render(<AgentConversationListView />);
+
+        await waitFor(
+          () => {
+            expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+          },
+          { timeout: 3000 }
+        );
+
+        // Clear Filters button should not be visible initially
+        expect(
+          screen.queryByRole('button', { name: /clear filters/i })
+        ).not.toBeInTheDocument();
+
+        // Apply a filter
+        const searchInput = screen.getByLabelText(/search/i);
+        await user.type(searchInput, 'test');
+
+        // Clear Filters button should now be visible
+        await waitFor(() => {
+          expect(
+            screen.getByRole('button', { name: /clear filters/i })
+          ).toBeInTheDocument();
+        });
+      });
+
+      it('resets both filters when Clear Filters is clicked', async () => {
+        const user = userEvent.setup();
+        render(<AgentConversationListView />);
+
+        await waitFor(
+          () => {
+            expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+          },
+          { timeout: 3000 }
+        );
+
+        // Apply both filters
+        const agentFilter = screen.getByLabelText(/filter by agent/i);
+        await user.selectOptions(agentFilter, 'agent-A');
+
+        const searchInput = screen.getByLabelText(/search/i);
+        await user.type(searchInput, 'test');
+
+        // Verify filters are applied
+        await waitFor(() => {
+          expect(
+            screen.getByRole('button', { name: /clear filters/i })
+          ).toBeInTheDocument();
+        });
+
+        // Click Clear Filters
+        const clearButton = screen.getByRole('button', {
+          name: /clear filters/i,
+        });
+        await user.click(clearButton);
+
+        // Both filters should be cleared and all conversations visible
+        await waitFor(() => {
+          expect(searchInput).toHaveValue('');
+          expect(agentFilter).toHaveValue('');
+          expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+          expect(screen.getByText(/ID: agent-conv-2/i)).toBeInTheDocument();
+          expect(screen.getByText(/ID: agent-conv-3/i)).toBeInTheDocument();
+          expect(
+            screen.queryByRole('button', { name: /clear filters/i })
+          ).not.toBeInTheDocument();
+        });
+      });
+    });
+
+    describe('Edge cases', () => {
+      it('shows "No conversations match your search criteria" when filters return no results', async () => {
+        const user = userEvent.setup();
+        render(<AgentConversationListView />);
+
+        await waitFor(
+          () => {
+            expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+          },
+          { timeout: 3000 }
+        );
+
+        // Apply filter that matches nothing
+        const searchInput = screen.getByLabelText(/search/i);
+        await user.type(searchInput, 'nonexistent-conversation-xyz');
+
+        // Should show "no match" message
+        await waitFor(() => {
+          expect(
+            screen.getByText(/no conversations match your search criteria/i)
+          ).toBeInTheDocument();
+          expect(
+            screen.queryByText(/ID: agent-conv-1/i)
+          ).not.toBeInTheDocument();
+        });
+      });
+
+      it('handles rapid filter changes without errors', async () => {
+        const user = userEvent.setup();
+        render(<AgentConversationListView />);
+
+        await waitFor(
+          () => {
+            expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+          },
+          { timeout: 3000 }
+        );
+
+        const searchInput = screen.getByLabelText(/search/i);
+        const agentFilter = screen.getByLabelText(/filter by agent/i);
+
+        // Rapidly change filters
+        await user.type(searchInput, 'agent-conv-1');
+        await user.selectOptions(agentFilter, 'agent-A');
+        await user.clear(searchInput);
+        await user.type(searchInput, 'agent-conv-2');
+        await user.selectOptions(agentFilter, 'agent-B');
+
+        // Should handle all changes without errors
+        await waitFor(() => {
+          expect(screen.getByText(/ID: agent-conv-2/i)).toBeInTheDocument();
+          expect(
+            screen.queryByText(/ID: agent-conv-1/i)
+          ).not.toBeInTheDocument();
+          expect(
+            screen.queryByText(/ID: agent-conv-3/i)
+          ).not.toBeInTheDocument();
+        });
+      });
+
+      it('hides pagination controls when filters are active', async () => {
+        const user = userEvent.setup();
+        // Setup with enough conversations to show pagination
+        server.use(
+          http.get(/\/agent-conversations\/api\/list/, () => {
+            return HttpResponse.json(
+              {
+                conversations: conversationsWithDifferentAgents,
+                pagination: {
+                  total: 25, // More than pageSize (20)
+                  limit: 20,
+                  offset: 0,
+                  hasMore: true,
+                },
+              },
+              {
+                headers: { 'Content-Type': 'application/json' },
+              }
+            );
+          })
+        );
+
+        render(<AgentConversationListView />);
+
+        await waitFor(
+          () => {
+            expect(screen.getByText(/page 1 of 2/i)).toBeInTheDocument();
+          },
+          { timeout: 3000 }
+        );
+
+        // Apply a filter
+        const searchInput = screen.getByLabelText(/search/i);
+        await user.type(searchInput, 'agent-A');
+
+        // Pagination controls should be hidden
+        await waitFor(() => {
+          expect(screen.queryByText(/page 1 of 2/i)).not.toBeInTheDocument();
+          expect(
+            screen.queryByRole('button', { name: /next/i })
+          ).not.toBeInTheDocument();
+        });
+      });
+    });
+  });
 });
