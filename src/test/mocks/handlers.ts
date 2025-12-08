@@ -1,9 +1,9 @@
 /**
  * MSW (Mock Service Worker) handlers for all API endpoints
- * 
+ *
  * These handlers mock network requests in tests, allowing tests to run
  * without depending on a real backend server.
- * 
+ *
  * Handlers support both `/api/*` and `/conversations/api/*` paths to match
  * the behavior of `getApiBasePath()` which returns different paths based on
  * the environment.
@@ -17,7 +17,10 @@ import type { FileNode } from '../../types/file-tree';
 import type { QueueInfo } from '../../api/queues';
 
 // Mock data generators
-const createMockConversation = (id: string, messageCount = 2): Conversation => ({
+const createMockConversation = (
+  id: string,
+  messageCount = 2
+): Conversation => ({
   conversationId: id,
   messages: Array.from({ length: messageCount }, (_, i) => ({
     role: i % 2 === 0 ? 'user' : 'assistant',
@@ -65,14 +68,25 @@ const createMockQueueInfo = (name: string): QueueInfo => ({
   agents: [`agent-${name}`],
 });
 
-const createMockFileNode = (name: string, type: 'file' | 'directory'): FileNode => ({
+const createMockFileNode = (
+  name: string,
+  type: 'file' | 'directory'
+): FileNode => ({
   name,
   path: `/${name}`,
   type,
   ...(type === 'directory' && {
     children: [
-      { name: `${name}-file1.ts`, path: `/${name}/${name}-file1.ts`, type: 'file' },
-      { name: `${name}-file2.ts`, path: `/${name}/${name}-file2.ts`, type: 'file' },
+      {
+        name: `${name}-file1.ts`,
+        path: `/${name}/${name}-file1.ts`,
+        type: 'file',
+      },
+      {
+        name: `${name}-file2.ts`,
+        path: `/${name}/${name}-file2.ts`,
+        type: 'file',
+      },
     ],
   }),
 });
@@ -86,36 +100,33 @@ const queues = new Map<string, QueueInfo>();
 // Initialize with some default data
 conversations.set('conv-1', createMockConversation('conv-1'));
 conversations.set('conv-2', createMockConversation('conv-2', 3));
-agentConversations.set('agent-conv-1', createMockAgentConversation('agent-conv-1'));
-agentConversations.set('agent-conv-2', createMockAgentConversation('agent-conv-2', 4));
+agentConversations.set(
+  'agent-conv-1',
+  createMockAgentConversation('agent-conv-1')
+);
+agentConversations.set(
+  'agent-conv-2',
+  createMockAgentConversation('agent-conv-2', 4)
+);
 tasks.set(1, createMockTask(1));
 tasks.set(2, createMockTask(2));
 queues.set('default', createMockQueueInfo('default'));
 queues.set('telegram', createMockQueueInfo('telegram'));
 
-/**
- * Helper to match paths that could be either /api/* or /conversations/api/*
- */
-const matchApiPath = (path: string) => {
-  return http.get(path) || http.get(`/conversations${path}`);
-};
-
 export const handlers = [
   // ============================================
   // Conversations API handlers
   // ============================================
-  
+
   // GET /conversations/api/list or /api/conversations/list
-  http.get(/\/conversations\/api\/list$/, ({ request }) => {
-    const url = new URL(request.url);
+  http.get(/\/conversations\/api\/list$/, () => {
     const conversationsList = Array.from(conversations.values());
     return HttpResponse.json(conversationsList, {
       headers: { 'Content-Type': 'application/json' },
     });
   }),
 
-  http.get(/\/api\/conversations\/list$/, ({ request }) => {
-    const url = new URL(request.url);
+  http.get(/\/api\/conversations\/list$/, () => {
     const conversationsList = Array.from(conversations.values());
     return HttpResponse.json(conversationsList, {
       headers: { 'Content-Type': 'application/json' },
@@ -202,7 +213,7 @@ export const handlers = [
     const sortBy = url.searchParams.get('sortBy') || 'lastAccessedAt';
     const sortOrder = url.searchParams.get('sortOrder') || 'desc';
 
-    let conversationsList = Array.from(agentConversations.values());
+    const conversationsList = Array.from(agentConversations.values());
 
     // Sort conversations
     conversationsList.sort((a, b) => {
@@ -265,7 +276,10 @@ export const handlers = [
 
   // POST /agent-conversations/api/new
   http.post(/\/agent-conversations\/api\/new$/, async ({ request }) => {
-    const body = (await request.json()) as { agentId?: string; metadata?: Record<string, unknown> };
+    const body = (await request.json()) as {
+      agentId?: string;
+      metadata?: Record<string, unknown>;
+    };
     const newId = `agent-conv-${Date.now()}`;
     const newConversation = createMockAgentConversation(newId, 0);
     if (body.agentId) {
@@ -289,28 +303,30 @@ export const handlers = [
   }),
 
   // POST /agent-conversations/api/:id/message
-  http.post(/\/agent-conversations\/api\/([^/]+)\/message$/, async ({ params, request }) => {
-    const id = params[0] as string;
-    const conversation = agentConversations.get(id);
-    if (!conversation) {
+  http.post(
+    /\/agent-conversations\/api\/([^/]+)\/message$/,
+    async ({ params }) => {
+      const id = params[0] as string;
+      const conversation = agentConversations.get(id);
+      if (!conversation) {
+        return HttpResponse.json(
+          { error: 'Conversation not found' },
+          { status: 404, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      // In a real scenario, this would add the message to the conversation
       return HttpResponse.json(
-        { error: 'Conversation not found' },
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
+        {
+          success: true,
+          conversationId: id,
+          message: 'Message sent',
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+        }
       );
     }
-    const body = (await request.json()) as { role: string; content: string; source?: string };
-    // In a real scenario, this would add the message to the conversation
-    return HttpResponse.json(
-      {
-        success: true,
-        conversationId: id,
-        message: 'Message sent',
-      },
-      {
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-  }),
+  ),
 
   // ============================================
   // Tasks API handlers
@@ -323,7 +339,8 @@ export const handlers = [
     const limit = parseInt(url.searchParams.get('limit') || '10', 10);
     const status = url.searchParams.get('status');
     const status_label = url.searchParams.get('status_label');
-    const conversation_id = url.searchParams.get('conversation_id');
+    // conversation_id is extracted but not currently used in filtering
+    void url.searchParams.get('conversation_id');
     const sortBy = url.searchParams.get('sortBy');
     const sortOrder = url.searchParams.get('sortOrder') || 'desc';
 
@@ -336,10 +353,7 @@ export const handlers = [
     if (status_label) {
       tasksList = tasksList.filter((t) => t.status_label === status_label);
     }
-    if (conversation_id) {
-      // Filter by conversation_id if needed (not in current Task type, but handle it)
-      tasksList = tasksList; // No filter for now
-    }
+    // conversation_id filter not implemented yet (not in current Task type)
 
     // Apply sorting
     if (sortBy) {
@@ -402,7 +416,8 @@ export const handlers = [
     const limit = parseInt(url.searchParams.get('limit') || '10', 10);
     const status = url.searchParams.get('status');
     const status_label = url.searchParams.get('status_label');
-    const conversation_id = url.searchParams.get('conversation_id');
+    // conversation_id is extracted but not currently used in filtering
+    void url.searchParams.get('conversation_id');
     const sortBy = url.searchParams.get('sortBy');
     const sortOrder = url.searchParams.get('sortOrder') || 'desc';
 
@@ -586,7 +601,8 @@ export const handlers = [
 
   // GET /repositories/api/:repository/files
   http.get(/\/repositories\/api\/([^/]+)\/files$/, ({ params }) => {
-    const repository = params[0] as string;
+    // Extract repository name from params (currently unused but available for future filtering)
+    void params[0];
     // Return a mock file tree for the repository
     const fileTree: FileNode[] = [
       createMockFileNode('src', 'directory'),
@@ -598,4 +614,3 @@ export const handlers = [
     });
   }),
 ];
-
