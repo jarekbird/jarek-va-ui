@@ -28,8 +28,9 @@ services:
       # Priority ensures this router is evaluated before the general Rails app router
       # Exclude /api/* paths explicitly - these are handled by cursor-runner (API routes)
       # HTTPS router (for production domains only - exclude localhost)
+      # Only create HTTPS router when DOMAIN_NAME is set and contains a dot (real domain, not localhost)
       - "traefik.http.routers.jarek-va-ui.priority=10"
-      - "traefik.http.routers.jarek-va-ui.rule=Host(`${DOMAIN_NAME:-localhost}`) && ((PathPrefix(`/conversations`) && !PathPrefix(`/conversations/api`)) || (PathPrefix(`/tasks`) && !PathPrefix(`/api`)) || (PathPrefix(`/task`) && !PathPrefix(`/api`))) && !Host(`localhost`)"
+      - "traefik.http.routers.jarek-va-ui.rule=HostRegexp(`.*\\..*`) && Host(`${DOMAIN_NAME:-localhost}`) && ((PathPrefix(`/conversations`) && !PathPrefix(`/conversations/api`)) || (PathPrefix(`/tasks`) && !PathPrefix(`/api`)) || (PathPrefix(`/task`) && !PathPrefix(`/api`)))"
       - "traefik.http.routers.jarek-va-ui.entrypoints=websecure"
       - "traefik.http.routers.jarek-va-ui.tls.certresolver=letsencrypt"
       - "traefik.http.services.jarek-va-ui.loadbalancer.server.port=80"
@@ -41,8 +42,9 @@ services:
       - "traefik.http.routers.jarek-va-ui-localhost.middlewares=jarek-va-ui-stripprefix,jarek-va-ui-headers"
       # Static assets router (Vite build outputs under /assets and root-level files like /vite.svg)
       # HTTPS router (for production domains only - exclude localhost)
+      # Only create HTTPS router when DOMAIN_NAME is set and contains a dot (real domain, not localhost)
       - "traefik.http.routers.jarek-va-ui-assets.priority=10"
-      - "traefik.http.routers.jarek-va-ui-assets.rule=Host(`${DOMAIN_NAME:-localhost}`) && (PathPrefix(`/assets`) || Path(`/vite.svg`)) && !Host(`localhost`)"
+      - "traefik.http.routers.jarek-va-ui-assets.rule=HostRegexp(`.*\\..*`) && Host(`${DOMAIN_NAME:-localhost}`) && (PathPrefix(`/assets`) || Path(`/vite.svg`))"
       - "traefik.http.routers.jarek-va-ui-assets.entrypoints=websecure"
       - "traefik.http.routers.jarek-va-ui-assets.tls.certresolver=letsencrypt"
       - "traefik.http.routers.jarek-va-ui-assets.service=jarek-va-ui"

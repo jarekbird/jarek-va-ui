@@ -42,7 +42,9 @@ describe('conversations API', () => {
 
       const result = await listConversations();
       expect(result).toEqual(mockConversations);
-      expect(mockFetch).toHaveBeenCalledWith('/conversations/api/list');
+      // Check that URL ends with expected path (handles both relative and absolute URLs)
+      const callUrl = mockFetch.mock.calls[0][0];
+      expect(callUrl).toMatch(/\/conversations\/api\/list$/);
     });
 
     it('throws an error when fetch fails', async () => {
@@ -73,8 +75,9 @@ describe('conversations API', () => {
       });
 
       await listConversations();
-      // Should use default '/conversations/api' when VITE_API_BASE_URL is not set
-      expect(mockFetch).toHaveBeenCalledWith('/conversations/api/list');
+      // Check that URL ends with expected path (handles both relative and absolute URLs)
+      const callUrl = mockFetch.mock.calls[0][0];
+      expect(callUrl).toMatch(/\/conversations\/api\/list$/);
     });
   });
 
@@ -104,7 +107,9 @@ describe('conversations API', () => {
 
       const result = await getConversationById('conv-1');
       expect(result).toEqual(mockConversation);
-      expect(mockFetch).toHaveBeenCalledWith('/conversations/api/conv-1');
+      // Check that URL ends with expected path (handles both relative and absolute URLs)
+      const callUrl = mockFetch.mock.calls[0][0];
+      expect(callUrl).toMatch(/\/conversations\/api\/conv-1$/);
     });
 
     it('throws "Conversation not found" error for 404', async () => {
@@ -163,7 +168,9 @@ describe('conversations API', () => {
 
       const result = await fetchConversations();
       expect(result.conversations).toEqual(mockConversations);
-      expect(mockFetch).toHaveBeenCalledWith('/conversations/api/list');
+      // Check that URL ends with expected path (handles both relative and absolute URLs)
+      const callUrl = mockFetch.mock.calls[0][0];
+      expect(callUrl).toMatch(/\/conversations\/api\/list$/);
     });
 
     it('fetches conversations with pagination params', async () => {
@@ -193,9 +200,9 @@ describe('conversations API', () => {
         total: 1,
         totalPages: 1,
       });
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/conversations/api/list?page=1&limit=10'
-      );
+      // Check that URL ends with expected path and query params (handles both relative and absolute URLs)
+      const callUrl = mockFetch.mock.calls[0][0];
+      expect(callUrl).toMatch(/\/conversations\/api\/list\?page=1&limit=10$/);
     });
 
     it('fetches conversations with filter params', async () => {
@@ -238,9 +245,13 @@ describe('conversations API', () => {
         total: 1,
         totalPages: 1,
       });
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/conversations/api/list?page=1&limit=10&status=active&agent=test-agent'
-      );
+      // Check that URL contains expected path and query params (handles both relative and absolute URLs)
+      const callUrl = mockFetch.mock.calls[0][0];
+      expect(callUrl).toMatch(/\/conversations\/api\/list\?/);
+      expect(callUrl).toContain('page=1');
+      expect(callUrl).toContain('limit=10');
+      expect(callUrl).toContain('status=active');
+      expect(callUrl).toContain('agent=test-agent');
     });
 
     it('handles array response (legacy format)', async () => {

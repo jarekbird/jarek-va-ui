@@ -193,7 +193,13 @@ export const Dashboard: React.FC = () => {
           <h2 style={{ color: '#2c3e50', marginBottom: '1rem' }}>
             Dashboard Unavailable
           </h2>
-          <p style={{ color: '#7f8c8d', marginBottom: '1rem', maxWidth: '600px' }}>
+          <p
+            style={{
+              color: '#7f8c8d',
+              marginBottom: '1rem',
+              maxWidth: '600px',
+            }}
+          >
             The Dashboard feature is currently disabled. To enable it, set the{' '}
             <code
               style={{
@@ -205,7 +211,8 @@ export const Dashboard: React.FC = () => {
             >
               VITE_ELEVENLABS_AGENT_ENABLED
             </code>{' '}
-            environment variable to <code
+            environment variable to{' '}
+            <code
               style={{
                 background: '#e9ecef',
                 padding: '2px 6px',
@@ -217,13 +224,30 @@ export const Dashboard: React.FC = () => {
             </code>
             .
           </p>
-          <p style={{ color: '#95a5a6', fontSize: '0.85rem', marginTop: '1rem' }}>
-            Current value: <code style={{ background: '#e9ecef', padding: '2px 6px', borderRadius: '3px', fontFamily: 'monospace' }}>
+          <p
+            style={{ color: '#95a5a6', fontSize: '0.85rem', marginTop: '1rem' }}
+          >
+            Current value:{' '}
+            <code
+              style={{
+                background: '#e9ecef',
+                padding: '2px 6px',
+                borderRadius: '3px',
+                fontFamily: 'monospace',
+              }}
+            >
               {flagValue ?? '(not set)'}
             </code>
           </p>
-          <p style={{ color: '#95a5a6', fontSize: '0.85rem', marginTop: '0.5rem' }}>
-            Note: Vite environment variables are build-time. You must rebuild the Docker image after changing this value.
+          <p
+            style={{
+              color: '#95a5a6',
+              fontSize: '0.85rem',
+              marginTop: '0.5rem',
+            }}
+          >
+            Note: Vite environment variables are build-time. You must rebuild
+            the Docker image after changing this value.
           </p>
         </div>
       </div>
