@@ -31,7 +31,7 @@ const createMockConversation = (
   lastAccessedAt: new Date().toISOString(),
 });
 
-const createMockAgentConversation = (
+export const createMockAgentConversation = (
   id: string,
   messageCount = 2
 ): AgentConversation => ({
