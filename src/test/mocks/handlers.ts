@@ -119,6 +119,8 @@ export const handlers = [
   // ============================================
 
   // GET /conversations/api/list or /api/conversations/list
+  // Note: API tests use manual fetch mocks, so these handlers won't intercept those requests
+  // Component tests that don't mock fetch will use these handlers
   http.get(/\/conversations\/api\/list$/, () => {
     const conversationsList = Array.from(conversations.values());
     return HttpResponse.json(conversationsList, {

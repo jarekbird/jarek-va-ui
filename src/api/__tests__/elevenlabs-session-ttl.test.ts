@@ -9,19 +9,38 @@
  * Task: TASK-45 - Validate Session TTL and Expiration Behavior
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+} from 'vitest';
 import { registerSession, getVoiceSignedUrl } from '../elevenlabs';
 import {
   getAgentConversation,
   createAgentConversation,
   sendAgentMessage,
 } from '../agent-conversations';
+import { server } from '../../test/mocks/server';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch as unknown as typeof fetch;
 
 describe('Session TTL and Expiration Behavior', () => {
+  // Disable MSW for this test suite since we use manual fetch mocks
+  beforeAll(() => {
+    server.close();
+  });
+
+  afterAll(() => {
+    server.listen({ onUnhandledRequest: 'bypass' });
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();

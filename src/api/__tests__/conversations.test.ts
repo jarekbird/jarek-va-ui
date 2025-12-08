@@ -1,10 +1,20 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+} from 'vitest';
 import {
   listConversations,
   getConversationById,
   fetchConversations,
 } from '../conversations';
 import type { Conversation } from '../../types';
+import { server } from '../../test/mocks/server';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
@@ -12,6 +22,15 @@ const mockFetch = vi.fn();
 globalThis.fetch = mockFetch as unknown as typeof fetch;
 
 describe('conversations API', () => {
+  // Disable MSW for this test suite since we use manual fetch mocks
+  beforeAll(() => {
+    server.close();
+  });
+
+  afterAll(() => {
+    server.listen({ onUnhandledRequest: 'bypass' });
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
