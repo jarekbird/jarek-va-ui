@@ -113,6 +113,88 @@ tasks.set(2, createMockTask(2));
 queues.set('default', createMockQueueInfo('default'));
 queues.set('telegram', createMockQueueInfo('telegram'));
 
+// Handler function for GET /api/tasks or /conversations/api/tasks
+// Defined outside handlers array to avoid duplication
+const handleGetTasks = ({ request }: { request: Request }) => {
+  const url = new URL(request.url);
+  const pageParam = url.searchParams.get('page');
+  const limitParam = url.searchParams.get('limit');
+  const hasPagination = pageParam !== null || limitParam !== null;
+  const page = pageParam ? parseInt(pageParam, 10) : 1;
+  const limit = limitParam ? parseInt(limitParam, 10) : 10;
+  const status = url.searchParams.get('status');
+  const status_label = url.searchParams.get('status_label');
+  // conversation_id is extracted but not currently used in filtering
+  void url.searchParams.get('conversation_id');
+  const sortBy = url.searchParams.get('sortBy');
+  const sortOrder = url.searchParams.get('sortOrder') || 'desc';
+
+  let tasksList = Array.from(tasks.values());
+
+  // Apply filters
+  if (status !== null) {
+    tasksList = tasksList.filter((t) => t.status === parseInt(status, 10));
+  }
+  if (status_label) {
+    tasksList = tasksList.filter((t) => t.status_label === status_label);
+  }
+  // conversation_id filter not implemented yet (not in current Task type)
+
+  // Apply sorting
+  if (sortBy) {
+    tasksList.sort((a, b) => {
+      let aValue: string | number;
+      let bValue: string | number;
+
+      if (sortBy === 'createdat') {
+        aValue = a.createdat ? new Date(a.createdat).getTime() : 0;
+        bValue = b.createdat ? new Date(b.createdat).getTime() : 0;
+      } else if (sortBy === 'updatedat') {
+        aValue = a.updatedat ? new Date(a.updatedat).getTime() : 0;
+        bValue = b.updatedat ? new Date(b.updatedat).getTime() : 0;
+      } else {
+        // order
+        aValue = a.order;
+        bValue = b.order;
+      }
+
+      if (sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+  }
+
+  // Return in paginated format if page/limit query params provided, otherwise array
+  if (hasPagination) {
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    const paginated = tasksList.slice(start, end);
+    const total = tasksList.length;
+
+    return HttpResponse.json(
+      {
+        tasks: paginated,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+
+  // Return array format for listTasks() which doesn't pass pagination params
+  return HttpResponse.json(tasksList, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+};
+
 export const handlers = [
   // ============================================
   // Conversations API handlers
@@ -335,158 +417,8 @@ export const handlers = [
   // ============================================
 
   // GET /api/tasks or /conversations/api/tasks
-  http.get(/\/api\/tasks$/, ({ request }) => {
-    const url = new URL(request.url);
-    const page = parseInt(url.searchParams.get('page') || '1', 10);
-    const limit = parseInt(url.searchParams.get('limit') || '10', 10);
-    const status = url.searchParams.get('status');
-    const status_label = url.searchParams.get('status_label');
-    // conversation_id is extracted but not currently used in filtering
-    void url.searchParams.get('conversation_id');
-    const sortBy = url.searchParams.get('sortBy');
-    const sortOrder = url.searchParams.get('sortOrder') || 'desc';
-
-    let tasksList = Array.from(tasks.values());
-
-    // Apply filters
-    if (status !== null) {
-      tasksList = tasksList.filter((t) => t.status === parseInt(status, 10));
-    }
-    if (status_label) {
-      tasksList = tasksList.filter((t) => t.status_label === status_label);
-    }
-    // conversation_id filter not implemented yet (not in current Task type)
-
-    // Apply sorting
-    if (sortBy) {
-      tasksList.sort((a, b) => {
-        let aValue: string | number;
-        let bValue: string | number;
-
-        if (sortBy === 'createdat') {
-          aValue = a.createdat ? new Date(a.createdat).getTime() : 0;
-          bValue = b.createdat ? new Date(b.createdat).getTime() : 0;
-        } else if (sortBy === 'updatedat') {
-          aValue = a.updatedat ? new Date(a.updatedat).getTime() : 0;
-          bValue = b.updatedat ? new Date(b.updatedat).getTime() : 0;
-        } else {
-          // order
-          aValue = a.order;
-          bValue = b.order;
-        }
-
-        if (sortOrder === 'asc') {
-          return aValue > bValue ? 1 : -1;
-        } else {
-          return aValue < bValue ? 1 : -1;
-        }
-      });
-    }
-
-    // Apply pagination
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const paginated = tasksList.slice(start, end);
-    const total = tasksList.length;
-
-    // Return in paginated format if page/limit provided, otherwise array
-    if (page && limit) {
-      return HttpResponse.json(
-        {
-          tasks: paginated,
-          pagination: {
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit),
-          },
-        },
-        {
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    return HttpResponse.json(paginated, {
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }),
-
-  http.get(/\/conversations\/api\/tasks$/, ({ request }) => {
-    const url = new URL(request.url);
-    const page = parseInt(url.searchParams.get('page') || '1', 10);
-    const limit = parseInt(url.searchParams.get('limit') || '10', 10);
-    const status = url.searchParams.get('status');
-    const status_label = url.searchParams.get('status_label');
-    // conversation_id is extracted but not currently used in filtering
-    void url.searchParams.get('conversation_id');
-    const sortBy = url.searchParams.get('sortBy');
-    const sortOrder = url.searchParams.get('sortOrder') || 'desc';
-
-    let tasksList = Array.from(tasks.values());
-
-    // Apply filters
-    if (status !== null) {
-      tasksList = tasksList.filter((t) => t.status === parseInt(status, 10));
-    }
-    if (status_label) {
-      tasksList = tasksList.filter((t) => t.status_label === status_label);
-    }
-
-    // Apply sorting
-    if (sortBy) {
-      tasksList.sort((a, b) => {
-        let aValue: string | number;
-        let bValue: string | number;
-
-        if (sortBy === 'createdat') {
-          aValue = a.createdat ? new Date(a.createdat).getTime() : 0;
-          bValue = b.createdat ? new Date(b.createdat).getTime() : 0;
-        } else if (sortBy === 'updatedat') {
-          aValue = a.updatedat ? new Date(a.updatedat).getTime() : 0;
-          bValue = b.updatedat ? new Date(b.updatedat).getTime() : 0;
-        } else {
-          // order
-          aValue = a.order;
-          bValue = b.order;
-        }
-
-        if (sortOrder === 'asc') {
-          return aValue > bValue ? 1 : -1;
-        } else {
-          return aValue < bValue ? 1 : -1;
-        }
-      });
-    }
-
-    // Apply pagination
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const paginated = tasksList.slice(start, end);
-    const total = tasksList.length;
-
-    // Return in paginated format if page/limit provided, otherwise array
-    if (page && limit) {
-      return HttpResponse.json(
-        {
-          tasks: paginated,
-          pagination: {
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit),
-          },
-        },
-        {
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    return HttpResponse.json(paginated, {
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }),
+  http.get(/\/api\/tasks$/, handleGetTasks),
+  http.get(/\/conversations\/api\/tasks$/, handleGetTasks),
 
   // GET /api/tasks/:id or /conversations/api/tasks/:id
   http.get(/\/api\/tasks\/(\d+)$/, ({ params }) => {
