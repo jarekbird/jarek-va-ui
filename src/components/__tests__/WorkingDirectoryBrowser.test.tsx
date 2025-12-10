@@ -181,8 +181,10 @@ describe('WorkingDirectoryBrowser', () => {
       });
 
       // Top-level directories should be expanded, so children should be visible
-      // Check for children of 'src' directory
-      expect(screen.getByText('components')).toBeInTheDocument();
+      // Wait for children of 'src' directory to be visible
+      await waitFor(() => {
+        expect(screen.getByText('components')).toBeInTheDocument();
+      });
       expect(screen.getByText('utils')).toBeInTheDocument();
 
       // Check for children of 'tests' directory
@@ -237,6 +239,11 @@ describe('WorkingDirectoryBrowser', () => {
 
       await waitFor(() => {
         expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+      });
+
+      // Wait for 'components' to be visible (it's a child of 'src' which is expanded initially)
+      await waitFor(() => {
+        expect(screen.getByText('components')).toBeInTheDocument();
       });
 
       // Find the 'components' directory button (it's a child of 'src')
