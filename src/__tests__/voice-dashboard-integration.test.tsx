@@ -41,8 +41,11 @@ vi.mock('../services/elevenlabs-voice', () => {
     }
 
     async startVoiceSession(
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       _agentId: string,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       _conversationId?: string,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       _signedUrl?: string
     ): Promise<void> {
       if (this.status === 'connected' || this.status === 'connecting') {
@@ -172,9 +175,12 @@ describe('Voice Dashboard Integration', () => {
     );
 
     // Wait for dashboard to load
-    await waitFor(() => {
-      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     // Verify voice indicator is rendered
     const voiceIndicator = screen.getByTestId('voice-indicator');
@@ -190,15 +196,21 @@ describe('Voice Dashboard Integration', () => {
     );
 
     // Wait for dashboard to load
-    await waitFor(() => {
-      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     // Select an agent conversation first
     // The agent conversation should be available in the list
-    await waitFor(() => {
-      expect(screen.getByText(/agent conversations/i)).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText(/agent conversations/i)).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     // Find and click the connect button
     const connectButton = screen.getByRole('button', { name: /connect/i });
@@ -210,12 +222,15 @@ describe('Voice Dashboard Integration', () => {
 
     // The button should be disabled during connection attempt
     // or show an error if no conversation is selected
-    await waitFor(() => {
-      // Either the button is disabled or an error is shown
-      const errorMessage = screen.queryByText(/please select/i);
-      const disabledButton = connectButton.hasAttribute('disabled');
-      expect(errorMessage || disabledButton).toBeTruthy();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        // Either the button is disabled or an error is shown
+        const errorMessage = screen.queryByText(/please select/i);
+        const disabledButton = connectButton.hasAttribute('disabled');
+        expect(errorMessage || disabledButton).toBeTruthy();
+      },
+      { timeout: 5000 }
+    );
   });
 
   it('voice connect without agent ID shows appropriate error', async () => {
@@ -242,26 +257,39 @@ describe('Voice Dashboard Integration', () => {
     );
 
     // Wait for dashboard to load
-    await waitFor(() => {
-      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
 
     // Wait for agent config to load
-    await waitFor(() => {
-      expect(screen.getByTestId('voice-indicator')).toBeInTheDocument();
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('voice-indicator')).toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
 
     // Find and click the connect button
     const connectButton = screen.getByRole('button', { name: /connect/i });
     await user.click(connectButton);
 
     // Error message should be displayed (or button should be disabled)
-    await waitFor(() => {
-      const errorMessage = screen.queryByText(/agent id not configured|error/i);
-      const button = screen.queryByRole('button', { name: /connect/i });
-      // Either error is shown or button is disabled/not available
-      expect(errorMessage || !button || button.hasAttribute('disabled')).toBeTruthy();
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        const errorMessage = screen.queryByText(
+          /agent id not configured|error/i
+        );
+        const button = screen.queryByRole('button', { name: /connect/i });
+        // Either error is shown or button is disabled/not available
+        expect(
+          errorMessage || !button || button.hasAttribute('disabled')
+        ).toBeTruthy();
+      },
+      { timeout: 10000 }
+    );
   });
 
   it('voice connect without conversation shows appropriate error', async () => {
@@ -273,26 +301,37 @@ describe('Voice Dashboard Integration', () => {
     );
 
     // Wait for dashboard to load
-    await waitFor(() => {
-      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
 
     // Wait for voice indicator to be ready
-    await waitFor(() => {
-      expect(screen.getByTestId('voice-indicator')).toBeInTheDocument();
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('voice-indicator')).toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
 
     // Find and click the connect button without selecting a conversation
     const connectButton = screen.getByRole('button', { name: /connect/i });
     await user.click(connectButton);
 
     // Error message should be displayed (or button should be disabled)
-    await waitFor(() => {
-      const errorMessage = screen.queryByText(/please select|error/i);
-      const button = screen.queryByRole('button', { name: /connect/i });
-      // Either error is shown or button is disabled/not available
-      expect(errorMessage || !button || button.hasAttribute('disabled')).toBeTruthy();
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        const errorMessage = screen.queryByText(/please select|error/i);
+        const button = screen.queryByRole('button', { name: /connect/i });
+        // Either error is shown or button is disabled/not available
+        expect(
+          errorMessage || !button || button.hasAttribute('disabled')
+        ).toBeTruthy();
+      },
+      { timeout: 10000 }
+    );
   });
 
   it('voice disconnect works correctly', async () => {
@@ -303,9 +342,12 @@ describe('Voice Dashboard Integration', () => {
     );
 
     // Wait for dashboard to load
-    await waitFor(() => {
-      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     // The disconnect button should be available when connected
     // For this test, we'll verify the button exists
@@ -325,9 +367,12 @@ describe('Voice Dashboard Integration', () => {
     );
 
     // Wait for dashboard to load
-    await waitFor(() => {
-      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     // Verify voice indicator shows disconnected status
     const voiceIndicator = screen.getByTestId('voice-indicator');
@@ -346,26 +391,39 @@ describe('Voice Dashboard Integration', () => {
     );
 
     // Wait for dashboard to load
-    await waitFor(() => {
-      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
 
     // Wait for voice indicator to be ready
-    await waitFor(() => {
-      expect(screen.getByTestId('voice-indicator')).toBeInTheDocument();
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('voice-indicator')).toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
 
     // Try to connect without proper setup to trigger error
     const connectButton = screen.getByRole('button', { name: /connect/i });
     await user.click(connectButton);
 
     // Error should be displayed (or button should be disabled)
-    await waitFor(() => {
-      const errorMessage = screen.queryByText(/error|please select|agent id/i);
-      const button = screen.queryByRole('button', { name: /connect/i });
-      // Either error is shown or button is disabled/not available
-      expect(errorMessage || !button || button.hasAttribute('disabled')).toBeTruthy();
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        const errorMessage = screen.queryByText(
+          /error|please select|agent id/i
+        );
+        const button = screen.queryByRole('button', { name: /connect/i });
+        // Either error is shown or button is disabled/not available
+        expect(
+          errorMessage || !button || button.hasAttribute('disabled')
+        ).toBeTruthy();
+      },
+      { timeout: 10000 }
+    );
   });
 
   it('UI reacts correctly to voice service events', async () => {
@@ -376,9 +434,12 @@ describe('Voice Dashboard Integration', () => {
     );
 
     // Wait for dashboard to load
-    await waitFor(() => {
-      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     // Verify voice indicator is rendered and shows initial state
     const voiceIndicator = screen.getByTestId('voice-indicator');
@@ -397,28 +458,38 @@ describe('Voice Dashboard Integration', () => {
     );
 
     // Wait for dashboard to load
-    await waitFor(() => {
-      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
 
     // Wait for voice indicator to be ready
-    await waitFor(() => {
-      expect(screen.getByTestId('voice-indicator')).toBeInTheDocument();
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('voice-indicator')).toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
 
     // Try to connect without agent ID (should show error)
     const connectButton = screen.getByRole('button', { name: /connect/i });
     await user.click(connectButton);
 
     // Should show appropriate error message (or button should be disabled)
-    await waitFor(() => {
-      const errorMessage = screen.queryByText(
-        /agent id not configured|please select|error/i
-      );
-      const button = screen.queryByRole('button', { name: /connect/i });
-      // Either error is shown or button is disabled/not available
-      expect(errorMessage || !button || button.hasAttribute('disabled')).toBeTruthy();
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        const errorMessage = screen.queryByText(
+          /agent id not configured|please select|error/i
+        );
+        const button = screen.queryByRole('button', { name: /connect/i });
+        // Either error is shown or button is disabled/not available
+        expect(
+          errorMessage || !button || button.hasAttribute('disabled')
+        ).toBeTruthy();
+      },
+      { timeout: 10000 }
+    );
   });
 });
-
