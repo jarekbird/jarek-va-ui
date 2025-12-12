@@ -565,7 +565,12 @@ describe('Agent Conversation Flows Integration', () => {
       { timeout: 5000 }
     );
 
-    // Verify we're back on the list
-    expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+    // Verify we're back on the list (conversations should be visible)
+    await waitFor(
+      () => {
+        expect(screen.getByText(/ID: agent-conv-1/i)).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
   });
 });
