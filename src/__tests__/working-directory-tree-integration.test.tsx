@@ -178,8 +178,13 @@ describe('Working Directory Tree Integration', () => {
       { timeout: 5000 }
     );
 
-    // Verify children are visible initially
-    expect(screen.getByText('App.tsx')).toBeInTheDocument();
+    // Verify children are visible initially (components directory should be expanded)
+    await waitFor(
+      () => {
+        expect(screen.getByText('App.tsx')).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     // Find the components directory button
     const componentsButton = screen.getByRole('button', {
