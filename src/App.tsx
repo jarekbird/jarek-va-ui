@@ -38,8 +38,8 @@ const App: React.FC = () => {
         </>
       )}
       <Route path="/task-dashboard" element={<TaskDashboard />} />
-      <Route path="/tasks" element={<TaskListView />} />
       <Route path="/tasks/:taskId" element={<TaskDetailView />} />
+      <Route path="/tasks" element={<TaskListView />} />
     </Routes>
   );
 };
