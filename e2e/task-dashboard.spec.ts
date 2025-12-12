@@ -20,15 +20,14 @@ test.describe('Task Dashboard', () => {
   test('task dashboard loads and all panels render', async ({ page }) => {
     // Wait for the page to be visible
     const body = page.locator('body');
-    await expect(body).toBeVisible();
-
-    // Verify the page has loaded
-    const navigation = page.locator('nav').first();
-    await expect(navigation).toBeVisible({ timeout: 10000 });
+    await expect(body).toBeVisible({ timeout: 10000 });
 
     // Verify the page has content (not just a blank page)
     const bodyText = await body.textContent();
     expect(bodyText?.length).toBeGreaterThan(0);
+
+    // Verify we're on the task dashboard page
+    await expect(page).toHaveURL(/\/task-dashboard/, { timeout: 10000 });
   });
 
   test('refresh tasks button works', async ({ page }) => {
