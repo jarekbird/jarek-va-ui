@@ -495,8 +495,19 @@ describe('ConversationListView', () => {
 
       // Click multiple times rapidly
       await user.click(newNoteButton);
-      await user.click(newNoteButton);
-      await user.click(newNoteButton);
+      // Wait for button to be disabled (creating state)
+      await waitFor(
+        () => {
+          expect(
+            screen.getByRole('button', { name: /creating/i })
+          ).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
+      // Try to click again (should be disabled)
+      const creatingButton = screen.getByRole('button', { name: /creating/i });
+      await user.click(creatingButton);
+      await user.click(creatingButton);
 
       // Wait for creation to complete
       await waitFor(
@@ -508,7 +519,7 @@ describe('ConversationListView', () => {
         { timeout: 2000 }
       );
 
-      // Should only create one conversation
+      // Should only create one conversation (button should be disabled after first click)
       expect(createCallCount).toBe(1);
     });
   });
