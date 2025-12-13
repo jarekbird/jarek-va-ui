@@ -95,12 +95,18 @@ describe('TaskManagementPanel', () => {
 
       render(<TaskManagementPanel />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for tasks to be displayed (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/ready task 1/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      // Verify tasks are displayed
-      expect(screen.getByText(/ready task 1/i)).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+
+      // Verify all tasks are displayed
       expect(screen.getByText(/ready task 2/i)).toBeInTheDocument();
       expect(screen.getByText(/backlogged task 1/i)).toBeInTheDocument();
     });
@@ -121,14 +127,18 @@ describe('TaskManagementPanel', () => {
 
       render(<TaskManagementPanel />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for header to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(
+            screen.getByRole('heading', { level: 3, name: /tasks/i })
+          ).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      // Check for header title
-      expect(
-        screen.getByRole('heading', { level: 3, name: /tasks/i })
-      ).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
 
       // Check for refresh button
       const refreshButton = screen.getByRole('button', {

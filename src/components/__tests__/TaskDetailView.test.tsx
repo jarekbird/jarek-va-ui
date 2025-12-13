@@ -146,17 +146,17 @@ describe('TaskDetailView', () => {
         </MemoryRouter>
       );
 
+      // Wait for task content to appear (this also ensures loading spinner is gone)
       await waitFor(
         () => {
-          expect(
-            screen.queryByTestId('loading-spinner')
-          ).not.toBeInTheDocument();
+          // TaskDetails should render task content
+          expect(screen.getByText(/test task 1/i)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
 
-      // TaskDetails should render task content
-      expect(screen.getByText(/test task 1/i)).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
     });
 
     it('shows LoadingSpinner during load, then hides it', async () => {
@@ -217,11 +217,16 @@ describe('TaskDetailView', () => {
         </MemoryRouter>
       );
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for error message to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/invalid task id/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      expect(screen.getByText(/invalid task id/i)).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
     });
 
     it('does not call API when taskId is invalid', async () => {
@@ -348,12 +353,17 @@ describe('TaskDetailView', () => {
         </MemoryRouter>
       );
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for error message to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          // The API throws "Task not found" error, which is displayed
+          expect(screen.getByText(/task not found/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      // The API throws "Task not found" error, which is displayed
-      expect(screen.getByText(/task not found/i)).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
     });
 
     it('renders ErrorMessage component with error message', async () => {
@@ -397,9 +407,16 @@ describe('TaskDetailView', () => {
         </MemoryRouter>
       );
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for error to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/failed to fetch/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
+
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
 
       // TaskDetails should not be rendered
       expect(screen.queryByText(/test task 1/i)).not.toBeInTheDocument();

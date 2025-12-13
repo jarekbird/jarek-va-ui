@@ -80,13 +80,18 @@ describe('TaskListView', () => {
 
       render(<TaskListView />);
 
-      // Wait for loading to complete
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for tasks to be displayed (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/ready task 1/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      // Verify tasks are displayed
-      expect(screen.getByText(/ready task 1/i)).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+
+      // Verify all tasks are displayed
       expect(screen.getByText(/ready task 2/i)).toBeInTheDocument();
       expect(screen.getByText(/backlogged task 1/i)).toBeInTheDocument();
     });
@@ -131,12 +136,16 @@ describe('TaskListView', () => {
 
       render(<TaskListView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for navigation to be rendered (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByRole('navigation')).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      // Navigation should be rendered (check for a link that Navigation renders)
-      expect(screen.getByRole('navigation')).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
     });
 
     it('displays "Tasks" heading', async () => {
@@ -222,12 +231,18 @@ describe('TaskListView', () => {
 
       render(<TaskListView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for tasks to be displayed (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/ready task 1/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
+
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
 
       // TaskList should render tasks
-      expect(screen.getByText(/ready task 1/i)).toBeInTheDocument();
       expect(screen.getByText(/ready task 2/i)).toBeInTheDocument();
     });
   });
@@ -362,12 +377,17 @@ describe('TaskListView', () => {
 
       render(<TaskListView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for error message to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          // The error message comes from the API client - "Failed to fetch" for network errors
+          expect(screen.getByText(/failed to fetch/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      // The error message comes from the API client - "Failed to fetch" for network errors
-      expect(screen.getByText(/failed to fetch/i)).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
     });
 
     it('displays error message when API returns 500', async () => {
@@ -388,12 +408,19 @@ describe('TaskListView', () => {
 
       render(<TaskListView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for error message to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          // Error message from API: "Internal Server Error" (the error field from the response)
+          expect(
+            screen.getByText(/internal server error/i)
+          ).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      // Error message from API: "Internal Server Error" (the error field from the response)
-      expect(screen.getByText(/internal server error/i)).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
     });
 
     it('displays error message when API returns 404', async () => {
@@ -408,12 +435,17 @@ describe('TaskListView', () => {
 
       render(<TaskListView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for error message to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          // Error message from API: "Not found" (the error field from the response)
+          expect(screen.getByText(/not found/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      // Error message from API: "Not found" (the error field from the response)
-      expect(screen.getByText(/not found/i)).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
     });
 
     it('renders ErrorMessage component with error message', async () => {
@@ -445,9 +477,16 @@ describe('TaskListView', () => {
 
       render(<TaskListView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for error to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/failed to fetch/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
+
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
 
       // TaskList should not be rendered
       expect(screen.queryByText(/ready task 1/i)).not.toBeInTheDocument();
@@ -490,11 +529,16 @@ describe('TaskListView', () => {
 
       render(<TaskListView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for empty state message to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/no tasks found\./i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      expect(screen.getByText(/no tasks found\./i)).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
     });
 
     it('empty state only shown when not loading and no error', async () => {
@@ -538,9 +582,16 @@ describe('TaskListView', () => {
 
       render(<TaskListView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for empty state to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/no tasks found\./i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
+
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
 
       // TaskList should not be rendered (no status headers)
       expect(
@@ -566,12 +617,16 @@ describe('TaskListView', () => {
 
       render(<TaskListView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for tasks to be displayed (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/ready task 1/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      // TaskList should be rendered with tasks
-      expect(screen.getByText(/ready task 1/i)).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
       // The handleSelectTask is passed but doesn't cause navigation (handled by Link in TaskList)
       // We verify this by checking that TaskList is rendered and functional
     });
@@ -594,11 +649,16 @@ describe('TaskListView', () => {
 
       render(<TaskListView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for empty state message to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/no tasks found\./i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      expect(screen.getByText(/no tasks found\./i)).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
       // Component should not crash
     });
 

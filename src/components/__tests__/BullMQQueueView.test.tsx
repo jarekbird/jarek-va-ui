@@ -95,14 +95,18 @@ describe('BullMQQueueView', () => {
 
       render(<BullMQQueueView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for header to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(
+            screen.getByRole('heading', { level: 3, name: /bull mq queues/i })
+          ).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      // Check for header title
-      expect(
-        screen.getByRole('heading', { level: 3, name: /bull mq queues/i })
-      ).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
 
       // Check for refresh button
       const refreshButton = screen.getByRole('button', {

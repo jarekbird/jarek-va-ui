@@ -107,16 +107,19 @@ describe('AgentConfigView', () => {
     it('displays health data correctly', async () => {
       render(<AgentConfigView />);
 
+      // Wait for health data to appear (this also ensures loading spinner is gone)
       await waitFor(
         () => {
-          expect(
-            document.querySelector('.loading-spinner')
-          ).not.toBeInTheDocument();
+          expect(screen.getByText(/service:/i)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
 
-      expect(screen.getByText(/service:/i)).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(
+        document.querySelector('.loading-spinner')
+      ).not.toBeInTheDocument();
+
       // Use getAllByText since "Redis:" appears in both config and health sections
       const redisElements = screen.getAllByText(/redis:/i);
       expect(redisElements.length).toBeGreaterThanOrEqual(1);
@@ -126,20 +129,22 @@ describe('AgentConfigView', () => {
     it('renders Navigation component', async () => {
       render(<AgentConfigView />);
 
+      // Wait for navigation to appear (this also ensures loading spinner is gone)
       await waitFor(
         () => {
-          expect(
-            document.querySelector('.loading-spinner')
-          ).not.toBeInTheDocument();
+          // Navigation should be rendered (check for Dashboard link)
+          const dashboardLinks = screen.getAllByRole('link', {
+            name: /dashboard/i,
+          });
+          expect(dashboardLinks.length).toBeGreaterThan(0);
         },
         { timeout: 5000 }
       );
 
-      // Navigation should be rendered (check for Dashboard link)
-      const dashboardLinks = screen.getAllByRole('link', {
-        name: /dashboard/i,
-      });
-      expect(dashboardLinks.length).toBeGreaterThan(0);
+      // Verify loading spinner is gone
+      expect(
+        document.querySelector('.loading-spinner')
+      ).not.toBeInTheDocument();
     });
 
     it('shows LoadingSpinner during load, then hides it', async () => {
