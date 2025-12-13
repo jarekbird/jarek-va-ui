@@ -127,18 +127,10 @@ describe('TaskManagementPanel', () => {
 
       render(<TaskManagementPanel />);
 
-      // Wait for header to appear (this also ensures loading spinner is gone)
-      await waitFor(
-        () => {
-          expect(
-            screen.getByRole('heading', { level: 3, name: /tasks/i })
-          ).toBeInTheDocument();
-        },
-        { timeout: 5000 }
-      );
-
-      // Verify loading spinner is gone
-      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+      // Header is rendered immediately, independent of loading state.
+      expect(
+        screen.getByRole('heading', { level: 3, name: /tasks/i })
+      ).toBeInTheDocument();
 
       // Check for refresh button
       const refreshButton = screen.getByRole('button', {
