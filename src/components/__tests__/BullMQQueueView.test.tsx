@@ -164,12 +164,18 @@ describe('BullMQQueueView', () => {
 
       render(<BullMQQueueView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for queue names to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText('queue-1')).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      // Check queue names
-      expect(screen.getByText('queue-1')).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+
+      // Check all queue names
       expect(screen.getByText('queue-2')).toBeInTheDocument();
       expect(screen.getByText('queue-3')).toBeInTheDocument();
     });
@@ -188,12 +194,18 @@ describe('BullMQQueueView', () => {
 
       render(<BullMQQueueView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for stat labels to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/waiting:/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
+
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
 
       // Check for stat labels and values
-      expect(screen.getByText(/waiting:/i)).toBeInTheDocument();
       expect(screen.getByText('2')).toBeInTheDocument(); // waiting count
       expect(screen.getByText(/active:/i)).toBeInTheDocument();
       expect(screen.getByText('1')).toBeInTheDocument(); // active count
@@ -217,12 +229,16 @@ describe('BullMQQueueView', () => {
 
       render(<BullMQQueueView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for agent count to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/2 agents/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      // Check for agent count
-      expect(screen.getByText(/2 agents/i)).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
     });
 
     it('displays agent list when agents are present', async () => {
@@ -239,12 +255,18 @@ describe('BullMQQueueView', () => {
 
       render(<BullMQQueueView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for agent tags to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText('agent-1')).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
+
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
 
       // Check for agent tags
-      expect(screen.getByText('agent-1')).toBeInTheDocument();
       expect(screen.getByText('agent-2')).toBeInTheDocument();
     });
 
@@ -262,12 +284,18 @@ describe('BullMQQueueView', () => {
 
       render(<BullMQQueueView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for delayed stat to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/delayed:/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
+
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
 
       // Check for delayed stat
-      expect(screen.getByText(/delayed:/i)).toBeInTheDocument();
       expect(screen.getByText('5')).toBeInTheDocument(); // delayed count
     });
 
@@ -308,15 +336,19 @@ describe('BullMQQueueView', () => {
 
       const { container } = render(<BullMQQueueView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
-
-      // queue-1 has active=1, waiting=2, so it should have active class
-      const queue1Card = container.querySelector(
-        '.bullmq-queue-view__queue--active'
+      // Wait for queue cards to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          const queue1Card = container.querySelector(
+            '.bullmq-queue-view__queue--active'
+          );
+          expect(queue1Card).toBeInTheDocument();
+        },
+        { timeout: 5000 }
       );
-      expect(queue1Card).toBeInTheDocument();
+
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
     });
   });
 
@@ -336,9 +368,16 @@ describe('BullMQQueueView', () => {
 
       render(<BullMQQueueView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for waiting stat to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/waiting:/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
+
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
 
       // Find waiting stat value (should be gray for 0)
       const waitingValue = screen.getByText(/waiting:/i)
@@ -361,9 +400,16 @@ describe('BullMQQueueView', () => {
 
       render(<BullMQQueueView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for waiting stat to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/waiting:/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
+
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
 
       // Find waiting stat value (should be blue for 3)
       const waitingValue = screen.getByText(/waiting:/i)
@@ -386,9 +432,16 @@ describe('BullMQQueueView', () => {
 
       render(<BullMQQueueView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for waiting stat to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/waiting:/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
+
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
 
       // Find waiting stat value (should be orange for 7)
       const waitingValue = screen.getByText(/waiting:/i)
@@ -411,9 +464,16 @@ describe('BullMQQueueView', () => {
 
       render(<BullMQQueueView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for waiting stat to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/waiting:/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
+
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
 
       // Find waiting stat value (should be red for 15)
       const waitingValue = screen.getByText(/waiting:/i)
