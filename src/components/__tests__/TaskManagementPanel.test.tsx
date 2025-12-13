@@ -236,26 +236,37 @@ describe('TaskManagementPanel', () => {
         resolvePromise = resolve;
       });
 
+      let apiCallCount = 0;
+      const handleTasksRequest = async () => {
+        apiCallCount += 1;
+        // First call (initial load) returns immediately so tasks render.
+        if (apiCallCount === 1) {
+          return HttpResponse.json(mockTasks, {
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+
+        // Second call (refresh) is delayed until we resolve the promise.
+        await delayPromise;
+        return HttpResponse.json(mockTasks, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      };
+
       server.use(
-        http.get(/\/api\/tasks$/, async () => {
-          await delayPromise;
-          return HttpResponse.json(mockTasks, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-        }),
-        http.get(/\/conversations\/api\/tasks$/, async () => {
-          await delayPromise;
-          return HttpResponse.json(mockTasks, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-        })
+        http.get(/\/api\/tasks$/, handleTasksRequest),
+        http.get(/\/conversations\/api\/tasks$/, handleTasksRequest)
       );
 
       render(<TaskManagementPanel />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for initial load to complete (tasks rendered)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/ready task 1/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
       const refreshButton = screen.getByRole('button', {
         name: /refresh tasks/i,
@@ -263,26 +274,26 @@ describe('TaskManagementPanel', () => {
       const user = userEvent.setup();
       await user.click(refreshButton);
 
-      // Loading spinner should appear during refresh
-      // Note: The component only shows LoadingSpinner when loading && tasks.length === 0
-      // During refresh, if tasks.length > 0, spinner won't show, but loading state is still active
-      // We'll check that the refresh is happening by waiting for it to complete
-      const spinner = screen.queryByTestId('loading-spinner');
-      if (spinner) {
-        expect(spinner).toBeInTheDocument();
-      }
+      // During refresh, the component sets loading=true and hides the TaskList,
+      // but it also won't show the spinner because tasks.length > 0.
+      await waitFor(
+        () => {
+          expect(apiCallCount).toBeGreaterThanOrEqual(2);
+          expect(screen.queryByText(/ready task 1/i)).not.toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
 
       // Resolve the promise to allow the API call to complete
       resolvePromise!();
 
-      // Wait for loading to complete
+      // Wait for refresh to complete and ensure tasks are still shown
       await waitFor(
         () => {
-          expect(
-            screen.queryByTestId('loading-spinner')
-          ).not.toBeInTheDocument();
+          expect(screen.getByText(/ready task 1/i)).toBeInTheDocument();
         },
-        { timeout: 2000 }
+        { timeout: 5000 }
       );
     });
   });
@@ -363,37 +374,50 @@ describe('TaskManagementPanel', () => {
 
       const ref = createRef<TaskManagementPanelRef>();
 
+      let apiCallCount = 0;
+      const handleTasksRequest = async () => {
+        apiCallCount += 1;
+        // First call (initial load) returns immediately so the component has tasks rendered.
+        if (apiCallCount === 1) {
+          return HttpResponse.json(mockTasks, {
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+
+        // Subsequent calls (refresh) are delayed so we can observe intermediate state.
+        await delayPromise;
+        return HttpResponse.json(mockTasks, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      };
+
       server.use(
-        http.get(/\/api\/tasks$/, async () => {
-          await delayPromise;
-          return HttpResponse.json(mockTasks, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-        }),
-        http.get(/\/conversations\/api\/tasks$/, async () => {
-          await delayPromise;
-          return HttpResponse.json(mockTasks, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-        })
+        http.get(/\/api\/tasks$/, handleTasksRequest),
+        http.get(/\/conversations\/api\/tasks$/, handleTasksRequest)
       );
 
       render(<TaskManagementPanel ref={ref} />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for initial load to complete (tasks rendered)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/ready task 1/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
       // Call refresh via ref
       const refreshPromise = ref.current?.refresh();
 
-      // Loading spinner should appear during refresh
-      // Note: The component only shows LoadingSpinner when loading && tasks.length === 0
-      // During refresh, if tasks.length > 0, spinner won't show, but loading state is still active
-      const spinner = screen.queryByTestId('loading-spinner');
-      if (spinner) {
-        expect(spinner).toBeInTheDocument();
-      }
+      // During refresh, the component sets loading=true and hides the TaskList,
+      // but it also won't show the spinner because tasks.length > 0.
+      await waitFor(
+        () => {
+          expect(screen.queryByText(/ready task 1/i)).not.toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
 
       // Resolve the promise to allow the API call to complete
       resolvePromise!();
@@ -401,14 +425,8 @@ describe('TaskManagementPanel', () => {
       // Wait for refresh to complete
       await refreshPromise;
 
-      await waitFor(
-        () => {
-          expect(
-            screen.queryByTestId('loading-spinner')
-          ).not.toBeInTheDocument();
-        },
-        { timeout: 2000 }
-      );
+      // Task list should still be displayed after refresh
+      expect(screen.getByText(/ready task 1/i)).toBeInTheDocument();
     });
   });
 

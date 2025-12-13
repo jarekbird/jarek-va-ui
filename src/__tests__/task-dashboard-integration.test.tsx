@@ -263,9 +263,12 @@ describe('Task Dashboard Integration', () => {
       }),
       http.get(/\/agents\/queues/, async () => {
         await new Promise((resolve) => setTimeout(resolve, 100));
-        return HttpResponse.json(mockQueues, {
-          headers: { 'Content-Type': 'application/json' },
-        });
+        return HttpResponse.json(
+          { queues: mockQueues },
+          {
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
       })
     );
 

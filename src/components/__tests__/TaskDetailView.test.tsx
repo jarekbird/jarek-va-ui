@@ -450,19 +450,14 @@ describe('TaskDetailView', () => {
 
   describe('Task not found', () => {
     it('displays "Task not found." when task is null after successful load', async () => {
-      // This scenario is handled by the API returning 404, which sets task to null
+      // This scenario requires the API to return a successful response but with a null body,
+      // so the component ends up with: loading=false, error=null, task=null
+      // and renders the "Task not found." empty state message.
       server.use(
-        http.get(/\/api\/tasks\/(\d+)$/, () => {
-          return HttpResponse.json(
-            { error: 'Task not found' },
-            { status: 404 }
-          );
-        }),
-        http.get(/\/conversations\/api\/tasks\/(\d+)$/, () => {
-          return HttpResponse.json(
-            { error: 'Task not found' },
-            { status: 404 }
-          );
+        http.get(/\/(conversations\/api|api)\/tasks\/(\d+)(\?.*)?$/, () => {
+          return HttpResponse.json(null, {
+            headers: { 'Content-Type': 'application/json' },
+          });
         })
       );
 
@@ -474,13 +469,15 @@ describe('TaskDetailView', () => {
         </MemoryRouter>
       );
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/task not found\./i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      // The component shows the error message from the API, not "Task not found."
-      // The API throws "Task not found" which is displayed as an error
-      expect(screen.getByText(/task not found/i)).toBeInTheDocument();
+      // Ensure we're not showing an error state
+      expect(screen.queryByText(/task not found$/i)).not.toBeInTheDocument();
     });
 
     it('only shows "Task not found." when not loading and no error', async () => {
