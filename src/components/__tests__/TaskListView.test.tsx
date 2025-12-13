@@ -136,16 +136,19 @@ describe('TaskListView', () => {
 
       render(<TaskListView />);
 
-      // Wait for navigation to be rendered (this also ensures loading spinner is gone)
+      // Wait for tasks to be displayed (this also ensures loading spinner is gone)
       await waitFor(
         () => {
-          expect(screen.getByRole('navigation')).toBeInTheDocument();
+          expect(screen.getByText(/ready task 1/i)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
 
       // Verify loading spinner is gone
       expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+
+      // Navigation should be rendered (check for a link that Navigation renders)
+      expect(screen.getByRole('navigation')).toBeInTheDocument();
     });
 
     it('displays "Tasks" heading', async () => {
