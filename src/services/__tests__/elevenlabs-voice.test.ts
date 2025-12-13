@@ -4,6 +4,24 @@ import {
   type ConnectionStatus,
 } from '../elevenlabs-voice';
 
+// Mock ElevenLabs JS SDK
+vi.mock('@elevenlabs/client', () => {
+  return {
+    Conversation: {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      startSession: vi.fn(async (options: any) => {
+        // Simulate SDK callbacks (minimal)
+        options?.onConnect?.({ conversationId: 'eleven-conv-1' });
+        options?.onStatusChange?.({ status: 'connected' });
+        return {
+          sendUserMessage: vi.fn(),
+          endSession: vi.fn(),
+        };
+      }),
+    },
+  };
+});
+
 // Type for accessing private properties in tests
 type ElevenLabsVoiceServicePrivate = ElevenLabsVoiceService & {
   agentId?: string;
@@ -12,7 +30,9 @@ type ElevenLabsVoiceServicePrivate = ElevenLabsVoiceService & {
   reconnectAttempts: number;
   maxReconnectAttempts: number;
   status: ConnectionStatus;
-  ws?: WebSocket & { send: (data: string) => void; close: () => void };
+  elevenConversation?: unknown;
+  elevenConversationId?: string;
+  elevenSessionUrl?: string;
 };
 
 // Mock fetch
@@ -41,7 +61,7 @@ describe('ElevenLabsVoiceService', () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
 
-    // Mock getUserMedia for microphone permission
+    // Keep a mediaDevices mock for environments that may require it
     mockGetUserMedia = vi.fn().mockResolvedValue({
       getTracks: () => [{ stop: vi.fn() }],
     });
@@ -90,8 +110,6 @@ describe('ElevenLabsVoiceService', () => {
       expect(service.getConnectionStatus()).toBe('connecting');
       expect(statusChanges).toContain('connecting');
 
-      // Wait for connection (stub simulates 100ms delay)
-      await vi.advanceTimersByTimeAsync(200);
       await connectPromise;
 
       expect(service.getConnectionStatus()).toBe('connected');
@@ -128,8 +146,6 @@ describe('ElevenLabsVoiceService', () => {
         // Expected rejection, suppress unhandled rejection warning
       });
 
-      await vi.advanceTimersByTimeAsync(100);
-
       await expect(connectPromise).rejects.toThrow();
 
       expect(service.getConnectionStatus()).toBe('error');
@@ -138,7 +154,6 @@ describe('ElevenLabsVoiceService', () => {
 
     it('should prevent starting a session when already connected', async () => {
       const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
-      await vi.advanceTimersByTimeAsync(200);
       await connectPromise;
 
       await expect(service.startVoiceSession('agent-456')).rejects.toThrow(
@@ -205,7 +220,6 @@ describe('ElevenLabsVoiceService', () => {
 
     it('should reset reconnect attempts on successful connection', async () => {
       const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
-      await vi.advanceTimersByTimeAsync(200);
       await connectPromise;
 
       expect(service.getConnectionStatus()).toBe('connected');
@@ -284,7 +298,6 @@ describe('ElevenLabsVoiceService', () => {
         'conv-123',
         'expired-url'
       );
-      await vi.advanceTimersByTimeAsync(200);
       await connectPromise;
 
       expect(service.getConnectionStatus()).toBe('connected');
@@ -293,7 +306,6 @@ describe('ElevenLabsVoiceService', () => {
       (service as ElevenLabsVoiceServicePrivate).signedUrlExpiresAt =
         expiredDate;
       const renewPromise = service.renewSignedUrl();
-      await vi.advanceTimersByTimeAsync(200); // Allow reconnect to complete
       await renewPromise;
 
       // Should have attempted to reconnect
@@ -331,7 +343,6 @@ describe('ElevenLabsVoiceService', () => {
   describe('Heartbeat and Timeout Handling', () => {
     it('should start heartbeat when connected', async () => {
       const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
-      await vi.advanceTimersByTimeAsync(200);
       await connectPromise;
 
       expect(service.getConnectionStatus()).toBe('connected');
@@ -347,7 +358,6 @@ describe('ElevenLabsVoiceService', () => {
 
     it('should stop heartbeat when disconnected', async () => {
       const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
-      await vi.advanceTimersByTimeAsync(200);
       await connectPromise;
 
       service.endVoiceSession();
@@ -368,7 +378,6 @@ describe('ElevenLabsVoiceService', () => {
       });
 
       const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
-      await vi.advanceTimersByTimeAsync(200);
       await connectPromise;
 
       // Simulate heartbeat timeout (no response received)
@@ -383,17 +392,10 @@ describe('ElevenLabsVoiceService', () => {
 
     it('should send heartbeat pings periodically', async () => {
       const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
-      await vi.advanceTimersByTimeAsync(200);
       await connectPromise;
 
       // Heartbeat should start automatically
       expect(service.getConnectionStatus()).toBe('connected');
-
-      // Set ws to a mock WebSocket for heartbeat
-      (service as ElevenLabsVoiceServicePrivate).ws = {
-        send: vi.fn(),
-        close: vi.fn(),
-      } as unknown as WebSocket;
 
       // Advance time to trigger heartbeat ping (30 seconds)
       await vi.advanceTimersByTimeAsync(31000);
@@ -407,14 +409,7 @@ describe('ElevenLabsVoiceService', () => {
   describe('Text Message Sending', () => {
     it('should send text message when connected', async () => {
       const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
-      await vi.advanceTimersByTimeAsync(200);
       await connectPromise;
-
-      // Set ws to a mock WebSocket so the check passes
-      (service as ElevenLabsVoiceServicePrivate).ws = {
-        send: vi.fn(),
-        close: vi.fn(),
-      } as unknown as WebSocket;
 
       expect(() => service.sendTextToAgent('Hello agent')).not.toThrow();
     });
@@ -432,7 +427,6 @@ describe('ElevenLabsVoiceService', () => {
       service.configure({ onConnect });
 
       const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
-      await vi.advanceTimersByTimeAsync(200);
       await connectPromise;
 
       expect(onConnect).toHaveBeenCalled();
@@ -476,7 +470,6 @@ describe('ElevenLabsVoiceService', () => {
       service.configure({ onStatusChange });
 
       const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
-      await vi.advanceTimersByTimeAsync(200);
       await connectPromise;
 
       expect(onStatusChange).toHaveBeenCalledWith('connecting');
@@ -487,7 +480,6 @@ describe('ElevenLabsVoiceService', () => {
   describe('Session Management', () => {
     it('should end session and cleanup resources', async () => {
       const connectPromise = service.startVoiceSession('agent-123', 'conv-123');
-      await vi.advanceTimersByTimeAsync(200);
       await connectPromise;
 
       expect(service.getConnectionStatus()).toBe('connected');
@@ -505,7 +497,6 @@ describe('ElevenLabsVoiceService', () => {
         'agent-123',
         'conv-123'
       );
-      await vi.advanceTimersByTimeAsync(200);
       await connectPromise1;
 
       service.endVoiceSession();
@@ -515,7 +506,6 @@ describe('ElevenLabsVoiceService', () => {
         'agent-456',
         'conv-456'
       );
-      await vi.advanceTimersByTimeAsync(200);
       await connectPromise2;
 
       expect(service.getConnectionStatus()).toBe('connected');

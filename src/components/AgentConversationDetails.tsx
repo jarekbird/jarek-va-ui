@@ -90,9 +90,29 @@ export const AgentConversationDetails: React.FC<
       }
     };
 
+    const handleAgentVoiceMessage = async (messageContent: string) => {
+      try {
+        // Persist agent (assistant) text from ElevenLabs into agent conversation history
+        await sendAgentMessage(conversation.conversationId, {
+          role: 'assistant',
+          content: messageContent,
+          source: 'voice',
+        });
+
+        // Refresh conversation to get updated messages
+        const updatedConversation = await getAgentConversation(
+          conversation.conversationId
+        );
+        onConversationUpdate(updatedConversation);
+      } catch (err) {
+        console.error('Failed to save agent voice message:', err);
+      }
+    };
+
     // Configure voice service to handle messages
     voiceService.configure({
       onMessage: handleVoiceMessage,
+      onAgentMessage: handleAgentVoiceMessage,
       conversationId: conversation.conversationId,
     });
 
@@ -100,6 +120,7 @@ export const AgentConversationDetails: React.FC<
       // Cleanup: remove message handler
       voiceService.configure({
         onMessage: undefined,
+        onAgentMessage: undefined,
       });
     };
   }, [voiceService, conversation, onConversationUpdate]);

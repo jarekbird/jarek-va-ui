@@ -151,8 +151,14 @@ export const AgentConversationListView: React.FC<
     try {
       const response = await createAgentConversation();
       if (response.success && response.conversationId) {
-        // Navigate to the new conversation
-        navigate(`/agent-conversation/${response.conversationId}`);
+        // If onConversationSelect is provided (e.g., when used in Dashboard),
+        // call it to select the conversation within the same view
+        // Otherwise, navigate to the new conversation page
+        if (onConversationSelect) {
+          onConversationSelect(response.conversationId);
+        } else {
+          navigate(`/agent-conversation/${response.conversationId}`);
+        }
         // Reload conversations list to include the new one
         await loadConversations();
       } else {
