@@ -273,12 +273,17 @@ describe('TaskDetailView', () => {
         </MemoryRouter>
       );
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for error message to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          // The error message comes from the API client - "Failed to fetch" for network errors
+          expect(screen.getByText(/failed to fetch/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      // The error message comes from the API client - "Failed to fetch" for network errors
-      expect(screen.getByText(/failed to fetch/i)).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
     });
 
     it('displays error message when API returns 500', async () => {
