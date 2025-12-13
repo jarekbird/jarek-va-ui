@@ -308,7 +308,9 @@ describe('TaskDetailView', () => {
       // Wait for error message to appear (this also ensures loading spinner is gone)
       await waitFor(
         () => {
-          expect(screen.getByText(/internal server error/i)).toBeInTheDocument();
+          expect(
+            screen.getByText(/internal server error/i)
+          ).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
