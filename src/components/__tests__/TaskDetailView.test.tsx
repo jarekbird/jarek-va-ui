@@ -567,7 +567,7 @@ describe('TaskDetailView', () => {
     });
 
     it('reloads task when taskId changes', async () => {
-      renderWithRouter(
+      const { unmount: unmountFirst } = renderWithRouter(
         <MemoryRouter initialEntries={['/tasks/1']}>
           <Routes>
             <Route path="/tasks/:taskId" element={<TaskDetailView />} />
@@ -587,8 +587,11 @@ describe('TaskDetailView', () => {
       // Verify task 1 is displayed
       expect(screen.getByText(/test task 1/i)).toBeInTheDocument();
 
-      // Change to task 2 - need to render a new component with different route
-      const { unmount } = renderWithRouter(
+      // Unmount first component before rendering the second
+      unmountFirst();
+
+      // Change to task 2 - render a new component with different route
+      const { unmount: unmountSecond } = renderWithRouter(
         <MemoryRouter initialEntries={['/tasks/2']}>
           <Routes>
             <Route path="/tasks/:taskId" element={<TaskDetailView />} />
@@ -607,9 +610,14 @@ describe('TaskDetailView', () => {
       );
 
       // Verify task 2 is displayed
-      expect(screen.getByText(/test task 2/i)).toBeInTheDocument();
+      await waitFor(
+        () => {
+          expect(screen.getByText(/test task 2/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      unmount();
+      unmountSecond();
     });
   });
 });
