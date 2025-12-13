@@ -358,6 +358,11 @@ describe('WorkingDirectoryBrowser', () => {
         expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
       });
 
+      // Wait for 'components' to be visible (it's a child of 'src' which is expanded initially)
+      await waitFor(() => {
+        expect(screen.getByText('components')).toBeInTheDocument();
+      });
+
       // Find the 'components' directory button
       const componentsDir = screen.getByText('components');
       const componentsButton = componentsDir.closest('[role="button"]');
@@ -397,6 +402,11 @@ describe('WorkingDirectoryBrowser', () => {
 
       await waitFor(() => {
         expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+      });
+
+      // Wait for 'components' to be visible (it's a child of 'src' which is expanded initially)
+      await waitFor(() => {
+        expect(screen.getByText('components')).toBeInTheDocument();
       });
 
       // Find the 'components' directory button
