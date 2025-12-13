@@ -305,12 +305,16 @@ describe('TaskDetailView', () => {
         </MemoryRouter>
       );
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for error message to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/internal server error/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      // Error message from API: "Internal Server Error" (the error field from the response)
-      expect(screen.getByText(/internal server error/i)).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
     });
 
     it('displays "Task not found" when API returns 404', async () => {
