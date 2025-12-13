@@ -332,9 +332,16 @@ describe('TaskListView', () => {
 
       render(<TaskListView />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for task 2 to be displayed (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/ready task 2/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
+
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
 
       // Task with ID 2 should be active
       const task2 = screen.getByText(/ready task 2/i).closest('li');
