@@ -575,17 +575,16 @@ describe('TaskDetailView', () => {
         </MemoryRouter>
       );
 
+      // Wait for task 1 to be displayed
       await waitFor(
         () => {
-          expect(
-            screen.queryByTestId('loading-spinner')
-          ).not.toBeInTheDocument();
+          expect(screen.getByText(/test task 1/i)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
 
-      // Verify task 1 is displayed
-      expect(screen.getByText(/test task 1/i)).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
 
       // Unmount first component before rendering the second
       unmountFirst();
