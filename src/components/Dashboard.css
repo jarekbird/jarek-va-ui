@@ -136,6 +136,9 @@
   .dashboard__agent-chat {
     order: 2;
     min-height: 300px;
+    height: auto;
+    display: flex;
+    flex-direction: column;
   }
 
   .dashboard__right {
@@ -154,6 +157,10 @@
 
   .dashboard__voice-indicator {
     padding: 0.5rem;
+  }
+
+  .dashboard__agent-chat {
+    min-height: 250px;
   }
 }
 

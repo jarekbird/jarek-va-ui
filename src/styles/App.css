@@ -99,6 +99,7 @@ h1 {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
   padding: 1rem;
   overflow-y: auto;
 }
@@ -832,6 +833,41 @@ h1 {
   .agent-conversation-header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  /* Fix for Agent Conversations panel on mobile */
+  .agent-conversation-list-view-panel {
+    height: auto;
+    min-height: 300px;
+    max-height: none;
+    overflow-y: visible;
+    padding: 0.75rem;
+  }
+
+  .agent-conversation-list-view-panel .filters-container {
+    margin-bottom: 0.75rem;
+  }
+
+  .agent-chat-panel {
+    height: auto;
+    min-height: 300px;
+    max-height: none;
+  }
+
+  .agent-chat-panel > * {
+    flex: none;
+    overflow-y: visible;
+  }
+
+  .agent-chat-panel__detail {
+    height: auto;
+    min-height: 300px;
+    overflow-y: visible;
+  }
+
+  /* Ensure conversation list is visible on mobile */
+  .conversation-list {
+    overflow: visible;
   }
 }
 
