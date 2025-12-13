@@ -253,7 +253,7 @@ describe('Navigation + Feature Flags Integration', () => {
       });
     });
 
-    it('does not render agent-conversations route when feature flag is disabled', async () => {
+    it('shows disabled screen on /agent-conversations when feature flag is disabled', async () => {
       render(
         <MemoryRouter initialEntries={['/agent-conversations']}>
           <App />
@@ -261,16 +261,15 @@ describe('Navigation + Feature Flags Integration', () => {
       );
 
       await waitFor(() => {
-        // Since the route is not defined when feature flag is disabled,
-        // React Router should show a 404 or fallback
-        // The App should handle this gracefully
         expect(
-          screen.queryByRole('heading', { name: /agent conversations/i })
-        ).not.toBeInTheDocument();
+          screen.getByRole('heading', {
+            name: /agent conversations unavailable/i,
+          })
+        ).toBeInTheDocument();
       });
     });
 
-    it('does not render agent-config route when feature flag is disabled', async () => {
+    it('shows disabled screen on /agent-config when feature flag is disabled', async () => {
       render(
         <MemoryRouter initialEntries={['/agent-config']}>
           <App />
@@ -278,11 +277,9 @@ describe('Navigation + Feature Flags Integration', () => {
       );
 
       await waitFor(() => {
-        // Since the route is not defined when feature flag is disabled,
-        // React Router should show a 404 or fallback
         expect(
-          screen.queryByRole('heading', { name: /agent config/i })
-        ).not.toBeInTheDocument();
+          screen.getByRole('heading', { name: /agent config unavailable/i })
+        ).toBeInTheDocument();
       });
     });
 

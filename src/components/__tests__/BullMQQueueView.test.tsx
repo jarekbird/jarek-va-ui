@@ -50,6 +50,17 @@ describe('BullMQQueueView', () => {
     vi.clearAllMocks();
     server.resetHandlers();
     vi.useRealTimers();
+    // Set up default successful handler
+    server.use(
+      http.get('/agents/queues', () => {
+        return HttpResponse.json(
+          { queues: mockQueues },
+          {
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      })
+    );
   });
 
   afterEach(() => {
@@ -58,17 +69,6 @@ describe('BullMQQueueView', () => {
 
   describe('Successful load', () => {
     it('loads queues on mount via listQueues API', async () => {
-      server.use(
-        http.get('/agents/queues', () => {
-          return HttpResponse.json(
-            { queues: mockQueues },
-            {
-              headers: { 'Content-Type': 'application/json' },
-            }
-          );
-        })
-      );
-
       render(<BullMQQueueView />);
 
       await waitFor(() => {
@@ -82,17 +82,6 @@ describe('BullMQQueueView', () => {
     });
 
     it('renders header with title and refresh button', async () => {
-      server.use(
-        http.get('/agents/queues', () => {
-          return HttpResponse.json(
-            { queues: mockQueues },
-            {
-              headers: { 'Content-Type': 'application/json' },
-            }
-          );
-        })
-      );
-
       render(<BullMQQueueView />);
 
       // Wait for header to appear (this also ensures loading spinner is gone)

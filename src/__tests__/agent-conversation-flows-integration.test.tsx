@@ -70,17 +70,26 @@ describe('Agent Conversation Flows Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     server.resetHandlers();
-    // Set up default MSW handlers
+    // Set up default MSW handlers for successful cases
+    // Individual tests can override these with server.use() if needed
     server.use(
-      http.get(/\/agent-conversations\/api\/list/, () => {
+      http.get(/\/agent-conversations\/api\/list/, ({ request }) => {
+        const url = new URL(request.url);
+        // Handle pagination if present
+        const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+        const limit = parseInt(url.searchParams.get('limit') || '20', 10);
+        const start = offset;
+        const end = start + limit;
+        const paginated = mockConversations.slice(start, end);
+
         return HttpResponse.json(
           {
-            conversations: mockConversations,
+            conversations: paginated,
             pagination: {
               total: mockConversations.length,
-              limit: 20,
-              offset: 0,
-              hasMore: false,
+              limit,
+              offset,
+              hasMore: end < mockConversations.length,
             },
           },
           {
@@ -89,11 +98,9 @@ describe('Agent Conversation Flows Integration', () => {
         );
       }),
       http.get(
-        /\/agent-conversations\/api\/conversation\/agent-conv-\d+/,
-        ({ request }) => {
-          const url = new URL(request.url);
-          const match = url.pathname.match(/\/conversation\/(agent-conv-\d+)$/);
-          const conversationId = match ? match[1] : 'agent-conv-1';
+        /\/agent-conversations\/api\/(agent-conv-\d+|agent-conv-new-\d+)$/,
+        ({ params }) => {
+          const conversationId = params[0] as string;
           const conversation = mockConversations.find(
             (c) => c.conversationId === conversationId
           );
@@ -101,6 +108,21 @@ describe('Agent Conversation Flows Integration', () => {
             return HttpResponse.json(conversation, {
               headers: { 'Content-Type': 'application/json' },
             });
+          }
+          // Handle new conversation
+          if (conversationId.startsWith('agent-conv-new-')) {
+            return HttpResponse.json(
+              {
+                conversationId,
+                agentId: 'agent-1',
+                messages: [],
+                createdAt: new Date().toISOString(),
+                lastAccessedAt: new Date().toISOString(),
+              },
+              {
+                headers: { 'Content-Type': 'application/json' },
+              }
+            );
           }
           return HttpResponse.json(
             { error: 'Conversation not found' },
@@ -116,24 +138,7 @@ describe('Agent Conversation Flows Integration', () => {
           },
           { status: 201, headers: { 'Content-Type': 'application/json' } }
         );
-      }),
-      http.get(
-        /\/agent-conversations\/api\/conversation\/agent-conv-new-1/,
-        () => {
-          return HttpResponse.json(
-            {
-              conversationId: 'agent-conv-new-1',
-              agentId: 'agent-1',
-              messages: [],
-              createdAt: new Date().toISOString(),
-              lastAccessedAt: new Date().toISOString(),
-            },
-            {
-              headers: { 'Content-Type': 'application/json' },
-            }
-          );
-        }
-      )
+      })
     );
   });
 

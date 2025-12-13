@@ -63,18 +63,18 @@ describe('ConversationListView', () => {
     vi.clearAllMocks();
     // Reset MSW handlers to default
     server.resetHandlers();
+    // Set up default successful handler
+    server.use(
+      http.get(/\/conversations\/api\/list$/, () => {
+        return HttpResponse.json(mockConversations, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      })
+    );
   });
 
   describe('Successful load', () => {
     it('loads and displays list of conversations', async () => {
-      server.use(
-        http.get(/\/conversations\/api\/list$/, () => {
-          return HttpResponse.json(mockConversations, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-        })
-      );
-
       render(<ConversationListView />);
 
       // Wait for loading to complete
@@ -88,14 +88,6 @@ describe('ConversationListView', () => {
     });
 
     it('highlights active conversation based on URL', async () => {
-      server.use(
-        http.get(/\/conversations\/api\/list$/, () => {
-          return HttpResponse.json(mockConversations, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-        })
-      );
-
       renderWithRouter(
         <MemoryRouter initialEntries={['/conversation/conv-1']}>
           <ConversationListView />
