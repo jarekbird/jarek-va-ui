@@ -488,12 +488,16 @@ describe('TaskDetailView', () => {
         </MemoryRouter>
       );
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
+      // Wait for error message to appear (this also ensures loading spinner is gone)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/task not found/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      // Error is displayed, not the "Task not found." message
-      expect(screen.getByText(/task not found/i)).toBeInTheDocument();
+      // Verify loading spinner is gone
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
     });
   });
 
