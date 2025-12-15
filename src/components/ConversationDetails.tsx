@@ -333,10 +333,18 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
             rows={3}
             disabled={isSending || isPolling}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              // On mobile devices, Enter should always create a new line
+              // Only submit on Enter+Shift or Enter on desktop (non-mobile)
+              const isMobile =
+                /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+                  navigator.userAgent
+                ) || window.innerWidth <= 768;
+
+              if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
                 e.preventDefault();
                 handleSubmit(e);
               }
+              // On mobile, Enter always creates a new line (default behavior)
             }}
           />
           <button

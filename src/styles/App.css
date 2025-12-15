@@ -13,6 +13,12 @@ body {
   padding: 20px;
 }
 
+@media (max-width: 768px) {
+  body {
+    padding: 0;
+  }
+}
+
 .container {
   max-width: 1200px;
   margin: 20px auto;
@@ -90,6 +96,23 @@ h1 {
 
   .new-conversation-button {
     width: 100%;
+  }
+
+  .container {
+    margin: 0;
+    padding: 1rem;
+    border-radius: 0;
+  }
+
+  .conversation-details {
+    padding: 1rem;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .conversation-list-view-panel,
+  .agent-conversation-list-view-panel {
+    padding: 0.5rem;
   }
 }
 
@@ -495,6 +518,15 @@ h1 {
   overflow-y: auto;
   margin-bottom: 20px;
   padding-right: 10px;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  .messages-container {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-right: 0.5rem;
+  }
 }
 
 .message-form {

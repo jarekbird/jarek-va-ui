@@ -31,3 +31,4 @@ test('app loads and displays correctly', async ({ page }) => {
   expect(errors.length).toBe(0);
 });
 
+
