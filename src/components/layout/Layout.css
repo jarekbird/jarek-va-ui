@@ -10,13 +10,21 @@
   color: white;
   padding: 0;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.layout-header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  position: relative;
 }
 
 .layout-nav {
   display: flex;
   gap: 0;
-  max-width: 1200px;
-  margin: 0 auto;
+  flex: 1;
 }
 
 .nav-link {
@@ -46,13 +54,87 @@
   padding: 20px;
 }
 
+/* Hamburger menu button */
+.hamburger-menu {
+  display: none;
+  flex-direction: column;
+  justify-content: space-around;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  z-index: 10;
+  margin: 12px 16px;
+}
+
+.hamburger-line {
+  width: 25px;
+  height: 3px;
+  background-color: #ecf0f1;
+  border-radius: 3px;
+  transition: all 0.3s ease;
+  transform-origin: center;
+}
+
+.hamburger-menu:hover .hamburger-line {
+  background-color: white;
+}
+
+/* Hamburger animation when open */
+.hamburger-menu[aria-expanded='true'] .hamburger-line:nth-child(1) {
+  transform: rotate(45deg) translate(8px, 8px);
+}
+
+.hamburger-menu[aria-expanded='true'] .hamburger-line:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger-menu[aria-expanded='true'] .hamburger-line:nth-child(3) {
+  transform: rotate(-45deg) translate(7px, -7px);
+}
+
 @media (max-width: 768px) {
+  .hamburger-menu {
+    display: flex;
+  }
+
+  .layout-header-content {
+    flex-wrap: wrap;
+  }
+
   .layout-nav {
+    display: none;
     flex-direction: column;
+    width: 100%;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #2c3e50;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 9;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+  }
+
+  .layout-nav.nav-open {
+    display: flex;
+    max-height: 500px;
+    opacity: 1;
   }
 
   .nav-link {
     padding: 12px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-left: 3px solid transparent;
+  }
+
+  .nav-link.active {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+    border-left-color: #3498db;
   }
 
   .layout-main {
