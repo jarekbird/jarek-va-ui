@@ -521,14 +521,6 @@ h1 {
   -webkit-overflow-scrolling: touch;
 }
 
-@media (max-width: 768px) {
-  .messages-container {
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-    padding-right: 0.5rem;
-  }
-}
-
 .message-form {
   margin-top: 20px;
   border-top: 1px solid #e0e0e0;
@@ -551,6 +543,30 @@ h1 {
   resize: vertical;
   min-height: 60px;
   max-height: 200px;
+}
+
+@media (max-width: 768px) {
+  .messages-container {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-right: 0.5rem;
+  }
+
+  .message-input-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .message-input {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    flex: none;
+  }
+
+  .send-button {
+    width: 100%;
+    min-width: auto;
+  }
 }
 
 .message-input:focus {
