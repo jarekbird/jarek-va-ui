@@ -1,5 +1,7 @@
 .navigation-wrapper {
   position: relative;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .main-navigation {
@@ -84,8 +86,13 @@
 }
 
 @media (max-width: 768px) {
+  .navigation-wrapper {
+    justify-content: flex-end;
+  }
+
   .hamburger-menu {
     display: flex;
+    margin-right: 16px;
   }
 
   .main-navigation {
