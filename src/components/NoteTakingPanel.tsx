@@ -80,7 +80,7 @@ export const NoteTakingPanel: React.FC<NoteTakingPanelProps> = ({
       {selectedConversationId ? (
         <div className="note-taking-panel__detail">
           <button
-            className="note-taking-panel__back-button"
+            className="note-taking-panel__back-button note-taking-panel__back-button--top"
             onClick={handleBackToList}
             aria-label="Back to list"
           >
@@ -107,6 +107,13 @@ export const NoteTakingPanel: React.FC<NoteTakingPanelProps> = ({
               }
             />
           )}
+          <button
+            className="note-taking-panel__back-button note-taking-panel__back-button--bottom"
+            onClick={handleBackToList}
+            aria-label="Back to note taking history"
+          >
+            ← Back to Note Taking History
+          </button>
         </div>
       ) : (
         <ConversationListView

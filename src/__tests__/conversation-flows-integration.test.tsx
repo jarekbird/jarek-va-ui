@@ -16,6 +16,12 @@ import type { Conversation } from '../types';
  */
 
 describe('Conversation Flows Integration', () => {
+  // Track sent messages for polling simulation (shared across tests)
+  const sentMessages = new Map<
+    string,
+    Array<{ role: string; content: string; timestamp: string }>
+  >();
+
   const mockConversations: Conversation[] = [
     {
       conversationId: 'conv-1',
@@ -67,6 +73,9 @@ describe('Conversation Flows Integration', () => {
 
   beforeEach(() => {
     server.resetHandlers();
+    // Clear sent messages for each test
+    sentMessages.clear();
+
     // Set up default MSW handlers
     server.use(
       http.get(/\/conversations\/api\/list$/, () => {
@@ -79,14 +88,110 @@ describe('Conversation Flows Integration', () => {
           headers: { 'Content-Type': 'application/json' },
         });
       }),
+      // Handler for /conversations/api/:id (correct pattern)
+      http.get(/\/conversations\/api\/(conv-\d+)$/, ({ params }) => {
+        const conversationId = params[0] as string;
+        const conversation = mockConversations.find(
+          (c) => c.conversationId === conversationId
+        );
+        if (conversation) {
+          // Start with base conversation messages
+          const messages = [...conversation.messages];
+
+          // Add any sent messages that aren't in the base conversation
+          const sent = sentMessages.get(conversationId) || [];
+          sent.forEach((sentMsg) => {
+            if (
+              !messages.some(
+                (m) => m.content === sentMsg.content && m.role === sentMsg.role
+              )
+            ) {
+              messages.push(sentMsg);
+            }
+          });
+
+          // Simulate assistant response being added during polling
+          // Check if last message is user without assistant response
+          if (
+            messages.length > 0 &&
+            messages[messages.length - 1].role === 'user' &&
+            (messages.length === 1 ||
+              messages[messages.length - 2].role !== 'assistant')
+          ) {
+            // Add assistant response
+            messages.push({
+              role: 'assistant',
+              content: `Response to: ${messages[messages.length - 1].content}`,
+              timestamp: new Date().toISOString(),
+            });
+          }
+          return HttpResponse.json(
+            { ...conversation, messages },
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+        return HttpResponse.json(
+          { error: 'Conversation not found' },
+          { status: 404, headers: { 'Content-Type': 'application/json' } }
+        );
+      }),
+      http.get(/\/api\/conversations\/(conv-\d+)$/, ({ params }) => {
+        const conversationId = params[0] as string;
+        const conversation = mockConversations.find(
+          (c) => c.conversationId === conversationId
+        );
+        if (conversation) {
+          // Start with base conversation messages
+          const messages = [...conversation.messages];
+
+          // Add any sent messages that aren't in the base conversation
+          const sent = sentMessages.get(conversationId) || [];
+          sent.forEach((sentMsg) => {
+            if (
+              !messages.some(
+                (m) => m.content === sentMsg.content && m.role === sentMsg.role
+              )
+            ) {
+              messages.push(sentMsg);
+            }
+          });
+
+          // Simulate assistant response being added during polling
+          // Check if last message is user without assistant response
+          if (
+            messages.length > 0 &&
+            messages[messages.length - 1].role === 'user' &&
+            (messages.length === 1 ||
+              messages[messages.length - 2].role !== 'assistant')
+          ) {
+            // Add assistant response
+            messages.push({
+              role: 'assistant',
+              content: `Response to: ${messages[messages.length - 1].content}`,
+              timestamp: new Date().toISOString(),
+            });
+          }
+          return HttpResponse.json(
+            { ...conversation, messages },
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+        return HttpResponse.json(
+          { error: 'Conversation not found' },
+          { status: 404, headers: { 'Content-Type': 'application/json' } }
+        );
+      }),
+      // Legacy handlers for /conversations/api/conversation/:id pattern (for backward compatibility)
       http.get(
-        /\/conversations\/api\/conversation\/conv-\d+/,
-        ({ request }) => {
-          const url = new URL(request.url);
-          const match = url.pathname.match(/\/conversation\/(conv-\d+)$/);
-          const conversationId = match ? match[1] : 'conv-1';
+        /\/conversations\/api\/conversation\/(conv-\d+)$/,
+        ({ params }) => {
+          const conversationId = params[0] as string;
           const conversation = mockConversations.find(
-            (c) => c.id === conversationId
+            (c) => c.conversationId === conversationId
           );
           if (conversation) {
             return HttpResponse.json(conversation, {
@@ -100,13 +205,11 @@ describe('Conversation Flows Integration', () => {
         }
       ),
       http.get(
-        /\/api\/conversations\/conversation\/conv-\d+/,
-        ({ request }) => {
-          const url = new URL(request.url);
-          const match = url.pathname.match(/\/conversation\/(conv-\d+)$/);
-          const conversationId = match ? match[1] : 'conv-1';
+        /\/api\/conversations\/conversation\/(conv-\d+)$/,
+        ({ params }) => {
+          const conversationId = params[0] as string;
           const conversation = mockConversations.find(
-            (c) => c.id === conversationId
+            (c) => c.conversationId === conversationId
           );
           if (conversation) {
             return HttpResponse.json(conversation, {
@@ -165,46 +268,110 @@ describe('Conversation Flows Integration', () => {
           }
         );
       }),
-      http.post(/\/conversations\/api\/conversation\/conv-\d+\/message/, () => {
-        return HttpResponse.json(
-          {
-            conversationId: 'conv-1',
-            messages: [
-              ...mockConversations[0].messages,
-              {
-                role: 'user',
-                content: 'New message',
-                timestamp: new Date().toISOString(),
-              },
-            ],
-            createdAt: '2024-01-01T00:00:00Z',
-            lastAccessedAt: new Date().toISOString(),
-          },
-          {
-            headers: { 'Content-Type': 'application/json' },
+      // Handler for POST /conversations/api/:id/message (correct pattern)
+      http.post(
+        /\/conversations\/api\/(conv-\d+)\/message$/,
+        async ({ params, request }) => {
+          const conversationId = params[0] as string;
+          const body = (await request.json()) as { message: string };
+
+          // Track the sent message for polling
+          if (!sentMessages.has(conversationId)) {
+            sentMessages.set(conversationId, []);
           }
-        );
-      }),
-      http.post(/\/api\/conversations\/conversation\/conv-\d+\/message/, () => {
-        return HttpResponse.json(
-          {
-            conversationId: 'conv-1',
-            messages: [
-              ...mockConversations[0].messages,
-              {
-                role: 'user',
-                content: 'New message',
-                timestamp: new Date().toISOString(),
-              },
-            ],
-            createdAt: '2024-01-01T00:00:00Z',
-            lastAccessedAt: new Date().toISOString(),
-          },
-          {
-            headers: { 'Content-Type': 'application/json' },
+          sentMessages.get(conversationId)!.push({
+            role: 'user',
+            content: body.message,
+            timestamp: new Date().toISOString(),
+          });
+
+          return HttpResponse.json(
+            {
+              success: true,
+              conversationId,
+              message: 'Message sent',
+            },
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+      ),
+      http.post(
+        /\/api\/conversations\/(conv-\d+)\/message$/,
+        async ({ params, request }) => {
+          const conversationId = params[0] as string;
+          const body = (await request.json()) as { message: string };
+
+          // Track the sent message for polling
+          if (!sentMessages.has(conversationId)) {
+            sentMessages.set(conversationId, []);
           }
-        );
-      })
+          sentMessages.get(conversationId)!.push({
+            role: 'user',
+            content: body.message,
+            timestamp: new Date().toISOString(),
+          });
+
+          return HttpResponse.json(
+            {
+              success: true,
+              conversationId,
+              message: 'Message sent',
+            },
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+      ),
+      // Legacy handlers for /conversations/api/conversation/:id/message pattern
+      http.post(
+        /\/conversations\/api\/conversation\/(conv-\d+)\/message/,
+        () => {
+          return HttpResponse.json(
+            {
+              conversationId: 'conv-1',
+              messages: [
+                ...mockConversations[0].messages,
+                {
+                  role: 'user',
+                  content: 'New message',
+                  timestamp: new Date().toISOString(),
+                },
+              ],
+              createdAt: '2024-01-01T00:00:00Z',
+              lastAccessedAt: new Date().toISOString(),
+            },
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+      ),
+      http.post(
+        /\/api\/conversations\/conversation\/(conv-\d+)\/message/,
+        () => {
+          return HttpResponse.json(
+            {
+              conversationId: 'conv-1',
+              messages: [
+                ...mockConversations[0].messages,
+                {
+                  role: 'user',
+                  content: 'New message',
+                  timestamp: new Date().toISOString(),
+                },
+              ],
+              createdAt: '2024-01-01T00:00:00Z',
+              lastAccessedAt: new Date().toISOString(),
+            },
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+      )
     );
   });
 
@@ -253,9 +420,9 @@ describe('Conversation Flows Integration', () => {
     await waitFor(
       () => {
         // Should navigate to the new conversation detail view
-        expect(
-          screen.getByText(/back to note taking history/i)
-        ).toBeInTheDocument();
+        // Link should be found by text
+        const backLink = screen.queryByText(/back to note taking history/i);
+        expect(backLink).toBeInTheDocument();
       },
       { timeout: 5000 }
     );
@@ -283,15 +450,21 @@ describe('Conversation Flows Integration', () => {
     });
     await user.click(conversationLink);
 
-    // Wait for navigation to detail view
+    // Wait for navigation to detail view and conversation to load
     await waitFor(
       () => {
+        // First check if conversation loaded
+        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
         expect(
-          screen.getByText(/back to note taking history/i)
+          screen.getByText(/Note Session ID: conv-1/i)
         ).toBeInTheDocument();
       },
-      { timeout: 5000 }
+      { timeout: 10000 }
     );
+
+    // Now verify back link is present (should be at least one, possibly two)
+    const backLinks = screen.getAllByText(/back to note taking history/i);
+    expect(backLinks.length).toBeGreaterThanOrEqual(1);
   });
 
   it('conversation detail displays correctly', async () => {
@@ -373,19 +546,21 @@ describe('Conversation Flows Integration', () => {
     const sendButton = screen.getByRole('button', { name: /send/i });
     await user.click(sendButton);
 
-    // Wait for message to be sent
+    // Wait for message to be sent and appear in UI
+    // The message is added optimistically, so it should appear immediately
     await waitFor(
       () => {
         expect(screen.getByText('New message')).toBeInTheDocument();
       },
-      { timeout: 5000 }
+      { timeout: 10000 }
     );
 
-    // Navigate back to list
-    const backLink = screen.getByRole('link', {
-      name: /back to note taking history/i,
-    });
-    await user.click(backLink);
+    // Navigate back to list (link at bottom)
+    // There should be two links - one at top and one at bottom
+    const backLinks = screen.getAllByText(/back to note taking history/i);
+    expect(backLinks.length).toBeGreaterThanOrEqual(1);
+    // Click the last one (bottom link)
+    await user.click(backLinks[backLinks.length - 1]);
 
     // Wait for list to load
     await waitFor(

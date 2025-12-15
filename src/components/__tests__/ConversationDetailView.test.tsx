@@ -156,10 +156,12 @@ describe('ConversationDetailView', () => {
         { timeout: 3000 }
       );
 
-      // Back link should be present
-      const backLink = screen.getByRole('link', {
+      // Back link should be present (there are now two - top and bottom)
+      const backLinks = screen.getAllByRole('link', {
         name: /back to note taking history/i,
       });
+      expect(backLinks.length).toBeGreaterThanOrEqual(1);
+      const backLink = backLinks[0];
       expect(backLink).toBeInTheDocument();
       expect(backLink).toHaveAttribute('href', '/');
     });

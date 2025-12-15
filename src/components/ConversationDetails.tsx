@@ -180,22 +180,35 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
         }
 
         // Always check for completion on every poll (not just when there are updates)
-        // Stop polling if we have an assistant response (last message is from assistant)
-        // AND the message content hasn't changed (streaming has completed)
-        // We detect completion by checking if content is stable (same as last poll)
+        // Stop polling only if:
+        // 1. The last message is from assistant (we got a response)
+        // 2. The message content hasn't changed (streaming has completed)
+        // 3. The number of assistant messages equals or exceeds user messages (all have responses)
         if (
           lastServerMessage &&
           lastServerMessage.role === 'assistant' &&
           !hasUpdatedMessages // Content hasn't changed since last poll = streaming complete
         ) {
-          // Update refs before stopping to ensure they're current
-          lastMessageCountRef.current = serverMessageCount;
-          lastMessageContentRef.current = lastServerMessage.content;
+          // Count user and assistant messages to see if all user messages have responses
+          const userMessageCount = serverMessages.filter(
+            (m) => m.role === 'user'
+          ).length;
+          const assistantMessageCount = serverMessages.filter(
+            (m) => m.role === 'assistant'
+          ).length;
 
-          setIsPolling(false);
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
+          // Only stop polling if we have at least as many assistant messages as user messages
+          // This means all user messages have received responses
+          if (assistantMessageCount >= userMessageCount) {
+            // Update refs before stopping to ensure they're current
+            lastMessageCountRef.current = serverMessageCount;
+            lastMessageContentRef.current = lastServerMessage.content;
+
+            setIsPolling(false);
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
           }
         }
       } catch (err) {
@@ -215,7 +228,7 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!localConversation || !message.trim() || isSending) {
+    if (!localConversation || !message.trim()) {
       return;
     }
 
@@ -224,6 +237,10 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
     const messageToSend = message.trim();
     setMessage('');
 
+    // Get the current conversation state (may have been updated by previous messages)
+    const currentConversation =
+      currentConversationRef.current || localConversation;
+
     // Immediately add user message to UI
     const userMessage = {
       role: 'user' as const,
@@ -231,8 +248,8 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
       timestamp: new Date().toISOString(),
     };
     const updatedConversation: Conversation = {
-      ...localConversation,
-      messages: [...localConversation.messages, userMessage],
+      ...currentConversation,
+      messages: [...currentConversation.messages, userMessage],
       lastAccessedAt: new Date().toISOString(),
     };
 
@@ -250,12 +267,14 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
     }
 
     try {
-      await sendMessage(localConversation.conversationId, {
+      await sendMessage(updatedConversation.conversationId, {
         message: messageToSend,
       });
 
-      // Start polling for assistant response
-      setIsPolling(true);
+      // Start polling for assistant response (if not already polling)
+      if (!isPolling) {
+        setIsPolling(true);
+      }
     } catch (err) {
       setError(
         err instanceof Error
@@ -264,15 +283,17 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
       );
       setMessage(messageToSend); // Restore message on error
       // Remove the user message from UI on error
-      if (onConversationUpdate && localConversation) {
-        onConversationUpdate(localConversation);
+      const previousConversation =
+        currentConversationRef.current || localConversation;
+      if (onConversationUpdate && previousConversation) {
+        onConversationUpdate(previousConversation);
       }
-      if (localConversation) {
+      if (previousConversation) {
         // Revert local state and refs to previous conversation
-        setLocalConversation(localConversation);
-        lastMessageCountRef.current = localConversation.messages.length;
-        conversationIdRef.current = localConversation.conversationId;
-        currentConversationRef.current = localConversation;
+        setLocalConversation(previousConversation);
+        lastMessageCountRef.current = previousConversation.messages.length;
+        conversationIdRef.current = previousConversation.conversationId;
+        currentConversationRef.current = previousConversation;
       }
     } finally {
       setIsSending(false);
@@ -331,7 +352,7 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
             placeholder="Type your message..."
             className="message-input"
             rows={3}
-            disabled={isSending || isPolling}
+            disabled={false}
             onKeyDown={(e) => {
               // On mobile devices, Enter should always create a new line
               // Only submit on Enter+Shift or Enter on desktop (non-mobile)
@@ -349,7 +370,7 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
           />
           <button
             type="submit"
-            disabled={!message.trim() || isSending || isPolling}
+            disabled={!message.trim()}
             className="send-button"
           >
             {isSending ? 'Sending...' : 'Send'}

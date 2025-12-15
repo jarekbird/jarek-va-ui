@@ -227,6 +227,24 @@ export const handlers = [
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
+    // Simulate assistant responses: add assistant message for each user message without a following assistant message
+    const messages = conversation.messages;
+    for (let i = 0; i < messages.length; i++) {
+      if (
+        messages[i].role === 'user' &&
+        (i === messages.length - 1 || messages[i + 1].role !== 'assistant')
+      ) {
+        // Add assistant response
+        messages.splice(i + 1, 0, {
+          role: 'assistant',
+          content: `Response to: ${messages[i].content}`,
+          timestamp: new Date(
+            new Date(messages[i].timestamp).getTime() + 1000
+          ).toISOString(),
+        });
+        break; // Only add one assistant response per poll to simulate streaming
+      }
+    }
     return HttpResponse.json(conversation, {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -240,6 +258,24 @@ export const handlers = [
         { error: 'Not found' },
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+    // Simulate assistant responses: add assistant message for each user message without a following assistant message
+    const messages = conversation.messages;
+    for (let i = 0; i < messages.length; i++) {
+      if (
+        messages[i].role === 'user' &&
+        (i === messages.length - 1 || messages[i + 1].role !== 'assistant')
+      ) {
+        // Add assistant response
+        messages.splice(i + 1, 0, {
+          role: 'assistant',
+          content: `Response to: ${messages[i].content}`,
+          timestamp: new Date(
+            new Date(messages[i].timestamp).getTime() + 1000
+          ).toISOString(),
+        });
+        break; // Only add one assistant response per poll to simulate streaming
+      }
     }
     return HttpResponse.json(conversation, {
       headers: { 'Content-Type': 'application/json' },
@@ -284,6 +320,73 @@ export const handlers = [
       }
     );
   }),
+
+  // POST /conversations/api/:id/message or /api/conversations/:id/message
+  http.post(
+    /\/conversations\/api\/([^/]+)\/message$/,
+    async ({ params, request }) => {
+      const id = params[0] as string;
+      const conversation = conversations.get(id);
+      if (!conversation) {
+        return HttpResponse.json(
+          { error: 'Conversation not found' },
+          { status: 404, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      const body = (await request.json()) as { message: string };
+      // Add user message to conversation
+      const userMessage = {
+        role: 'user' as const,
+        content: body.message,
+        timestamp: new Date().toISOString(),
+      };
+      conversation.messages.push(userMessage);
+      // Simulate adding assistant response after a delay (for polling tests)
+      // The assistant response will be added when getConversationById is called
+      return HttpResponse.json(
+        {
+          success: true,
+          conversationId: id,
+          message: 'Message sent',
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+  ),
+
+  http.post(
+    /\/api\/conversations\/([^/]+)\/message$/,
+    async ({ params, request }) => {
+      const id = params[0] as string;
+      const conversation = conversations.get(id);
+      if (!conversation) {
+        return HttpResponse.json(
+          { error: 'Conversation not found' },
+          { status: 404, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      const body = (await request.json()) as { message: string };
+      // Add user message to conversation
+      const userMessage = {
+        role: 'user' as const,
+        content: body.message,
+        timestamp: new Date().toISOString(),
+      };
+      conversation.messages.push(userMessage);
+      return HttpResponse.json(
+        {
+          success: true,
+          conversationId: id,
+          message: 'Message sent',
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+  ),
 
   // ============================================
   // Agent Conversations API handlers

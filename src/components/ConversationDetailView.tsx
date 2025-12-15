@@ -50,10 +50,36 @@ export const ConversationDetailView: React.FC = () => {
       {loading && <LoadingSpinner />}
       {error && <ErrorMessage message={error} />}
       {!loading && !error && conversation && (
-        <ConversationDetails
-          conversation={conversation}
-          onConversationUpdate={setConversation}
-        />
+        <>
+          <ConversationDetails
+            conversation={conversation}
+            onConversationUpdate={setConversation}
+          />
+          <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+            <Link
+              to="/"
+              style={{
+                display: 'inline-block',
+                padding: '0.5rem 1rem',
+                backgroundColor: '#f3f4f6',
+                border: '1px solid #d1d5db',
+                borderRadius: '4px',
+                color: '#374151',
+                textDecoration: 'none',
+                fontSize: '0.875rem',
+                transition: 'background-color 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#e5e7eb';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#f3f4f6';
+              }}
+            >
+              ← Back to Note Taking History
+            </Link>
+          </div>
+        </>
       )}
       {!loading && !error && !conversation && (
         <p style={{ textAlign: 'center', color: '#7f8c8d' }}>
