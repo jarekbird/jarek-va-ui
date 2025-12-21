@@ -67,6 +67,8 @@
   cursor: pointer;
   transition: background-color 0.15s;
   border-radius: 2px;
+  /* Allow the row to grow wider than the container so overflow-x can scroll */
+  width: max-content;
 }
 
 .file-tree-node__row:hover {
@@ -89,10 +91,10 @@
 .file-tree-node__name {
   font-size: 0.75rem;
   color: #374151;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  flex: 1;
+  /* Don't shrink/ellipsis: let long names extend the row so the tree can scroll */
+  flex: 0 0 auto;
+  overflow: visible;
 }
 
 .file-tree-node__name:hover {
