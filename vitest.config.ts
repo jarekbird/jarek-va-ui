@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    'import.meta.env.VITE_ELEVENLABS_AGENT_ENABLED': JSON.stringify('true'),
+  },
   test: {
     globals: true,
     environment: 'jsdom',

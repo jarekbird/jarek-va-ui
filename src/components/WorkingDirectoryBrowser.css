@@ -43,8 +43,10 @@
 .working-directory-browser__tree {
   flex: 1;
   overflow-y: auto;
+  overflow-x: auto;
   padding: 0.5rem;
   font-size: 0.75rem;
+  min-width: 0; /* Allows flex item to shrink below content size */
 }
 
 .working-directory-browser__empty {
