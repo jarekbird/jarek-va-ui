@@ -9,7 +9,7 @@
 .task-dashboard__content {
   flex: 1;
   display: grid;
-  grid-template-columns: 250px 1fr 1fr;
+  grid-template-columns: 350px 1fr 0.75fr;
   grid-template-rows: 1fr;
   gap: 1rem;
   padding: 1rem;
@@ -44,7 +44,7 @@
 /* Compressed/Tablet view: Stack file viewer and tasks */
 @media (max-width: 1400px) {
   .task-dashboard__content {
-    grid-template-columns: 250px 1fr 1fr;
+    grid-template-columns: 350px 1fr 0.75fr;
     grid-template-rows: 1fr auto;
   }
 
