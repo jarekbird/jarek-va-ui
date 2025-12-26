@@ -529,20 +529,26 @@ h1 {
 
 .message-input-container {
   display: flex;
+  flex-direction: column;
   gap: 10px;
   align-items: flex-end;
 }
 
-.message-input {
-  flex: 1;
+.message-input-container .message-input {
+  width: 100%;
   padding: 12px;
   border: 1px solid #d0d0d0;
   border-radius: 6px;
   font-family: inherit;
   font-size: 0.95em;
   resize: vertical;
-  min-height: 100px;
-  max-height: 200px;
+  min-height: 150px;
+  max-height: 300px;
+}
+
+.message-input-container .send-button {
+  align-self: flex-end;
+  width: auto;
 }
 
 @media (max-width: 768px) {
@@ -553,14 +559,7 @@ h1 {
   }
 
   .message-input-container {
-    flex-direction: column;
     align-items: stretch;
-  }
-
-  .message-input {
-    width: 100%;
-    margin-bottom: 0.5rem;
-    flex: none;
   }
 
   .send-button {

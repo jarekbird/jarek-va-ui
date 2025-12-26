@@ -30,6 +30,7 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
   const [error, setError] = React.useState<string | null>(null);
   const [isPolling, setIsPolling] = React.useState<boolean>(false);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const pollingIntervalRef = React.useRef<number | null>(null);
   const lastMessageCountRef = React.useRef<number>(0);
   const lastMessageContentRef = React.useRef<string>(''); // Track last message content for streaming detection
@@ -95,6 +96,31 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [localConversation]);
+
+  // Auto-resize textarea based on content
+  const adjustTextareaHeight = React.useCallback(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      // Reset height to get accurate scrollHeight
+      textarea.style.height = 'auto';
+      // Set height based on content, respecting min/max constraints
+      const scrollHeight = textarea.scrollHeight;
+      const minHeight = 150; // min-height from CSS
+      const maxHeight = 300; // max-height from CSS
+      const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
+      textarea.style.height = `${newHeight}px`;
+    }
+  }, []);
+
+  // Adjust textarea height when message changes
+  React.useEffect(() => {
+    adjustTextareaHeight();
+  }, [message, adjustTextareaHeight]);
+
+  // Set initial height on mount
+  React.useEffect(() => {
+    adjustTextareaHeight();
+  }, [adjustTextareaHeight]);
 
   // Start polling when sending a message
   React.useEffect(() => {
@@ -236,6 +262,10 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
     setError(null);
     const messageToSend = message.trim();
     setMessage('');
+    // Reset textarea height after clearing message
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
 
     // Get the current conversation state (may have been updated by previous messages)
     const currentConversation =
@@ -347,11 +377,15 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
         {error && <div className="error-message">{error}</div>}
         <div className="message-input-container">
           <textarea
+            ref={textareaRef}
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              adjustTextareaHeight();
+            }}
             placeholder="Type your message..."
             className="message-input"
-            rows={4}
+            rows={1}
             disabled={false}
             onKeyDown={(e) => {
               // On mobile devices, Enter should always create a new line

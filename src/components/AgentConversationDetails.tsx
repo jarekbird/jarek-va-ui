@@ -43,6 +43,7 @@ export const AgentConversationDetails: React.FC<
   const [isStartingVoice, setIsStartingVoice] = React.useState<boolean>(false);
   const [agentId, setAgentId] = React.useState<string | null>(null);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const errorTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
@@ -132,6 +133,31 @@ export const AgentConversationDetails: React.FC<
     }
   }, [conversation]);
 
+  // Auto-resize textarea based on content
+  const adjustTextareaHeight = React.useCallback(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      // Reset height to get accurate scrollHeight
+      textarea.style.height = 'auto';
+      // Set height based on content, respecting min/max constraints
+      const scrollHeight = textarea.scrollHeight;
+      const minHeight = 150; // min-height from CSS
+      const maxHeight = 300; // max-height from CSS
+      const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
+      textarea.style.height = `${newHeight}px`;
+    }
+  }, []);
+
+  // Adjust textarea height when message changes
+  React.useEffect(() => {
+    adjustTextareaHeight();
+  }, [message, adjustTextareaHeight]);
+
+  // Set initial height on mount
+  React.useEffect(() => {
+    adjustTextareaHeight();
+  }, [adjustTextareaHeight]);
+
   // Auto-dismiss error messages after 5 seconds
   React.useEffect(() => {
     if (error) {
@@ -177,6 +203,10 @@ export const AgentConversationDetails: React.FC<
     setError(null);
     const messageToSend = message.trim();
     setMessage('');
+    // Reset textarea height after clearing message
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
 
     // Optimistically update UI
     const userMessage = {
@@ -576,11 +606,15 @@ export const AgentConversationDetails: React.FC<
         )}
         <div className="message-input-container">
           <textarea
+            ref={textareaRef}
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              adjustTextareaHeight();
+            }}
             placeholder="Type your message..."
             className="message-input"
-            rows={4}
+            rows={1}
             disabled={isSending}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
