@@ -9,7 +9,7 @@ import type { TaskManagementPanelRef } from '../TaskManagementPanel';
  * Comprehensive unit tests for TaskDashboard component
  *
  * This test suite verifies:
- * - All four panels are rendered correctly
+ * - All three panels are rendered correctly
  * - Note conversation updates trigger refresh on both file browser and task panel
  * - Ref-based communication between parent and child components works
  * - Component layout and structure
@@ -75,10 +75,6 @@ const mockNoteTakingPanel = vi.fn(
   }
 );
 
-const mockBullMQQueueView = vi.fn(() => {
-  return <div data-testid="bullmq-queue-view">BullMQQueueView</div>;
-});
-
 vi.mock('../WorkingDirectoryBrowser', () => ({
   WorkingDirectoryBrowser: (props: {
     ref: React.Ref<WorkingDirectoryBrowserRef>;
@@ -98,10 +94,6 @@ vi.mock('../NoteTakingPanel', () => ({
   }) => mockNoteTakingPanel(props),
 }));
 
-vi.mock('../BullMQQueueView', () => ({
-  BullMQQueueView: () => mockBullMQQueueView(),
-}));
-
 describe('TaskDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -113,7 +105,7 @@ describe('TaskDashboard', () => {
   });
 
   describe('Component rendering', () => {
-    it('renders all four panels', () => {
+    it('renders all three panels', () => {
       render(<TaskDashboard />);
 
       expect(
@@ -121,7 +113,6 @@ describe('TaskDashboard', () => {
       ).toBeInTheDocument();
       expect(screen.getByTestId('note-taking-panel')).toBeInTheDocument();
       expect(screen.getByTestId('task-management-panel')).toBeInTheDocument();
-      expect(screen.getByTestId('bullmq-queue-view')).toBeInTheDocument();
     });
 
     it('renders with correct container structure', () => {
@@ -144,12 +135,10 @@ describe('TaskDashboard', () => {
       const middleRight = container.querySelector(
         '.task-dashboard__middle-right'
       );
-      const right = container.querySelector('.task-dashboard__right');
 
       expect(fileViewer).toBeInTheDocument();
       expect(left).toBeInTheDocument();
       expect(middleRight).toBeInTheDocument();
-      expect(right).toBeInTheDocument();
     });
 
     it('renders WorkingDirectoryBrowser in file-viewer container', () => {
@@ -181,15 +170,6 @@ describe('TaskDashboard', () => {
       const taskPanel = screen.getByTestId('task-management-panel');
 
       expect(middleRight).toContainElement(taskPanel);
-    });
-
-    it('renders BullMQQueueView in right container', () => {
-      const { container } = render(<TaskDashboard />);
-
-      const right = container.querySelector('.task-dashboard__right');
-      const queueView = screen.getByTestId('bullmq-queue-view');
-
-      expect(right).toContainElement(queueView);
     });
   });
 

@@ -10,11 +10,10 @@ import type { Task } from '../types';
 /**
  * Integration tests for Task Dashboard flow
  *
- * These tests verify that all four panels work together correctly:
+ * These tests verify that all three panels work together correctly:
  * - WorkingDirectoryBrowser
  * - NoteTakingPanel
  * - TaskManagementPanel
- * - BullMQQueueView
  *
  * Particularly the orchestration logic where note conversation updates
  * trigger refreshes on both the file browser and task panel.
@@ -116,7 +115,7 @@ describe('Task Dashboard Integration', () => {
     );
   });
 
-  it('renders all four panels correctly', async () => {
+  it('renders all three panels correctly', async () => {
     render(
       <MemoryRouter>
         <TaskDashboard />
@@ -140,11 +139,6 @@ describe('Task Dashboard Integration', () => {
     // TaskManagementPanel should show tasks
     await waitFor(() => {
       expect(screen.getByText('Test task 1')).toBeInTheDocument();
-    });
-
-    // BullMQQueueView should be rendered (check for heading)
-    await waitFor(() => {
-      expect(screen.getByText('Bull MQ Queues')).toBeInTheDocument();
     });
   });
 
@@ -357,6 +351,5 @@ describe('Task Dashboard Integration', () => {
     expect(screen.getByText('src')).toBeInTheDocument();
     expect(screen.getByText('Test task 1')).toBeInTheDocument();
     expect(screen.getByTestId('note-taking-panel')).toBeInTheDocument();
-    expect(screen.getByText('Bull MQ Queues')).toBeInTheDocument();
   });
 });

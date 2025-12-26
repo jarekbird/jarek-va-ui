@@ -1,12 +1,11 @@
 /**
  * TaskDashboard Component
- * Main dashboard for task management with note-taking, file viewer, tasks, and Bull MQ view
+ * Main dashboard for task management with note-taking, file viewer, and tasks
  *
  * Layout:
  * - Far left: File viewer
  * - Left: Note taking panel
  * - Middle right: Task management
- * - Right: Bull MQ queue view
  */
 
 import React, { useState, useRef } from 'react';
@@ -19,7 +18,6 @@ import {
   TaskManagementPanel,
   type TaskManagementPanelRef,
 } from './TaskManagementPanel';
-import { BullMQQueueView } from './BullMQQueueView';
 import './TaskDashboard.css';
 
 export const TaskDashboard: React.FC = () => {
@@ -56,9 +54,6 @@ export const TaskDashboard: React.FC = () => {
         </div>
         <div className="task-dashboard__middle-right">
           <TaskManagementPanel ref={taskPanelRef} />
-        </div>
-        <div className="task-dashboard__right">
-          <BullMQQueueView />
         </div>
       </div>
     </div>
