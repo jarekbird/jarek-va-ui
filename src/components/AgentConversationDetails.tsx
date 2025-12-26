@@ -580,7 +580,7 @@ export const AgentConversationDetails: React.FC<
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Type your message..."
             className="message-input"
-            rows={3}
+            rows={4}
             disabled={isSending}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {

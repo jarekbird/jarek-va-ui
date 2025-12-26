@@ -351,7 +351,7 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Type your message..."
             className="message-input"
-            rows={3}
+            rows={4}
             disabled={false}
             onKeyDown={(e) => {
               // On mobile devices, Enter should always create a new line
