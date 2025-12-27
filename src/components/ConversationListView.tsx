@@ -24,6 +24,8 @@ export const ConversationListView: React.FC<ConversationListViewProps> = ({
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
   const [isCreating, setIsCreating] = React.useState<boolean>(false);
+  // Synchronous guard to prevent double-submit races before React state updates apply
+  const isCreatingRef = React.useRef<boolean>(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -71,10 +73,12 @@ export const ConversationListView: React.FC<ConversationListViewProps> = ({
   };
 
   const handleNewConversation = async () => {
-    if (isCreating) {
+    // Use ref (not state) to prevent rapid double clicks from dispatching multiple requests
+    if (isCreatingRef.current || isCreating) {
       return;
     }
 
+    isCreatingRef.current = true;
     setIsCreating(true);
     setError(null);
 
@@ -101,6 +105,7 @@ export const ConversationListView: React.FC<ConversationListViewProps> = ({
       );
     } finally {
       setIsCreating(false);
+      isCreatingRef.current = false;
     }
   };
 

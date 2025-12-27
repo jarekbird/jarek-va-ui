@@ -35,6 +35,14 @@ export const NoteTakingPanel: React.FC<NoteTakingPanelProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  const handleDetailUpdate = React.useCallback(
+    (updatedConversation: Conversation) => {
+      setConversation(updatedConversation);
+      onConversationUpdate?.(updatedConversation);
+    },
+    [onConversationUpdate]
+  );
+
   React.useEffect(() => {
     if (selectedConversationId) {
       loadConversation(selectedConversationId);
@@ -91,12 +99,7 @@ export const NoteTakingPanel: React.FC<NoteTakingPanelProps> = ({
           {conversation && !loading && !error && (
             <ConversationDetails
               conversation={conversation}
-              onConversationUpdate={(updatedConversation) => {
-                setConversation(updatedConversation);
-                if (onConversationUpdate) {
-                  onConversationUpdate(updatedConversation);
-                }
-              }}
+              onConversationUpdate={handleDetailUpdate}
               repository={
                 'metadata' in conversation &&
                 conversation.metadata &&

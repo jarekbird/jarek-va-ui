@@ -25,6 +25,44 @@ import { createMockAgentConversation } from '../../test/mocks/handlers';
 
 // Note: We don't mock AgentConversationDetails - we test the full component integration
 
+let lastWs: {
+  pathWithQuery: string;
+  closeCalls: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  emit: (msg: any) => void;
+} | null = null;
+
+vi.mock('../../services/ws', () => {
+  return {
+    connectWs: (
+      pathWithQuery: string,
+      options: {
+        onOpen?: () => void;
+        onClose?: (event: CloseEvent) => void;
+        onError?: (event: Event) => void;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onMessage: (message: any) => void;
+      }
+    ) => {
+      const wsState = {
+        pathWithQuery,
+        closeCalls: 0,
+        emit: (msg: unknown) => options.onMessage(msg),
+      };
+      lastWs = wsState;
+      // simulate immediate open
+      options.onOpen?.();
+      return {
+        close: () => {
+          wsState.closeCalls += 1;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          options.onClose?.({} as any);
+        },
+      };
+    },
+  };
+});
+
 describe('AgentConversationDetailView', () => {
   const mockConversation: AgentConversation = createMockAgentConversation(
     'agent-conv-test',
@@ -34,6 +72,7 @@ describe('AgentConversationDetailView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     server.resetHandlers();
+    lastWs = null;
     // Use real timers by default
     vi.useRealTimers();
   });
@@ -42,6 +81,7 @@ describe('AgentConversationDetailView', () => {
     // Always restore real timers after each test
     vi.useRealTimers();
   });
+
 
   it('should be defined', () => {
     expect(AgentConversationDetailView).toBeDefined();
@@ -193,8 +233,7 @@ describe('AgentConversationDetailView', () => {
       );
     });
 
-    it('shows "Live updates" indicator when polling is active', async () => {
-      vi.useFakeTimers();
+    it('shows "Live updates" indicator when websocket is active', async () => {
       server.use(
         http.get(/\/agent-conversations\/api\/agent-conv-test$/, async () => {
           // Use real timers for the async delay
@@ -207,8 +246,6 @@ describe('AgentConversationDetailView', () => {
 
       renderComponent('agent-conv-test');
 
-      // Wait for initial load to complete (use real timers for waitFor)
-      vi.useRealTimers();
       await waitFor(
         () => {
           const spinner = document.querySelector('.loading-spinner');
@@ -217,15 +254,6 @@ describe('AgentConversationDetailView', () => {
         { timeout: 5000 }
       );
 
-      // Switch back to fake timers for polling test
-      vi.useFakeTimers();
-
-      // Polling should start after conversation loads
-      // Advance timers slightly to allow polling to initialize
-      await vi.advanceTimersByTimeAsync(100);
-
-      // "Live updates" indicator should appear when polling is active
-      vi.useRealTimers();
       await waitFor(
         () => {
           expect(screen.getByText(/live updates/i)).toBeInTheDocument();
@@ -235,15 +263,10 @@ describe('AgentConversationDetailView', () => {
     });
   });
 
-  describe('Polling behavior', () => {
-    it('polls for updates at 3 second intervals', async () => {
-      let requestCount = 0;
-
+  describe('Websocket behavior', () => {
+    it('opens websocket after conversation loads', async () => {
       server.use(
-        http.get(/\/agent-conversations\/api\/agent-conv-test$/, async () => {
-          requestCount++;
-          // Use real timers for the async delay
-          await new Promise((resolve) => setTimeout(resolve, 0));
+        http.get(/\/agent-conversations\/api\/agent-conv-test$/, () => {
           return HttpResponse.json(mockConversation, {
             headers: { 'Content-Type': 'application/json' },
           });
@@ -252,7 +275,6 @@ describe('AgentConversationDetailView', () => {
 
       renderComponent('agent-conv-test');
 
-      // Wait for initial load with real timers
       await waitFor(
         () => {
           const spinner = document.querySelector('.loading-spinner');
@@ -261,47 +283,21 @@ describe('AgentConversationDetailView', () => {
         { timeout: 5000 }
       );
 
-      const initialRequestCount = requestCount;
-      expect(initialRequestCount).toBe(1); // Should have made initial request
-
-      // Verify polling indicator appears (which means polling is active)
-      await waitFor(
-        () => {
-          expect(screen.getByText(/live updates/i)).toBeInTheDocument();
-        },
-        { timeout: 2000 }
-      );
-
-      // Wait for polling to trigger (with real timers, wait 3+ seconds)
-      await new Promise((resolve) => setTimeout(resolve, 3500));
-
-      // Should have made at least one more request (the poll)
-      expect(requestCount).toBeGreaterThan(initialRequestCount);
+      await waitFor(() => {
+        expect(lastWs).toBeTruthy();
+        expect(lastWs?.pathWithQuery).toBe(
+          '/agent-conversations/api/ws?conversationId=agent-conv-test'
+        );
+      });
     });
 
-    it('updates conversation when messages change', async () => {
-      let callCount = 0;
-
-      const initialConversation = createMockAgentConversation(
-        'agent-conv-test',
-        2
-      );
-      const updatedConversation = createMockAgentConversation(
-        'agent-conv-test',
-        3
-      );
+    it('updates UI when websocket sends updated conversation', async () => {
+      const initialConversation = createMockAgentConversation('agent-conv-test', 2);
+      const updatedConversation = createMockAgentConversation('agent-conv-test', 3);
 
       server.use(
-        http.get(/\/agent-conversations\/api\/agent-conv-test$/, async () => {
-          callCount++;
-          await new Promise((resolve) => setTimeout(resolve, 0));
-          // First call returns initial, subsequent calls return updated
-          if (callCount === 1) {
-            return HttpResponse.json(initialConversation, {
-              headers: { 'Content-Type': 'application/json' },
-            });
-          }
-          return HttpResponse.json(updatedConversation, {
+        http.get(/\/agent-conversations\/api\/agent-conv-test$/, () => {
+          return HttpResponse.json(initialConversation, {
             headers: { 'Content-Type': 'application/json' },
           });
         })
@@ -309,85 +305,29 @@ describe('AgentConversationDetailView', () => {
 
       renderComponent('agent-conv-test');
 
-      // Wait for initial load with real timers
       await waitFor(
         () => {
-          const spinner = document.querySelector('.loading-spinner');
-          expect(spinner).not.toBeInTheDocument();
+          expect(screen.getByText('Agent message 2')).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
 
-      // Switch to fake timers for polling
-      vi.useFakeTimers();
+      expect(lastWs).toBeTruthy();
+      lastWs?.emit({
+        type: 'agent_conversation.updated',
+        conversationId: 'agent-conv-test',
+        conversation: updatedConversation,
+        reason: 'message_added',
+      });
 
-      // Advance time by 3 seconds to trigger poll
-      await vi.advanceTimersByTimeAsync(3000);
-
-      // Switch back to real timers for assertions
-      vi.useRealTimers();
-
-      // Should show updated conversation with 3 messages
-      await waitFor(
-        () => {
-          // Check that conversation was updated (AgentConversationDetails should re-render)
-          // Since we're not mocking it, we check for absence of error and presence of details
-          expect(
-            document.querySelector('.loading-spinner')
-          ).not.toBeInTheDocument();
-          expect(screen.queryByText(/error occurred/i)).not.toBeInTheDocument();
-        },
-        { timeout: 2000 }
-      );
+      await waitFor(() => {
+        expect(screen.getByText('Agent message 3')).toBeInTheDocument();
+      });
     });
 
-    it('does not update when messages have not changed', async () => {
+    it('closes websocket on unmount', async () => {
       server.use(
-        http.get(/\/agent-conversations\/api\/agent-conv-test$/, async () => {
-          await new Promise((resolve) => setTimeout(resolve, 0));
-          // Always return the same conversation
-          return HttpResponse.json(mockConversation, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-        })
-      );
-
-      renderComponent('agent-conv-test');
-
-      // Wait for initial load with real timers
-      await waitFor(
-        () => {
-          const spinner = document.querySelector('.loading-spinner');
-          expect(spinner).not.toBeInTheDocument();
-        },
-        { timeout: 5000 }
-      );
-
-      // Switch to fake timers for polling
-      vi.useFakeTimers();
-
-      // Advance time by 3 seconds to trigger poll
-      await vi.advanceTimersByTimeAsync(3000);
-
-      // Switch back to real timers
-      vi.useRealTimers();
-
-      // Component should not update the conversation since messages haven't changed
-      // (The component uses JSON.stringify comparison, so it won't update)
-      // We verify that no error occurred and component is still rendered
-      expect(
-        document.querySelector('.loading-spinner')
-      ).not.toBeInTheDocument();
-      expect(screen.queryByText(/error occurred/i)).not.toBeInTheDocument();
-    });
-
-    it('stops polling on component unmount', async () => {
-      let requestCount = 0;
-
-      server.use(
-        http.get(/\/agent-conversations\/api\/agent-conv-test$/, async () => {
-          requestCount++;
-          await new Promise((resolve) => setTimeout(resolve, 0));
+        http.get(/\/agent-conversations\/api\/agent-conv-test$/, () => {
           return HttpResponse.json(mockConversation, {
             headers: { 'Content-Type': 'application/json' },
           });
@@ -396,7 +336,6 @@ describe('AgentConversationDetailView', () => {
 
       const { unmount } = renderComponent('agent-conv-test');
 
-      // Wait for initial load with real timers
       await waitFor(
         () => {
           const spinner = document.querySelector('.loading-spinner');
@@ -405,24 +344,16 @@ describe('AgentConversationDetailView', () => {
         { timeout: 5000 }
       );
 
-      const requestCountBeforeUnmount = requestCount;
+      expect(lastWs).toBeTruthy();
 
-      // Switch to fake timers
-      vi.useFakeTimers();
-
-      // Unmount component
       unmount();
 
-      // Advance time - no more requests should be made
-      await vi.advanceTimersByTimeAsync(6000);
-
-      expect(requestCount).toBe(requestCountBeforeUnmount);
+      expect(lastWs?.closeCalls).toBeGreaterThan(0);
     });
 
-    it('does not start polling if conversation not loaded', async () => {
+    it('does not open websocket if conversation not loaded', async () => {
       server.use(
-        http.get(/\/agent-conversations\/api\/agent-conv-test$/, async () => {
-          await new Promise((resolve) => setTimeout(resolve, 0));
+        http.get(/\/agent-conversations\/api\/agent-conv-test$/, () => {
           return HttpResponse.error();
         })
       );
@@ -431,50 +362,12 @@ describe('AgentConversationDetailView', () => {
 
       await waitFor(
         () => {
-          expect(
-            document.querySelector('.loading-spinner')
-          ).not.toBeInTheDocument();
+          expect(document.querySelector('.loading-spinner')).not.toBeInTheDocument();
         },
         { timeout: 5000 }
       );
 
-      // Switch to fake timers
-      vi.useFakeTimers();
-
-      // Advance time - no polling should occur
-      await vi.advanceTimersByTimeAsync(6000);
-
-      // Switch back to real timers
-      vi.useRealTimers();
-
-      // "Live updates" indicator should not appear
-      expect(screen.queryByText(/live updates/i)).not.toBeInTheDocument();
-    });
-
-    it('does not start polling if still loading', async () => {
-      server.use(
-        http.get(/\/agent-conversations\/api\/agent-conv-test$/, async () => {
-          // Never resolve to keep loading state
-          await new Promise(() => {});
-          return HttpResponse.json(mockConversation);
-        })
-      );
-
-      renderComponent('agent-conv-test');
-
-      // Component should still be loading
-      expect(document.querySelector('.loading-spinner')).toBeInTheDocument();
-
-      // Switch to fake timers
-      vi.useFakeTimers();
-
-      // Advance time - no polling should occur while loading
-      await vi.advanceTimersByTimeAsync(6000);
-
-      // Switch back to real timers
-      vi.useRealTimers();
-
-      // "Live updates" indicator should not appear
+      expect(lastWs).toBeNull();
       expect(screen.queryByText(/live updates/i)).not.toBeInTheDocument();
     });
   });
@@ -742,7 +635,7 @@ describe('AgentConversationDetailView', () => {
       );
     });
 
-    it('does not start polling when error occurs', async () => {
+    it('does not start websocket when error occurs', async () => {
       server.use(
         http.get(/\/agent-conversations\/api\/agent-conv-test$/, async () => {
           await new Promise((resolve) => setTimeout(resolve, 0));
@@ -761,17 +654,9 @@ describe('AgentConversationDetailView', () => {
         { timeout: 5000 }
       );
 
-      // Switch to fake timers
-      vi.useFakeTimers();
-
-      // Advance time - no polling should occur
-      await vi.advanceTimersByTimeAsync(6000);
-
-      // Switch back to real timers
-      vi.useRealTimers();
-
       // "Live updates" indicator should not appear
       expect(screen.queryByText(/live updates/i)).not.toBeInTheDocument();
+      expect(lastWs).toBeNull();
     });
 
     it('handles network errors gracefully', async () => {

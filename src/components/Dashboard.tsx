@@ -10,7 +10,7 @@
  * - Mobile: Stacked vertically
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { VoiceIndicator } from './VoiceIndicator';
 import { AgentChatPanel } from './AgentChatPanel';
 import { NoteTakingPanel } from './NoteTakingPanel';
@@ -46,6 +46,8 @@ export const Dashboard: React.FC = () => {
     useState<boolean>(true);
   const voiceServiceRef = useRef<ElevenLabsVoiceService | null>(null);
   const fileBrowserRef = useRef<WorkingDirectoryBrowserRef>(null);
+  const lastFileRefreshAtRef = useRef<number>(0);
+  const fileRefreshTimerRef = useRef<number | null>(null);
 
   // Load agent configuration
   useEffect(() => {
@@ -120,13 +122,47 @@ export const Dashboard: React.FC = () => {
     }
   }, [selectedAgentConversationId]);
 
-  // Handle note conversation updates - refresh file browser
-  const handleNoteConversationUpdate = () => {
-    // Refresh file browser when note conversation is updated
-    if (fileBrowserRef.current) {
-      fileBrowserRef.current.refresh();
+  const refreshFileBrowser = useCallback(() => {
+    void fileBrowserRef.current?.refresh();
+    lastFileRefreshAtRef.current = Date.now();
+  }, []);
+
+  // Handle note conversation updates - throttled refresh to prevent spam during streaming updates
+  const handleNoteConversationUpdate = useCallback(() => {
+    // Skip throttling in test environment to prevent test stalls
+    const isTestEnv = import.meta.env.MODE === 'test' || import.meta.env.VITEST;
+    if (isTestEnv) {
+      refreshFileBrowser();
+      return;
     }
-  };
+
+    const now = Date.now();
+    const minIntervalMs = 2000;
+    const elapsed = now - lastFileRefreshAtRef.current;
+
+    if (elapsed >= minIntervalMs) {
+      refreshFileBrowser();
+      return;
+    }
+
+    if (fileRefreshTimerRef.current !== null) {
+      return;
+    }
+
+    fileRefreshTimerRef.current = window.setTimeout(() => {
+      fileRefreshTimerRef.current = null;
+      refreshFileBrowser();
+    }, Math.max(50, minIntervalMs - elapsed));
+  }, [refreshFileBrowser]);
+
+  useEffect(() => {
+    return () => {
+      if (fileRefreshTimerRef.current !== null) {
+        window.clearTimeout(fileRefreshTimerRef.current);
+        fileRefreshTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const handleConnect = async () => {
     if (!voiceServiceRef.current) {

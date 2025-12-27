@@ -6,6 +6,7 @@ import { ErrorMessage } from './ErrorMessage';
 import { Navigation } from './Navigation';
 import { getAgentConversation } from '../api/agent-conversations';
 import type { AgentConversation } from '../types/agent-conversation';
+import { connectWs } from '../services/ws';
 
 export const AgentConversationDetailView: React.FC = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
@@ -22,41 +23,46 @@ export const AgentConversationDetailView: React.FC = () => {
     }
   }, [conversationId]);
 
-  // Poll for updates when conversation is loaded
+  // Websocket live updates when conversation is loaded
   React.useEffect(() => {
-    if (!conversationId || !conversation || loading) {
+    if (!conversationId || loading || !conversation) {
       return;
     }
 
-    setIsPolling(true);
-
-    // Poll every 3 seconds for new messages
-    const pollInterval = setInterval(async () => {
-      try {
-        const updatedConversation = await getAgentConversation(conversationId);
-        // Only update if messages have changed (to avoid unnecessary re-renders)
+    const conn = connectWs<{
+      type: string;
+      conversationId?: string;
+      conversation?: AgentConversation;
+    }>(`/agent-conversations/api/ws?conversationId=${encodeURIComponent(conversationId)}`, {
+      onOpen: () => setIsPolling(true),
+      onClose: () => setIsPolling(false),
+      onMessage: (msg) => {
         if (
-          updatedConversation.messages.length !==
-            conversation.messages.length ||
-          JSON.stringify(updatedConversation.messages) !==
-            JSON.stringify(conversation.messages)
+          (msg.type === 'agent_conversation.snapshot' ||
+            msg.type === 'agent_conversation.updated' ||
+            msg.type === 'agent_conversation.created') &&
+          msg.conversation
         ) {
-          setConversation(updatedConversation);
+          setConversation((prev) => {
+            if (!prev) return msg.conversation!;
+            // Avoid unnecessary re-renders when nothing changed
+            if (
+              prev.messages.length === msg.conversation!.messages.length &&
+              JSON.stringify(prev.messages) === JSON.stringify(msg.conversation!.messages)
+            ) {
+              return prev;
+            }
+            return msg.conversation!;
+          });
         }
-      } catch (err) {
-        // Silently fail polling errors to avoid disrupting user experience
-        // Only log if it's not a network error (which is expected when offline)
-        if (err instanceof Error && !err.message.includes('fetch')) {
-          console.warn('Failed to poll for conversation updates:', err);
-        }
-      }
-    }, 3000); // Poll every 3 seconds
+      },
+    });
 
     return () => {
-      clearInterval(pollInterval);
+      conn.close();
       setIsPolling(false);
     };
-  }, [conversationId, conversation, loading]);
+  }, [conversationId, loading]);
 
   const handleRefresh = async () => {
     if (!conversationId || isRefreshing) {

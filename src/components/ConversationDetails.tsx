@@ -4,6 +4,7 @@ import { sendMessage, getConversationById } from '../api/conversations';
 import { RepositoryFileBrowser } from './RepositoryFileBrowser';
 import { getRepositoryFiles } from '../api/repositories';
 import type { FileNode } from '../types/file-tree';
+import { connectWs } from '../services/ws';
 
 interface ConversationDetailsProps {
   conversation: Conversation | null;
@@ -29,6 +30,10 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
   const [isSending, setIsSending] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null);
   const [isPolling, setIsPolling] = React.useState<boolean>(false);
+  const [wsConnected, setWsConnected] = React.useState<boolean>(false);
+  const onConversationUpdateRef = React.useRef<
+    ConversationDetailsProps['onConversationUpdate']
+  >(onConversationUpdate);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const pollingIntervalRef = React.useRef<number | null>(null);
@@ -36,6 +41,54 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
   const lastMessageContentRef = React.useRef<string>(''); // Track last message content for streaming detection
   const conversationIdRef = React.useRef<string | null>(null);
   const currentConversationRef = React.useRef<Conversation | null>(null);
+
+  // Keep callback stable so websocket effect doesn't reconnect on every render
+  React.useEffect(() => {
+    onConversationUpdateRef.current = onConversationUpdate;
+  }, [onConversationUpdate]);
+
+  const mergeWithLocalOptimistic = React.useCallback(
+    (serverConversation: Conversation): Conversation => {
+      const localConversation = currentConversationRef.current;
+      const localMessages = localConversation?.messages || [];
+      const serverMessages = serverConversation.messages || [];
+
+      // Match messages by role+content (same as legacy polling logic)
+      const serverMessageKeys = new Set(
+        serverMessages.map((m) => `${m.role}:${m.content}`)
+      );
+
+      const mergedMessages = [...serverMessages];
+      localMessages.forEach((localMsg) => {
+        const localKey = `${localMsg.role}:${localMsg.content}`;
+        if (!serverMessageKeys.has(localKey)) {
+          mergedMessages.push(localMsg);
+        }
+      });
+
+      mergedMessages.sort(
+        (a, b) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+
+      return {
+        ...serverConversation,
+        messages: mergedMessages,
+      };
+    },
+    []
+  );
+
+  const updatePollingCompletion = React.useCallback((conv: Conversation) => {
+    const msgs = conv.messages || [];
+    const userCount = msgs.filter((m) => m.role === 'user').length;
+    const assistantCount = msgs.filter((m) => m.role === 'assistant').length;
+    const last = msgs.length > 0 ? msgs[msgs.length - 1] : null;
+
+    if (last && last.role === 'assistant' && assistantCount >= userCount) {
+      setIsPolling(false);
+    }
+  }, []);
 
   // File browser state
   const [fileTree, setFileTree] = React.useState<FileNode[]>([]);
@@ -122,126 +175,81 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
     adjustTextareaHeight();
   }, [adjustTextareaHeight]);
 
-  // Start polling when sending a message
+  // Websocket subscription for live updates
   React.useEffect(() => {
-    if (!isPolling || !conversationIdRef.current) {
+    if (!conversationIdRef.current) {
+      return;
+    }
+
+    const conversationId = conversationIdRef.current;
+    const wsPath = `/conversations/api/ws?conversationId=${encodeURIComponent(conversationId)}`;
+    
+    const conn = connectWs<{
+      type: string;
+      conversationId?: string;
+      conversation?: Conversation;
+    }>(wsPath, {
+      onOpen: () => {
+        console.log('[WS] Connected to conversation websocket', { conversationId, path: wsPath });
+        setWsConnected(true);
+      },
+      onClose: (event) => {
+        console.log('[WS] Websocket closed', { conversationId, code: event.code, reason: event.reason });
+        setWsConnected(false);
+      },
+      onError: (event) => {
+        console.error('[WS] Websocket error', { conversationId, path: wsPath, event });
+        setWsConnected(false);
+      },
+      onMessage: (msg) => {
+        if (
+          (msg.type === 'conversation.snapshot' ||
+            msg.type === 'conversation.updated' ||
+            msg.type === 'conversation.created') &&
+          msg.conversation
+        ) {
+          const merged = mergeWithLocalOptimistic(msg.conversation);
+          setLocalConversation(merged);
+          currentConversationRef.current = merged;
+          onConversationUpdateRef.current?.(merged);
+          updatePollingCompletion(merged);
+        }
+      },
+    });
+
+    return () => {
+      console.log('[WS] Cleaning up websocket connection', { conversationId });
+      conn.close();
+      setWsConnected(false);
+    };
+  }, [
+    mergeWithLocalOptimistic,
+    updatePollingCompletion,
+    localConversation?.conversationId,
+  ]);
+
+  // Fallback polling only while waiting for a response AND websocket isn't connected
+  React.useEffect(() => {
+    if (!isPolling || wsConnected || !conversationIdRef.current) {
       return;
     }
 
     pollingIntervalRef.current = setInterval(async () => {
       try {
-        // Use ref to get current conversation ID (doesn't depend on prop changes)
         const conversationId = conversationIdRef.current;
-        if (!conversationId) {
-          return;
-        }
+        if (!conversationId) return;
 
-        // Fetch updated conversation from server
         const serverConversation = await getConversationById(conversationId);
-        const serverMessageCount = serverConversation.messages.length;
-        const currentLocalCount = lastMessageCountRef.current;
+        const merged = mergeWithLocalOptimistic(serverConversation);
 
-        // Get the current local conversation to preserve any optimistic updates
-        const localConversation = currentConversationRef.current;
-        const localMessages = localConversation?.messages || [];
-        const serverMessages = serverConversation.messages;
-
-        // Check if there are changes:
-        // 1. New messages added (count increased)
-        // 2. Existing messages updated (content changed, e.g., streaming appends)
-        const hasNewMessages = serverMessageCount > currentLocalCount;
-
-        // For streaming: check if last message content changed (even if count is same)
-        // This detects when the backend appends to the last message in real-time
-        const lastServerMessage =
-          serverMessages.length > 0
-            ? serverMessages[serverMessages.length - 1]
-            : null;
-        const lastServerContent = lastServerMessage?.content || '';
-        const previousLastContent = lastMessageContentRef.current;
-        const hasUpdatedMessages =
-          lastServerContent !== previousLastContent &&
-          lastServerContent.length > 0;
-
-        // Update if there are new messages OR if existing messages were updated (streaming)
-        if (hasNewMessages || hasUpdatedMessages) {
-          // Merge strategy: Use server messages as source of truth
-          // Match messages by role+content (not timestamp) to identify duplicates
-          const serverMessageKeys = new Set(
-            serverMessages.map((m) => `${m.role}:${m.content}`)
-          );
-
-          // Start with server messages (they have authoritative timestamps and content)
-          const mergedMessages = [...serverMessages];
-
-          // Add any local messages that aren't in server yet (optimistic updates not yet saved)
-          localMessages.forEach((localMsg) => {
-            const localKey = `${localMsg.role}:${localMsg.content}`;
-            if (!serverMessageKeys.has(localKey)) {
-              mergedMessages.push(localMsg);
-            }
-          });
-
-          // Sort by timestamp to maintain chronological order
-          mergedMessages.sort(
-            (a, b) =>
-              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-          );
-
-          const mergedConversation: Conversation = {
-            ...serverConversation,
-            messages: mergedMessages,
-          };
-
-          lastMessageCountRef.current = mergedMessages.length;
-          // Update last message content ref for next comparison
-          if (mergedMessages.length > 0) {
-            const lastMsg = mergedMessages[mergedMessages.length - 1];
-            lastMessageContentRef.current = lastMsg.content;
-          }
-
-          if (onConversationUpdate) {
-            onConversationUpdate(mergedConversation);
-          }
-        }
-
-        // Always check for completion on every poll (not just when there are updates)
-        // Stop polling only if:
-        // 1. The last message is from assistant (we got a response)
-        // 2. The message content hasn't changed (streaming has completed)
-        // 3. The number of assistant messages equals or exceeds user messages (all have responses)
-        if (
-          lastServerMessage &&
-          lastServerMessage.role === 'assistant' &&
-          !hasUpdatedMessages // Content hasn't changed since last poll = streaming complete
-        ) {
-          // Count user and assistant messages to see if all user messages have responses
-          const userMessageCount = serverMessages.filter(
-            (m) => m.role === 'user'
-          ).length;
-          const assistantMessageCount = serverMessages.filter(
-            (m) => m.role === 'assistant'
-          ).length;
-
-          // Only stop polling if we have at least as many assistant messages as user messages
-          // This means all user messages have received responses
-          if (assistantMessageCount >= userMessageCount) {
-            // Update refs before stopping to ensure they're current
-            lastMessageCountRef.current = serverMessageCount;
-            lastMessageContentRef.current = lastServerMessage.content;
-
-            setIsPolling(false);
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current);
-              pollingIntervalRef.current = null;
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Error polling conversation:', err);
-        // Continue polling on error
+        setLocalConversation(merged);
+        currentConversationRef.current = merged;
+        onConversationUpdateRef.current?.(merged);
+        updatePollingCompletion(merged);
+      } catch {
+        // ignore and keep trying
       }
-    }, 2000); // Poll every 2 seconds
+    }, 2000);
 
     return () => {
       if (pollingIntervalRef.current) {
@@ -249,7 +257,7 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
         pollingIntervalRef.current = null;
       }
     };
-  }, [isPolling, onConversationUpdate]);
+  }, [isPolling, wsConnected, mergeWithLocalOptimistic, updatePollingCompletion]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -414,5 +422,3 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
     </div>
   );
 };
-// test change
-// test

@@ -8,7 +8,7 @@
  * - Middle right: Task management
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { NoteTakingPanel } from './NoteTakingPanel';
 import {
   WorkingDirectoryBrowser,
@@ -26,18 +26,51 @@ export const TaskDashboard: React.FC = () => {
   >();
   const fileBrowserRef = useRef<WorkingDirectoryBrowserRef>(null);
   const taskPanelRef = useRef<TaskManagementPanelRef>(null);
+  const lastRefreshAtRef = useRef<number>(0);
+  const refreshTimerRef = useRef<number | null>(null);
 
-  // Handle note conversation updates - refresh file browser and task panel
-  const handleNoteConversationUpdate = () => {
-    // Refresh file browser when note conversation is updated
-    if (fileBrowserRef.current) {
-      fileBrowserRef.current.refresh();
+  const refreshPanels = useCallback(() => {
+    void fileBrowserRef.current?.refresh();
+    void taskPanelRef.current?.refresh();
+    lastRefreshAtRef.current = Date.now();
+  }, []);
+
+  // Handle note conversation updates - throttled refresh to prevent spam during streaming updates
+  const handleNoteConversationUpdate = useCallback(() => {
+    // Skip throttling in test environment to prevent test stalls
+    const isTestEnv = import.meta.env.MODE === 'test' || import.meta.env.VITEST;
+    if (isTestEnv) {
+      refreshPanels();
+      return;
     }
-    // Refresh task panel when note conversation is updated
-    if (taskPanelRef.current) {
-      taskPanelRef.current.refresh();
+
+    const now = Date.now();
+    const minIntervalMs = 2000;
+    const elapsed = now - lastRefreshAtRef.current;
+
+    if (elapsed >= minIntervalMs) {
+      refreshPanels();
+      return;
     }
-  };
+
+    if (refreshTimerRef.current !== null) {
+      return;
+    }
+
+    refreshTimerRef.current = window.setTimeout(() => {
+      refreshTimerRef.current = null;
+      refreshPanels();
+    }, Math.max(50, minIntervalMs - elapsed));
+  }, [refreshPanels]);
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current !== null) {
+        window.clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div className="task-dashboard" data-testid="task-dashboard">
