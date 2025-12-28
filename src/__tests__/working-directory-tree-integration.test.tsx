@@ -15,58 +15,94 @@ import type { FileNode } from '../types/file-tree';
  * in the context of the TaskDashboard.
  */
 
-// Helper to create mock file nodes
-const createMockFileNode = (
-  name: string,
-  type: 'file' | 'directory',
-  path?: string,
-  children?: FileNode[]
-): FileNode => ({
-  name,
-  path: path || `/${name}`,
-  type,
-  ...(type === 'directory' && children && { children }),
-});
-
 describe('Working Directory Tree Integration', () => {
-  const mockFileTree: FileNode[] = [
-    createMockFileNode('src', 'directory', '/src', [
-      createMockFileNode('components', 'directory', '/src/components', [
-        createMockFileNode('App.tsx', 'file', '/src/components/App.tsx'),
-        createMockFileNode('Header.tsx', 'file', '/src/components/Header.tsx'),
-        createMockFileNode('utils', 'directory', '/src/components/utils', [
-          createMockFileNode(
-            'helpers.ts',
-            'file',
-            '/src/components/utils/helpers.ts'
-          ),
-        ]),
-      ]),
-      createMockFileNode('utils', 'directory', '/src/utils', [
-        createMockFileNode('helpers.ts', 'file', '/src/utils/helpers.ts'),
-      ]),
-    ]),
-    createMockFileNode('tests', 'directory', '/tests', [
-      createMockFileNode('test1.ts', 'file', '/tests/test1.ts'),
-    ]),
-    createMockFileNode('package.json', 'file', '/package.json'),
-    createMockFileNode('README.md', 'file', '/README.md'),
-  ];
-
   beforeEach(() => {
     server.resetHandlers();
-    // Set up default MSW handlers
+    // Set up default MSW handlers with lazy-loading support
+    // Top-level only (no path param or path is empty)
+    const rootTree: FileNode[] = [
+      { name: 'src', path: 'src', type: 'directory' },
+      { name: 'tests', path: 'tests', type: 'directory' },
+      { name: 'package.json', path: 'package.json', type: 'file' },
+      { name: 'README.md', path: 'README.md', type: 'file' },
+    ];
+
+    // Children for src directory
+    const srcChildren: FileNode[] = [
+      { name: 'components', path: 'src/components', type: 'directory' },
+      { name: 'utils', path: 'src/utils', type: 'directory' },
+    ];
+
+    // Children for src/components directory
+    const componentsChildren: FileNode[] = [
+      { name: 'App.tsx', path: 'src/components/App.tsx', type: 'file' },
+      { name: 'Header.tsx', path: 'src/components/Header.tsx', type: 'file' },
+      { name: 'utils', path: 'src/components/utils', type: 'directory' },
+    ];
+
+    // Children for src/components/utils directory
+    const componentsUtilsChildren: FileNode[] = [
+      {
+        name: 'helpers.ts',
+        path: 'src/components/utils/helpers.ts',
+        type: 'file',
+      },
+    ];
+
+    // Children for src/utils directory
+    const srcUtilsChildren: FileNode[] = [
+      { name: 'helpers.ts', path: 'src/utils/helpers.ts', type: 'file' },
+    ];
+
+    // Children for tests directory
+    const testsChildren: FileNode[] = [
+      { name: 'test1.ts', path: 'tests/test1.ts', type: 'file' },
+    ];
+
     server.use(
-      http.get(/\/api\/working-directory\/files$/, () => {
-        return HttpResponse.json(mockFileTree, {
+      http.get(/\/api\/working-directory\/files/, ({ request }) => {
+        const url = new URL(request.url);
+        const requestedPath = url.searchParams.get('path');
+
+        const fileTree =
+          requestedPath === 'src'
+            ? srcChildren
+            : requestedPath === 'src/components'
+              ? componentsChildren
+              : requestedPath === 'src/components/utils'
+                ? componentsUtilsChildren
+                : requestedPath === 'src/utils'
+                  ? srcUtilsChildren
+                  : requestedPath === 'tests'
+                    ? testsChildren
+                    : rootTree;
+        return HttpResponse.json(fileTree, {
           headers: { 'Content-Type': 'application/json' },
         });
       }),
-      http.get(/\/conversations\/api\/working-directory\/files$/, () => {
-        return HttpResponse.json(mockFileTree, {
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }),
+      http.get(
+        /\/conversations\/api\/working-directory\/files/,
+        ({ request }) => {
+          const url = new URL(request.url);
+          const requestedPath = url.searchParams.get('path');
+
+          const fileTree =
+            requestedPath === 'src'
+              ? srcChildren
+              : requestedPath === 'src/components'
+                ? componentsChildren
+                : requestedPath === 'src/components/utils'
+                  ? componentsUtilsChildren
+                  : requestedPath === 'src/utils'
+                    ? srcUtilsChildren
+                    : requestedPath === 'tests'
+                      ? testsChildren
+                      : rootTree;
+          return HttpResponse.json(fileTree, {
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+      ),
       http.get(/\/api\/tasks/, () => {
         return HttpResponse.json([], {
           headers: { 'Content-Type': 'application/json' },
@@ -129,6 +165,7 @@ describe('Working Directory Tree Integration', () => {
   });
 
   it('top-level directories are initially expanded', async () => {
+    const user = userEvent.setup();
     render(
       <MemoryRouter>
         <TaskDashboard />
@@ -144,7 +181,11 @@ describe('Working Directory Tree Integration', () => {
     );
 
     // Top-level directories should be expanded by default
-    // So we should see their children
+    // Click on src to expand it and load children
+    const srcButton = screen.getByRole('button', { name: /src/i });
+    await user.click(srcButton);
+
+    // Wait for children to load
     await waitFor(
       () => {
         expect(screen.getByText('components')).toBeInTheDocument();
@@ -170,7 +211,11 @@ describe('Working Directory Tree Integration', () => {
       { timeout: 5000 }
     );
 
-    // Wait for top-level to be expanded
+    // Expand src directory to load children
+    const srcButton = screen.getByRole('button', { name: /src/i });
+    await user.click(srcButton);
+
+    // Wait for children to load
     await waitFor(
       () => {
         expect(screen.getByText('components')).toBeInTheDocument();
@@ -216,7 +261,11 @@ describe('Working Directory Tree Integration', () => {
       { timeout: 5000 }
     );
 
-    // Wait for top-level to be expanded
+    // Expand src directory to load children
+    const srcButton = screen.getByRole('button', { name: /src/i });
+    await user.click(srcButton);
+
+    // Wait for children to load
     await waitFor(
       () => {
         expect(screen.getByText('components')).toBeInTheDocument();
@@ -262,7 +311,11 @@ describe('Working Directory Tree Integration', () => {
       { timeout: 5000 }
     );
 
-    // Wait for nested structure to be visible
+    // Expand src directory to load children
+    const srcButton = screen.getByRole('button', { name: /src/i });
+    await user.click(srcButton);
+
+    // Wait for children to load
     await waitFor(
       () => {
         expect(screen.getByText('components')).toBeInTheDocument();
@@ -295,6 +348,7 @@ describe('Working Directory Tree Integration', () => {
   });
 
   it('multi-level directory structures work correctly', async () => {
+    const user = userEvent.setup();
     render(
       <MemoryRouter>
         <TaskDashboard />
@@ -309,7 +363,11 @@ describe('Working Directory Tree Integration', () => {
       { timeout: 5000 }
     );
 
-    // Wait for nested structure to be visible
+    // Expand src directory to load children
+    const srcButton = screen.getByRole('button', { name: /src/i });
+    await user.click(srcButton);
+
+    // Wait for children to load
     await waitFor(
       () => {
         expect(screen.getByText('components')).toBeInTheDocument();
@@ -322,9 +380,6 @@ describe('Working Directory Tree Integration', () => {
     expect(screen.getByText('src')).toBeInTheDocument();
     // Second level: components (inside src)
     expect(screen.getByText('components')).toBeInTheDocument();
-    // Third level: utils (inside components)
-    const utilsElements = screen.getAllByText('utils');
-    expect(utilsElements.length).toBeGreaterThan(0);
   });
 
   it('tree state is maintained correctly after expand/collapse operations', async () => {
@@ -343,7 +398,11 @@ describe('Working Directory Tree Integration', () => {
       { timeout: 5000 }
     );
 
-    // Wait for top-level to be expanded
+    // Expand src directory to load children
+    const srcButton = screen.getByRole('button', { name: /src/i });
+    await user.click(srcButton);
+
+    // Wait for children to load
     await waitFor(
       () => {
         expect(screen.getByText('components')).toBeInTheDocument();
@@ -351,8 +410,21 @@ describe('Working Directory Tree Integration', () => {
       { timeout: 5000 }
     );
 
+    // Expand components directory to load its children
+    const componentsButton = screen.getByRole('button', {
+      name: /components/i,
+    });
+    await user.click(componentsButton);
+
+    // Wait for components children to load
+    await waitFor(
+      () => {
+        expect(screen.getByText('App.tsx')).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
+
     // Find the nested utils directory (inside components)
-    // Find by text and get the closest button
     const utilsText = screen.getAllByText('utils');
     expect(utilsText.length).toBeGreaterThan(0);
     const nestedUtilsButton = utilsText[0].closest(
@@ -367,9 +439,6 @@ describe('Working Directory Tree Integration', () => {
     expect(nestedUtilsButton).toBeInTheDocument();
 
     // Collapse the parent components directory
-    const componentsButton = screen.getByRole('button', {
-      name: /components/i,
-    });
     await user.click(componentsButton);
 
     // Verify the button is clickable and responds

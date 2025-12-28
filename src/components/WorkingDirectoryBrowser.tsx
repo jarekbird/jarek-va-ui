@@ -9,7 +9,10 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from 'react';
-import { getWorkingDirectoryFiles } from '../api/repositories';
+import {
+  getWorkingDirectoryFiles,
+  getWorkingDirectoryFilesForPath,
+} from '../api/repositories';
 import type { FileNode } from '../types/file-tree';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
@@ -23,22 +26,27 @@ interface FileTreeNodeProps {
   node: FileNode;
   level?: number;
   expandedPaths: Set<string>;
-  onToggleExpand: (path: string) => void;
+  loadingPaths: Set<string>;
+  onToggleExpand: (node: FileNode) => void;
 }
 
 const FileTreeNode: React.FC<FileTreeNodeProps> = ({
   node,
   level = 0,
   expandedPaths,
+  loadingPaths,
   onToggleExpand,
 }) => {
   const isExpanded = expandedPaths.has(node.path);
+  const isDirectory = node.type === 'directory';
+  const isLoading = loadingPaths.has(node.path);
+  const hasLoadedChildren = isDirectory && node.children !== undefined;
   const hasChildren =
-    node.type === 'directory' && node.children && node.children.length > 0;
+    isDirectory && node.children !== undefined && node.children.length > 0;
 
   const handleToggle = () => {
-    if (hasChildren) {
-      onToggleExpand(node.path);
+    if (isDirectory) {
+      onToggleExpand(node);
     }
   };
 
@@ -55,28 +63,42 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
             handleToggle();
           }
         }}
-        role={hasChildren ? 'button' : undefined}
-        tabIndex={hasChildren ? 0 : undefined}
+        role={isDirectory ? 'button' : undefined}
+        tabIndex={isDirectory ? 0 : undefined}
       >
         <span className="file-tree-node__expand">
-          {hasChildren ? (isExpanded ? '▼' : '▶') : ' '}
+          {isDirectory ? (isExpanded ? '▼' : '▶') : ' '}
         </span>
         <span className="file-tree-node__icon">{icon}</span>
         <span className="file-tree-node__name" title={node.path}>
           {node.name}
         </span>
       </div>
-      {isExpanded && hasChildren && node.children && (
+      {isExpanded && isDirectory && (
         <div>
-          {node.children.map((child, index) => (
-            <FileTreeNode
-              key={`${child.path}-${index}`}
-              node={child}
-              level={level + 1}
-              expandedPaths={expandedPaths}
-              onToggleExpand={onToggleExpand}
-            />
-          ))}
+          {isLoading && (
+            <div style={{ paddingLeft: `${(level + 1) * 12}px` }}>Loading…</div>
+          )}
+          {!isLoading &&
+            hasLoadedChildren &&
+            node.children &&
+            node.children.length === 0 && (
+              <div style={{ paddingLeft: `${(level + 1) * 12}px` }}>Empty</div>
+            )}
+          {!isLoading && hasChildren && node.children && (
+            <div>
+              {node.children.map((child, index) => (
+                <FileTreeNode
+                  key={`${child.path}-${index}`}
+                  node={child}
+                  level={level + 1}
+                  expandedPaths={expandedPaths}
+                  loadingPaths={loadingPaths}
+                  onToggleExpand={onToggleExpand}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -90,24 +112,30 @@ export const WorkingDirectoryBrowser = forwardRef<WorkingDirectoryBrowserRef>(
     const [error, setError] = useState<string | null>(null);
     // Track expanded paths to preserve state on refresh
     const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+    const [loadingPaths, setLoadingPaths] = useState<Set<string>>(new Set());
 
     useEffect(() => {
       loadFiles();
     }, []);
 
-    // Initialize with first level expanded
-    useEffect(() => {
-      if (files.length > 0 && expandedPaths.size === 0) {
-        const initialExpanded = new Set<string>();
-        files.forEach((node) => {
-          if (node.type === 'directory') {
-            initialExpanded.add(node.path);
-          }
-        });
-        setExpandedPaths(initialExpanded);
-      }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [files]);
+    const updateNodeChildren = (
+      nodes: FileNode[],
+      targetPath: string,
+      children: FileNode[]
+    ): FileNode[] => {
+      return nodes.map((n) => {
+        if (n.path === targetPath) {
+          return { ...n, children };
+        }
+        if (n.type === 'directory' && n.children) {
+          return {
+            ...n,
+            children: updateNodeChildren(n.children, targetPath, children),
+          };
+        }
+        return n;
+      });
+    };
 
     const loadFiles = async () => {
       try {
@@ -115,6 +143,8 @@ export const WorkingDirectoryBrowser = forwardRef<WorkingDirectoryBrowserRef>(
         setError(null);
         const fileTree = await getWorkingDirectoryFiles();
         setFiles(fileTree);
+        setExpandedPaths(new Set());
+        setLoadingPaths(new Set());
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to load file tree';
@@ -125,16 +155,53 @@ export const WorkingDirectoryBrowser = forwardRef<WorkingDirectoryBrowserRef>(
       }
     };
 
-    const handleToggleExpand = (path: string) => {
-      setExpandedPaths((prev) => {
-        const next = new Set(prev);
-        if (next.has(path)) {
-          next.delete(path);
-        } else {
-          next.add(path);
+    const findNodeByPath = (
+      nodes: FileNode[],
+      targetPath: string
+    ): FileNode | null => {
+      for (const n of nodes) {
+        if (n.path === targetPath) return n;
+        if (n.type === 'directory' && n.children) {
+          const found = findNodeByPath(n.children, targetPath);
+          if (found) return found;
         }
-        return next;
-      });
+      }
+      return null;
+    };
+
+    const handleToggleExpand = async (node: FileNode) => {
+      if (node.type !== 'directory') return;
+
+      const isExpanded = expandedPaths.has(node.path);
+      if (isExpanded) {
+        setExpandedPaths((prev) => {
+          const next = new Set(prev);
+          next.delete(node.path);
+          return next;
+        });
+        return;
+      }
+
+      setExpandedPaths((prev) => new Set(prev).add(node.path));
+
+      const currentNode = findNodeByPath(files, node.path) ?? node;
+      if (currentNode.children !== undefined) {
+        return; // already loaded
+      }
+
+      setLoadingPaths((prev) => new Set(prev).add(node.path));
+      try {
+        const children = await getWorkingDirectoryFilesForPath(node.path, 1);
+        setFiles((prev) => updateNodeChildren(prev, node.path, children));
+      } catch (err) {
+        console.error('Failed to load directory children:', err);
+      } finally {
+        setLoadingPaths((prev) => {
+          const next = new Set(prev);
+          next.delete(node.path);
+          return next;
+        });
+      }
     };
 
     // Expose refresh method via ref
@@ -171,6 +238,7 @@ export const WorkingDirectoryBrowser = forwardRef<WorkingDirectoryBrowserRef>(
                 key={`${node.path}-${index}`}
                 node={node}
                 expandedPaths={expandedPaths}
+                loadingPaths={loadingPaths}
                 onToggleExpand={handleToggleExpand}
               />
             ))}

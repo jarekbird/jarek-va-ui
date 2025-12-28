@@ -68,29 +68,6 @@ const createMockQueueInfo = (name: string): QueueInfo => ({
   agents: [`agent-${name}`],
 });
 
-const createMockFileNode = (
-  name: string,
-  type: 'file' | 'directory'
-): FileNode => ({
-  name,
-  path: `/${name}`,
-  type,
-  ...(type === 'directory' && {
-    children: [
-      {
-        name: `${name}-file1.ts`,
-        path: `/${name}/${name}-file1.ts`,
-        type: 'file',
-      },
-      {
-        name: `${name}-file2.ts`,
-        path: `/${name}/${name}-file2.ts`,
-        type: 'file',
-      },
-    ],
-  }),
-});
-
 // In-memory data stores for handlers
 const conversations = new Map<string, Conversation>();
 const agentConversations = new Map<string, AgentConversation>();
@@ -612,25 +589,63 @@ export const handlers = [
   // ============================================
 
   // GET /api/working-directory/files or /conversations/api/working-directory/files
-  http.get(/\/api\/working-directory\/files$/, () => {
-    const fileTree: FileNode[] = [
-      createMockFileNode('src', 'directory'),
-      createMockFileNode('tests', 'directory'),
-      { name: 'package.json', path: '/package.json', type: 'file' },
-      { name: 'README.md', path: '/README.md', type: 'file' },
+  http.get(/\/api\/working-directory\/files$/, ({ request }) => {
+    const url = new URL(request.url);
+    const requestedPath = url.searchParams.get('path');
+
+    const rootTree: FileNode[] = [
+      { name: 'src', path: 'src', type: 'directory' },
+      { name: 'tests', path: 'tests', type: 'directory' },
+      { name: 'package.json', path: 'package.json', type: 'file' },
+      { name: 'README.md', path: 'README.md', type: 'file' },
     ];
+
+    const srcChildren: FileNode[] = [
+      { name: 'index.ts', path: 'src/index.ts', type: 'file' },
+      { name: 'components', path: 'src/components', type: 'directory' },
+    ];
+
+    const testsChildren: FileNode[] = [
+      { name: 'example.test.ts', path: 'tests/example.test.ts', type: 'file' },
+    ];
+
+    const fileTree =
+      requestedPath === 'src'
+        ? srcChildren
+        : requestedPath === 'tests'
+          ? testsChildren
+          : rootTree;
     return HttpResponse.json(fileTree, {
       headers: { 'Content-Type': 'application/json' },
     });
   }),
 
-  http.get(/\/conversations\/api\/working-directory\/files$/, () => {
-    const fileTree: FileNode[] = [
-      createMockFileNode('src', 'directory'),
-      createMockFileNode('tests', 'directory'),
-      { name: 'package.json', path: '/package.json', type: 'file' },
-      { name: 'README.md', path: '/README.md', type: 'file' },
+  http.get(/\/conversations\/api\/working-directory\/files$/, ({ request }) => {
+    const url = new URL(request.url);
+    const requestedPath = url.searchParams.get('path');
+
+    const rootTree: FileNode[] = [
+      { name: 'src', path: 'src', type: 'directory' },
+      { name: 'tests', path: 'tests', type: 'directory' },
+      { name: 'package.json', path: 'package.json', type: 'file' },
+      { name: 'README.md', path: 'README.md', type: 'file' },
     ];
+
+    const srcChildren: FileNode[] = [
+      { name: 'index.ts', path: 'src/index.ts', type: 'file' },
+      { name: 'components', path: 'src/components', type: 'directory' },
+    ];
+
+    const testsChildren: FileNode[] = [
+      { name: 'example.test.ts', path: 'tests/example.test.ts', type: 'file' },
+    ];
+
+    const fileTree =
+      requestedPath === 'src'
+        ? srcChildren
+        : requestedPath === 'tests'
+          ? testsChildren
+          : rootTree;
     return HttpResponse.json(fileTree, {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -642,9 +657,9 @@ export const handlers = [
     void params[0];
     // Return a mock file tree for the repository
     const fileTree: FileNode[] = [
-      createMockFileNode('src', 'directory'),
-      createMockFileNode('lib', 'directory'),
-      { name: 'package.json', path: '/package.json', type: 'file' },
+      { name: 'src', path: 'src', type: 'directory' },
+      { name: 'lib', path: 'lib', type: 'directory' },
+      { name: 'package.json', path: 'package.json', type: 'file' },
     ];
     return HttpResponse.json(fileTree, {
       headers: { 'Content-Type': 'application/json' },

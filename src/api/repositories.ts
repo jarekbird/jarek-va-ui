@@ -42,6 +42,48 @@ export async function getWorkingDirectoryFiles(): Promise<FileNode[]> {
 }
 
 /**
+ * Get file tree entries for a subdirectory within the working directory (lazy loading).
+ * @param dirPath - Relative directory path within the working directory (e.g., "cursor-runner/src")
+ * @param depth - Maximum depth to traverse (default: 1)
+ */
+export async function getWorkingDirectoryFilesForPath(
+  dirPath: string,
+  depth: number = 1
+): Promise<FileNode[]> {
+  const apiBase = getApiBasePath();
+  const params = new URLSearchParams();
+  params.set('path', dirPath);
+  params.set('depth', String(depth));
+
+  const response = await fetch(
+    `${apiBase}/working-directory/files?${params.toString()}`
+  );
+
+  const contentType = response.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await response.text();
+    throw new Error(
+      `Expected JSON but received ${contentType}. Response: ${text.substring(0, 200)}`
+    );
+  }
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error('Working directory path not found');
+    }
+    const errorData = await response
+      .json()
+      .catch(() => ({ error: response.statusText }));
+    throw new Error(
+      errorData.error ||
+        `Failed to fetch working directory files: ${response.statusText}`
+    );
+  }
+
+  return response.json();
+}
+
+/**
  * Get file tree for a repository
  * @param repository - The repository name/identifier
  * @returns Promise resolving to FileNode[] tree structure

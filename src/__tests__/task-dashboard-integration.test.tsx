@@ -21,18 +21,7 @@ import type { Task } from '../types';
 
 describe('Task Dashboard Integration', () => {
   const mockFileTree: FileNode[] = [
-    {
-      name: 'src',
-      path: '/src',
-      type: 'directory',
-      children: [
-        {
-          name: 'App.tsx',
-          path: '/src/App.tsx',
-          type: 'file',
-        },
-      ],
-    },
+    { name: 'src', path: 'src', type: 'directory' },
   ];
 
   const mockTasks: Task[] = [

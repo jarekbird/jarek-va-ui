@@ -15,7 +15,7 @@ import type { FileNode } from '../../types/file-tree';
  *
  * This test suite verifies:
  * - Component loads file tree on mount via getWorkingDirectoryFiles API
- * - Top-level directories are initially expanded
+ * - Directories are lazy-loaded on expand (children fetched on demand)
  * - Directory expand/collapse works via click
  * - Keyboard navigation (Enter/Space) works for expand/collapse
  * - Error handling displays appropriate messages
@@ -32,27 +32,36 @@ const createMockFileNode = (
   children?: FileNode[]
 ): FileNode => ({
   name,
-  path: path || `/${name}`,
+  path: path || name,
   type,
   ...(type === 'directory' && children && { children }),
 });
 
 describe('WorkingDirectoryBrowser', () => {
-  const mockFileTree: FileNode[] = [
-    createMockFileNode('src', 'directory', '/src', [
-      createMockFileNode('components', 'directory', '/src/components', [
-        createMockFileNode('App.tsx', 'file', '/src/components/App.tsx'),
-        createMockFileNode('Header.tsx', 'file', '/src/components/Header.tsx'),
-      ]),
-      createMockFileNode('utils', 'directory', '/src/utils', [
-        createMockFileNode('helpers.ts', 'file', '/src/utils/helpers.ts'),
-      ]),
-    ]),
-    createMockFileNode('tests', 'directory', '/tests', [
-      createMockFileNode('test1.ts', 'file', '/tests/test1.ts'),
-    ]),
-    createMockFileNode('package.json', 'file', '/package.json'),
-    createMockFileNode('README.md', 'file', '/README.md'),
+  const mockRootTree: FileNode[] = [
+    createMockFileNode('src', 'directory', 'src'),
+    createMockFileNode('tests', 'directory', 'tests'),
+    createMockFileNode('package.json', 'file', 'package.json'),
+    createMockFileNode('README.md', 'file', 'README.md'),
+  ];
+
+  const mockSrcChildren: FileNode[] = [
+    createMockFileNode('components', 'directory', 'src/components'),
+    createMockFileNode('utils', 'directory', 'src/utils'),
+    createMockFileNode('index.ts', 'file', 'src/index.ts'),
+  ];
+
+  const mockComponentsChildren: FileNode[] = [
+    createMockFileNode('App.tsx', 'file', 'src/components/App.tsx'),
+    createMockFileNode('Header.tsx', 'file', 'src/components/Header.tsx'),
+  ];
+
+  const mockUtilsChildren: FileNode[] = [
+    createMockFileNode('helpers.ts', 'file', 'src/utils/helpers.ts'),
+  ];
+
+  const mockTestsChildren: FileNode[] = [
+    createMockFileNode('test1.ts', 'file', 'tests/test1.ts'),
   ];
 
   beforeEach(() => {
@@ -63,16 +72,43 @@ describe('WorkingDirectoryBrowser', () => {
   describe('Successful load', () => {
     it('loads file tree on mount via getWorkingDirectoryFiles API', async () => {
       server.use(
-        http.get(/\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
+        http.get(/\/api\/working-directory\/files$/, ({ request }) => {
+          const url = new URL(request.url);
+          const p = url.searchParams.get('path');
+          const body =
+            p === 'src'
+              ? mockSrcChildren
+              : p === 'src/components'
+                ? mockComponentsChildren
+                : p === 'src/utils'
+                  ? mockUtilsChildren
+                  : p === 'tests'
+                    ? mockTestsChildren
+                    : mockRootTree;
+          return HttpResponse.json(body, {
             headers: { 'Content-Type': 'application/json' },
           });
         }),
-        http.get(/\/conversations\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-        })
+        http.get(
+          /\/conversations\/api\/working-directory\/files$/,
+          ({ request }) => {
+            const url = new URL(request.url);
+            const p = url.searchParams.get('path');
+            const body =
+              p === 'src'
+                ? mockSrcChildren
+                : p === 'src/components'
+                  ? mockComponentsChildren
+                  : p === 'src/utils'
+                    ? mockUtilsChildren
+                    : p === 'tests'
+                      ? mockTestsChildren
+                      : mockRootTree;
+            return HttpResponse.json(body, {
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+        )
       );
 
       render(<WorkingDirectoryBrowser />);
@@ -90,12 +126,12 @@ describe('WorkingDirectoryBrowser', () => {
     it('renders header with title and refresh button', async () => {
       server.use(
         http.get(/\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
+          return HttpResponse.json(mockRootTree, {
             headers: { 'Content-Type': 'application/json' },
           });
         }),
         http.get(/\/conversations\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
+          return HttpResponse.json(mockRootTree, {
             headers: { 'Content-Type': 'application/json' },
           });
         })
@@ -124,7 +160,7 @@ describe('WorkingDirectoryBrowser', () => {
       server.use(
         http.get(/\/api\/working-directory\/files$/, async () => {
           await new Promise((resolve) => setTimeout(resolve, 50));
-          return HttpResponse.json(mockFileTree, {
+          return HttpResponse.json(mockRootTree, {
             headers: { 'Content-Type': 'application/json' },
           });
         }),
@@ -132,7 +168,7 @@ describe('WorkingDirectoryBrowser', () => {
           /\/conversations\/api\/working-directory\/files$/,
           async () => {
             await new Promise((resolve) => setTimeout(resolve, 50));
-            return HttpResponse.json(mockFileTree, {
+            return HttpResponse.json(mockRootTree, {
               headers: { 'Content-Type': 'application/json' },
             });
           }
@@ -159,16 +195,16 @@ describe('WorkingDirectoryBrowser', () => {
     });
   });
 
-  describe('Initial expansion', () => {
-    it('expands top-level directories initially', async () => {
+  describe('Initial state (lazy)', () => {
+    it('does not show nested entries until a directory is expanded', async () => {
       server.use(
         http.get(/\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
+          return HttpResponse.json(mockRootTree, {
             headers: { 'Content-Type': 'application/json' },
           });
         }),
         http.get(/\/conversations\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
+          return HttpResponse.json(mockRootTree, {
             headers: { 'Content-Type': 'application/json' },
           });
         })
@@ -180,59 +216,36 @@ describe('WorkingDirectoryBrowser', () => {
         expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
       });
 
-      // Top-level directories should be expanded, so children should be visible
-      // Wait for children of 'src' directory to be visible
-      await waitFor(() => {
-        expect(screen.getByText('components')).toBeInTheDocument();
-      });
-      expect(screen.getByText('utils')).toBeInTheDocument();
-
-      // Check for children of 'tests' directory
-      expect(screen.getByText('test1.ts')).toBeInTheDocument();
-    });
-
-    it('does not expand nested directories initially', async () => {
-      server.use(
-        http.get(/\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-        }),
-        http.get(/\/conversations\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-        })
-      );
-
-      render(<WorkingDirectoryBrowser />);
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-      });
-
-      // Nested directories should not be expanded initially
-      // 'components' is a child of 'src', so its children should not be visible
-      expect(screen.queryByText('App.tsx')).not.toBeInTheDocument();
-      expect(screen.queryByText('Header.tsx')).not.toBeInTheDocument();
+      // No children should be visible yet
+      expect(screen.queryByText('components')).not.toBeInTheDocument();
+      expect(screen.queryByText('test1.ts')).not.toBeInTheDocument();
     });
   });
 
   describe('Expand/collapse functionality', () => {
-    it('expands directory when clicked', async () => {
+    it('expands directory when clicked (loads children)', async () => {
       const user = userEvent.setup();
 
       server.use(
-        http.get(/\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
+        http.get(/\/api\/working-directory\/files$/, ({ request }) => {
+          const url = new URL(request.url);
+          const p = url.searchParams.get('path');
+          const body = p === 'src' ? mockSrcChildren : mockRootTree;
+          return HttpResponse.json(body, {
             headers: { 'Content-Type': 'application/json' },
           });
         }),
-        http.get(/\/conversations\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-        })
+        http.get(
+          /\/conversations\/api\/working-directory\/files$/,
+          ({ request }) => {
+            const url = new URL(request.url);
+            const p = url.searchParams.get('path');
+            const body = p === 'src' ? mockSrcChildren : mockRootTree;
+            return HttpResponse.json(body, {
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+        )
       );
 
       render(<WorkingDirectoryBrowser />);
@@ -241,27 +254,14 @@ describe('WorkingDirectoryBrowser', () => {
         expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
       });
 
-      // Wait for 'components' to be visible (it's a child of 'src' which is expanded initially)
+      // Click 'src' to expand (loads children)
+      const srcDir = screen.getByText('src');
+      const srcButton = srcDir.closest('[role="button"]');
+      expect(srcButton).toBeInTheDocument();
+      if (srcButton) await user.click(srcButton);
+
       await waitFor(() => {
         expect(screen.getByText('components')).toBeInTheDocument();
-      });
-
-      // Find the 'components' directory button (it's a child of 'src')
-      const componentsDir = screen.getByText('components');
-      const componentsButton = componentsDir.closest('[role="button"]');
-      expect(componentsButton).toBeInTheDocument();
-
-      // Initially, children should not be visible
-      expect(screen.queryByText('App.tsx')).not.toBeInTheDocument();
-
-      // Click to expand
-      if (componentsButton) {
-        await user.click(componentsButton);
-      }
-
-      // Children should now be visible
-      await waitFor(() => {
-        expect(screen.getByText('App.tsx')).toBeInTheDocument();
       });
     });
 
@@ -269,16 +269,25 @@ describe('WorkingDirectoryBrowser', () => {
       const user = userEvent.setup();
 
       server.use(
-        http.get(/\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
+        http.get(/\/api\/working-directory\/files$/, ({ request }) => {
+          const url = new URL(request.url);
+          const p = url.searchParams.get('path');
+          const body = p === 'src' ? mockSrcChildren : mockRootTree;
+          return HttpResponse.json(body, {
             headers: { 'Content-Type': 'application/json' },
           });
         }),
-        http.get(/\/conversations\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-        })
+        http.get(
+          /\/conversations\/api\/working-directory\/files$/,
+          ({ request }) => {
+            const url = new URL(request.url);
+            const p = url.searchParams.get('path');
+            const body = p === 'src' ? mockSrcChildren : mockRootTree;
+            return HttpResponse.json(body, {
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+        )
       );
 
       render(<WorkingDirectoryBrowser />);
@@ -287,13 +296,16 @@ describe('WorkingDirectoryBrowser', () => {
         expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
       });
 
-      // Find the 'src' directory button (top-level, initially expanded)
+      // Find the 'src' directory button (top-level)
       const srcDir = screen.getByText('src');
       const srcButton = srcDir.closest('[role="button"]');
       expect(srcButton).toBeInTheDocument();
 
-      // Children should be visible initially
-      expect(screen.getByText('components')).toBeInTheDocument();
+      // Expand then collapse
+      if (srcButton) await user.click(srcButton);
+      await waitFor(() => {
+        expect(screen.getByText('components')).toBeInTheDocument();
+      });
 
       // Click to collapse
       if (srcButton) {
@@ -306,15 +318,77 @@ describe('WorkingDirectoryBrowser', () => {
       });
     });
 
+    it('expands nested directory when clicked (loads grandchildren)', async () => {
+      const user = userEvent.setup();
+
+      server.use(
+        http.get(/\/api\/working-directory\/files$/, ({ request }) => {
+          const url = new URL(request.url);
+          const p = url.searchParams.get('path');
+          const body =
+            p === 'src'
+              ? mockSrcChildren
+              : p === 'src/components'
+                ? mockComponentsChildren
+                : mockRootTree;
+          return HttpResponse.json(body, {
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }),
+        http.get(
+          /\/conversations\/api\/working-directory\/files$/,
+          ({ request }) => {
+            const url = new URL(request.url);
+            const p = url.searchParams.get('path');
+            const body =
+              p === 'src'
+                ? mockSrcChildren
+                : p === 'src/components'
+                  ? mockComponentsChildren
+                  : mockRootTree;
+            return HttpResponse.json(body, {
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+        )
+      );
+
+      render(<WorkingDirectoryBrowser />);
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+      });
+
+      // Expand src
+      const srcButton = screen.getByText('src').closest('[role="button"]');
+      expect(srcButton).toBeInTheDocument();
+      if (srcButton) await user.click(srcButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('components')).toBeInTheDocument();
+      });
+
+      // Expand components
+      const componentsButton = screen
+        .getByText('components')
+        .closest('[role="button"]');
+      expect(componentsButton).toBeInTheDocument();
+      if (componentsButton) await user.click(componentsButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('App.tsx')).toBeInTheDocument();
+      });
+    });
+
     it('does not expand/collapse files (only directories)', async () => {
       server.use(
         http.get(/\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
+          return HttpResponse.json(mockRootTree, {
             headers: { 'Content-Type': 'application/json' },
           });
         }),
         http.get(/\/conversations\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
+          return HttpResponse.json(mockRootTree, {
             headers: { 'Content-Type': 'application/json' },
           });
         })
@@ -340,16 +414,25 @@ describe('WorkingDirectoryBrowser', () => {
       const user = userEvent.setup();
 
       server.use(
-        http.get(/\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
+        http.get(/\/api\/working-directory\/files$/, ({ request }) => {
+          const url = new URL(request.url);
+          const p = url.searchParams.get('path');
+          const body = p === 'src' ? mockSrcChildren : mockRootTree;
+          return HttpResponse.json(body, {
             headers: { 'Content-Type': 'application/json' },
           });
         }),
-        http.get(/\/conversations\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-        })
+        http.get(
+          /\/conversations\/api\/working-directory\/files$/,
+          ({ request }) => {
+            const url = new URL(request.url);
+            const p = url.searchParams.get('path');
+            const body = p === 'src' ? mockSrcChildren : mockRootTree;
+            return HttpResponse.json(body, {
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+        )
       );
 
       render(<WorkingDirectoryBrowser />);
@@ -358,26 +441,20 @@ describe('WorkingDirectoryBrowser', () => {
         expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
       });
 
-      // Wait for 'components' to be visible (it's a child of 'src' which is expanded initially)
-      await waitFor(() => {
-        expect(screen.getByText('components')).toBeInTheDocument();
-      });
-
-      // Find the 'components' directory button
-      const componentsDir = screen.getByText('components');
-      const componentsButton = componentsDir.closest('[role="button"]');
-      expect(componentsButton).toBeInTheDocument();
+      const srcDir = screen.getByText('src');
+      const srcButton = srcDir.closest('[role="button"]');
+      expect(srcButton).toBeInTheDocument();
 
       // Focus the button
-      if (componentsButton) {
-        componentsButton.focus();
+      if (srcButton) {
+        srcButton.focus();
 
         // Press Enter
         await user.keyboard('{Enter}');
 
         // Children should now be visible
         await waitFor(() => {
-          expect(screen.getByText('App.tsx')).toBeInTheDocument();
+          expect(screen.getByText('components')).toBeInTheDocument();
         });
       }
     });
@@ -386,16 +463,25 @@ describe('WorkingDirectoryBrowser', () => {
       const user = userEvent.setup();
 
       server.use(
-        http.get(/\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
+        http.get(/\/api\/working-directory\/files$/, ({ request }) => {
+          const url = new URL(request.url);
+          const p = url.searchParams.get('path');
+          const body = p === 'src' ? mockSrcChildren : mockRootTree;
+          return HttpResponse.json(body, {
             headers: { 'Content-Type': 'application/json' },
           });
         }),
-        http.get(/\/conversations\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-        })
+        http.get(
+          /\/conversations\/api\/working-directory\/files$/,
+          ({ request }) => {
+            const url = new URL(request.url);
+            const p = url.searchParams.get('path');
+            const body = p === 'src' ? mockSrcChildren : mockRootTree;
+            return HttpResponse.json(body, {
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+        )
       );
 
       render(<WorkingDirectoryBrowser />);
@@ -404,26 +490,20 @@ describe('WorkingDirectoryBrowser', () => {
         expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
       });
 
-      // Wait for 'components' to be visible (it's a child of 'src' which is expanded initially)
-      await waitFor(() => {
-        expect(screen.getByText('components')).toBeInTheDocument();
-      });
-
-      // Find the 'components' directory button
-      const componentsDir = screen.getByText('components');
-      const componentsButton = componentsDir.closest('[role="button"]');
-      expect(componentsButton).toBeInTheDocument();
+      const srcDir = screen.getByText('src');
+      const srcButton = srcDir.closest('[role="button"]');
+      expect(srcButton).toBeInTheDocument();
 
       // Focus the button
-      if (componentsButton) {
-        componentsButton.focus();
+      if (srcButton) {
+        srcButton.focus();
 
         // Press Space
         await user.keyboard(' ');
 
         // Children should now be visible
         await waitFor(() => {
-          expect(screen.getByText('App.tsx')).toBeInTheDocument();
+          expect(screen.getByText('components')).toBeInTheDocument();
         });
       }
     });
@@ -437,13 +517,13 @@ describe('WorkingDirectoryBrowser', () => {
       server.use(
         http.get(/\/api\/working-directory\/files$/, () => {
           apiCallCount++;
-          return HttpResponse.json(mockFileTree, {
+          return HttpResponse.json(mockRootTree, {
             headers: { 'Content-Type': 'application/json' },
           });
         }),
         http.get(/\/conversations\/api\/working-directory\/files$/, () => {
           apiCallCount++;
-          return HttpResponse.json(mockFileTree, {
+          return HttpResponse.json(mockRootTree, {
             headers: { 'Content-Type': 'application/json' },
           });
         })
@@ -478,12 +558,12 @@ describe('WorkingDirectoryBrowser', () => {
 
       server.use(
         http.get(/\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
+          return HttpResponse.json(mockRootTree, {
             headers: { 'Content-Type': 'application/json' },
           });
         }),
         http.get(/\/conversations\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
+          return HttpResponse.json(mockRootTree, {
             headers: { 'Content-Type': 'application/json' },
           });
         })
@@ -508,13 +588,13 @@ describe('WorkingDirectoryBrowser', () => {
       server.use(
         http.get(/\/api\/working-directory\/files$/, () => {
           apiCallCount++;
-          return HttpResponse.json(mockFileTree, {
+          return HttpResponse.json(mockRootTree, {
             headers: { 'Content-Type': 'application/json' },
           });
         }),
         http.get(/\/conversations\/api\/working-directory\/files$/, () => {
           apiCallCount++;
-          return HttpResponse.json(mockFileTree, {
+          return HttpResponse.json(mockRootTree, {
             headers: { 'Content-Type': 'application/json' },
           });
         })
@@ -694,17 +774,31 @@ describe('WorkingDirectoryBrowser', () => {
     });
 
     it('renders file tree with correct structure', async () => {
+      // Mock top-level only (lazy loading)
+      const rootTree: FileNode[] = [
+        { name: 'src', path: 'src', type: 'directory' },
+        { name: 'tests', path: 'tests', type: 'directory' },
+        { name: 'package.json', path: 'package.json', type: 'file' },
+      ];
+
       server.use(
-        http.get(/\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
+        http.get(/\/api\/working-directory\/files/, ({ request }) => {
+          const url = new URL(request.url);
+          const requestedPath = url.searchParams.get('path');
+          return HttpResponse.json(requestedPath ? [] : rootTree, {
             headers: { 'Content-Type': 'application/json' },
           });
         }),
-        http.get(/\/conversations\/api\/working-directory\/files$/, () => {
-          return HttpResponse.json(mockFileTree, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-        })
+        http.get(
+          /\/conversations\/api\/working-directory\/files/,
+          ({ request }) => {
+            const url = new URL(request.url);
+            const requestedPath = url.searchParams.get('path');
+            return HttpResponse.json(requestedPath ? [] : rootTree, {
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+        )
       );
 
       const { container } = render(<WorkingDirectoryBrowser />);
