@@ -57,10 +57,13 @@ export const TaskDashboard: React.FC = () => {
       return;
     }
 
-    refreshTimerRef.current = window.setTimeout(() => {
-      refreshTimerRef.current = null;
-      refreshPanels();
-    }, Math.max(50, minIntervalMs - elapsed));
+    refreshTimerRef.current = window.setTimeout(
+      () => {
+        refreshTimerRef.current = null;
+        refreshPanels();
+      },
+      Math.max(50, minIntervalMs - elapsed)
+    );
   }, [refreshPanels]);
 
   useEffect(() => {

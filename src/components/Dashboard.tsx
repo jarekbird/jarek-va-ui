@@ -149,10 +149,13 @@ export const Dashboard: React.FC = () => {
       return;
     }
 
-    fileRefreshTimerRef.current = window.setTimeout(() => {
-      fileRefreshTimerRef.current = null;
-      refreshFileBrowser();
-    }, Math.max(50, minIntervalMs - elapsed));
+    fileRefreshTimerRef.current = window.setTimeout(
+      () => {
+        fileRefreshTimerRef.current = null;
+        refreshFileBrowser();
+      },
+      Math.max(50, minIntervalMs - elapsed)
+    );
   }, [refreshFileBrowser]);
 
   useEffect(() => {

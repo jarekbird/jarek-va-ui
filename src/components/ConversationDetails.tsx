@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Conversation } from '../types';
-import { sendMessage, getConversationById } from '../api/conversations';
+import { sendMessage } from '../api/conversations';
 import { RepositoryFileBrowser } from './RepositoryFileBrowser';
 import { getRepositoryFiles } from '../api/repositories';
 import type { FileNode } from '../types/file-tree';
@@ -29,14 +29,12 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
   const [message, setMessage] = React.useState<string>('');
   const [isSending, setIsSending] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [isPolling, setIsPolling] = React.useState<boolean>(false);
-  const [wsConnected, setWsConnected] = React.useState<boolean>(false);
-  const onConversationUpdateRef = React.useRef<
-    ConversationDetailsProps['onConversationUpdate']
-  >(onConversationUpdate);
+  const onConversationUpdateRef =
+    React.useRef<ConversationDetailsProps['onConversationUpdate']>(
+      onConversationUpdate
+    );
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-  const pollingIntervalRef = React.useRef<number | null>(null);
   const lastMessageCountRef = React.useRef<number>(0);
   const lastMessageContentRef = React.useRef<string>(''); // Track last message content for streaming detection
   const conversationIdRef = React.useRef<string | null>(null);
@@ -78,17 +76,6 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
     },
     []
   );
-
-  const updatePollingCompletion = React.useCallback((conv: Conversation) => {
-    const msgs = conv.messages || [];
-    const userCount = msgs.filter((m) => m.role === 'user').length;
-    const assistantCount = msgs.filter((m) => m.role === 'assistant').length;
-    const last = msgs.length > 0 ? msgs[msgs.length - 1] : null;
-
-    if (last && last.role === 'assistant' && assistantCount >= userCount) {
-      setIsPolling(false);
-    }
-  }, []);
 
   // File browser state
   const [fileTree, setFileTree] = React.useState<FileNode[]>([]);
@@ -183,23 +170,31 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
 
     const conversationId = conversationIdRef.current;
     const wsPath = `/conversations/api/ws?conversationId=${encodeURIComponent(conversationId)}`;
-    
+
     const conn = connectWs<{
       type: string;
       conversationId?: string;
       conversation?: Conversation;
     }>(wsPath, {
       onOpen: () => {
-        console.log('[WS] Connected to conversation websocket', { conversationId, path: wsPath });
-        setWsConnected(true);
+        console.log('[WS] Connected to conversation websocket', {
+          conversationId,
+          path: wsPath,
+        });
       },
       onClose: (event) => {
-        console.log('[WS] Websocket closed', { conversationId, code: event.code, reason: event.reason });
-        setWsConnected(false);
+        console.log('[WS] Websocket closed', {
+          conversationId,
+          code: event.code,
+          reason: event.reason,
+        });
       },
       onError: (event) => {
-        console.error('[WS] Websocket error', { conversationId, path: wsPath, event });
-        setWsConnected(false);
+        console.error('[WS] Websocket error', {
+          conversationId,
+          path: wsPath,
+          event,
+        });
       },
       onMessage: (msg) => {
         if (
@@ -212,7 +207,6 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
           setLocalConversation(merged);
           currentConversationRef.current = merged;
           onConversationUpdateRef.current?.(merged);
-          updatePollingCompletion(merged);
         }
       },
     });
@@ -220,44 +214,8 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
     return () => {
       console.log('[WS] Cleaning up websocket connection', { conversationId });
       conn.close();
-      setWsConnected(false);
     };
-  }, [
-    mergeWithLocalOptimistic,
-    updatePollingCompletion,
-    localConversation?.conversationId,
-  ]);
-
-  // Fallback polling only while waiting for a response AND websocket isn't connected
-  React.useEffect(() => {
-    if (!isPolling || wsConnected || !conversationIdRef.current) {
-      return;
-    }
-
-    pollingIntervalRef.current = setInterval(async () => {
-      try {
-        const conversationId = conversationIdRef.current;
-        if (!conversationId) return;
-
-        const serverConversation = await getConversationById(conversationId);
-        const merged = mergeWithLocalOptimistic(serverConversation);
-
-        setLocalConversation(merged);
-        currentConversationRef.current = merged;
-        onConversationUpdateRef.current?.(merged);
-        updatePollingCompletion(merged);
-      } catch {
-        // ignore and keep trying
-      }
-    }, 2000);
-
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
-    };
-  }, [isPolling, wsConnected, mergeWithLocalOptimistic, updatePollingCompletion]);
+  }, [mergeWithLocalOptimistic, localConversation?.conversationId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -291,7 +249,7 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
       lastAccessedAt: new Date().toISOString(),
     };
 
-    // Update refs immediately to ensure they're current before polling starts
+    // Update refs immediately
     lastMessageCountRef.current = updatedConversation.messages.length;
     conversationIdRef.current = updatedConversation.conversationId;
     currentConversationRef.current = updatedConversation;
@@ -308,11 +266,6 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
       await sendMessage(updatedConversation.conversationId, {
         message: messageToSend,
       });
-
-      // Start polling for assistant response (if not already polling)
-      if (!isPolling) {
-        setIsPolling(true);
-      }
     } catch (err) {
       setError(
         err instanceof Error
@@ -367,7 +320,7 @@ export const ConversationDetails: React.FC<ConversationDetailsProps> = ({
             </div>
           </div>
         ))}
-        {isPolling && (
+        {isSending && (
           <div className="message assistant">
             <div className="message-role">assistant</div>
             <div className="message-content">

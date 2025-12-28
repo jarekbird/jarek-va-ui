@@ -33,36 +33,40 @@ export const AgentConversationDetailView: React.FC = () => {
       type: string;
       conversationId?: string;
       conversation?: AgentConversation;
-    }>(`/agent-conversations/api/ws?conversationId=${encodeURIComponent(conversationId)}`, {
-      onOpen: () => setIsPolling(true),
-      onClose: () => setIsPolling(false),
-      onMessage: (msg) => {
-        if (
-          (msg.type === 'agent_conversation.snapshot' ||
-            msg.type === 'agent_conversation.updated' ||
-            msg.type === 'agent_conversation.created') &&
-          msg.conversation
-        ) {
-          setConversation((prev) => {
-            if (!prev) return msg.conversation!;
-            // Avoid unnecessary re-renders when nothing changed
-            if (
-              prev.messages.length === msg.conversation!.messages.length &&
-              JSON.stringify(prev.messages) === JSON.stringify(msg.conversation!.messages)
-            ) {
-              return prev;
-            }
-            return msg.conversation!;
-          });
-        }
-      },
-    });
+    }>(
+      `/agent-conversations/api/ws?conversationId=${encodeURIComponent(conversationId)}`,
+      {
+        onOpen: () => setIsPolling(true),
+        onClose: () => setIsPolling(false),
+        onMessage: (msg) => {
+          if (
+            (msg.type === 'agent_conversation.snapshot' ||
+              msg.type === 'agent_conversation.updated' ||
+              msg.type === 'agent_conversation.created') &&
+            msg.conversation
+          ) {
+            setConversation((prev) => {
+              if (!prev) return msg.conversation!;
+              // Avoid unnecessary re-renders when nothing changed
+              if (
+                prev.messages.length === msg.conversation!.messages.length &&
+                JSON.stringify(prev.messages) ===
+                  JSON.stringify(msg.conversation!.messages)
+              ) {
+                return prev;
+              }
+              return msg.conversation!;
+            });
+          }
+        },
+      }
+    );
 
     return () => {
       conn.close();
       setIsPolling(false);
     };
-  }, [conversationId, loading]);
+  }, [conversationId, loading, conversation]);
 
   const handleRefresh = async () => {
     if (!conversationId || isRefreshing) {

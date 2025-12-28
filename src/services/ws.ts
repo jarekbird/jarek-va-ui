@@ -24,7 +24,9 @@ export function buildWsUrl(pathWithQuery: string): string {
   }
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const path = pathWithQuery.startsWith('/') ? pathWithQuery : `/${pathWithQuery}`;
+  const path = pathWithQuery.startsWith('/')
+    ? pathWithQuery
+    : `/${pathWithQuery}`;
   return `${protocol}//${window.location.host}${path}`;
 }
 
@@ -80,7 +82,13 @@ export function connectWs<TMessage = unknown>(
     };
 
     ws.onclose = (event) => {
-      console.log('[WS] Connection closed', { url, code: event.code, reason: event.reason, wasClean: event.wasClean, attempt });
+      console.log('[WS] Connection closed', {
+        url,
+        code: event.code,
+        reason: event.reason,
+        wasClean: event.wasClean,
+        attempt,
+      });
       options.onClose?.(event);
       scheduleReconnect();
     };
@@ -120,5 +128,3 @@ export function connectWs<TMessage = unknown>(
     },
   };
 }
-
-

@@ -82,7 +82,6 @@ describe('AgentConversationDetailView', () => {
     vi.useRealTimers();
   });
 
-
   it('should be defined', () => {
     expect(AgentConversationDetailView).toBeDefined();
   });
@@ -292,8 +291,14 @@ describe('AgentConversationDetailView', () => {
     });
 
     it('updates UI when websocket sends updated conversation', async () => {
-      const initialConversation = createMockAgentConversation('agent-conv-test', 2);
-      const updatedConversation = createMockAgentConversation('agent-conv-test', 3);
+      const initialConversation = createMockAgentConversation(
+        'agent-conv-test',
+        2
+      );
+      const updatedConversation = createMockAgentConversation(
+        'agent-conv-test',
+        3
+      );
 
       server.use(
         http.get(/\/agent-conversations\/api\/agent-conv-test$/, () => {
@@ -362,7 +367,9 @@ describe('AgentConversationDetailView', () => {
 
       await waitFor(
         () => {
-          expect(document.querySelector('.loading-spinner')).not.toBeInTheDocument();
+          expect(
+            document.querySelector('.loading-spinner')
+          ).not.toBeInTheDocument();
         },
         { timeout: 5000 }
       );
