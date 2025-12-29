@@ -40,6 +40,12 @@ services:
       - "traefik.http.routers.jarek-va-ui-localhost.entrypoints=web"
       - "traefik.http.routers.jarek-va-ui-localhost.service=jarek-va-ui"
       - "traefik.http.routers.jarek-va-ui-localhost.middlewares=jarek-va-ui-stripprefix,jarek-va-ui-headers"
+      # HTTP router for direct IP access - serve UI at root (no TLS, no redirect)
+      # This enables http://3.148.184.96/ (React Router root) while keeping API paths owned by cursor-runner.
+      - "traefik.http.routers.jarek-va-ui-ip.priority=10"
+      - "traefik.http.routers.jarek-va-ui-ip.rule=Host(`3.148.184.96`) && PathPrefix(`/`) && !PathPrefix(`/api`) && !PathPrefix(`/conversations/api`) && !PathPrefix(`/agent-conversations/api`) && !PathPrefix(`/cursor/execute`) && !PathPrefix(`/agents`)"
+      - "traefik.http.routers.jarek-va-ui-ip.entrypoints=web"
+      - "traefik.http.routers.jarek-va-ui-ip.service=jarek-va-ui"
       # Static assets router (Vite build outputs under /assets and root-level files like /vite.svg)
       # HTTPS router (for production domains only - exclude localhost)
       # Only create HTTPS router when DOMAIN_NAME is set and contains a dot (real domain, not localhost)
@@ -54,6 +60,11 @@ services:
       - "traefik.http.routers.jarek-va-ui-assets-localhost.entrypoints=web"
       - "traefik.http.routers.jarek-va-ui-assets-localhost.service=jarek-va-ui"
       - "traefik.http.routers.jarek-va-ui-assets-localhost.middlewares=jarek-va-ui-headers"
+      # HTTP router for direct IP access - static assets at /assets (no TLS, no redirect)
+      - "traefik.http.routers.jarek-va-ui-assets-ip.priority=10"
+      - "traefik.http.routers.jarek-va-ui-assets-ip.rule=Host(`3.148.184.96`) && (PathPrefix(`/assets`) || Path(`/vite.svg`))"
+      - "traefik.http.routers.jarek-va-ui-assets-ip.entrypoints=web"
+      - "traefik.http.routers.jarek-va-ui-assets-ip.service=jarek-va-ui"
       # Reuse security headers for assets, no prefix stripping
       - "traefik.http.routers.jarek-va-ui-assets.middlewares=jarek-va-ui-headers"
       # HTTP router for /conversations* that redirects to HTTPS
