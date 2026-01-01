@@ -169,6 +169,66 @@ export const WorkingDirectoryBrowser = forwardRef<WorkingDirectoryBrowserRef>(
       return null;
     };
 
+    const loadChildrenRecursively = async (
+      nodePath: string,
+      currentExpandedPaths: Set<string>,
+      currentFiles: FileNode[]
+    ): Promise<FileNode[]> => {
+      const currentNode = findNodeByPath(currentFiles, nodePath);
+      if (!currentNode) {
+        return currentFiles; // not found
+      }
+
+      // Load children for this node if not already loaded
+      let updatedFiles = currentFiles;
+      if (currentNode.children === undefined) {
+        setLoadingPaths((prev) => new Set(prev).add(nodePath));
+        try {
+          const children = await getWorkingDirectoryFilesForPath(nodePath, 1);
+          updatedFiles = updateNodeChildren(currentFiles, nodePath, children);
+          setFiles(updatedFiles);
+        } catch (err) {
+          console.error(
+            `Failed to load directory children for ${nodePath}:`,
+            err
+          );
+          return currentFiles;
+        } finally {
+          setLoadingPaths((prev) => {
+            const next = new Set(prev);
+            next.delete(nodePath);
+            return next;
+          });
+        }
+      }
+
+      // After loading (or if already loaded), check if any of the children are directories that are expanded
+      // and recursively load their children
+      const updatedNode = findNodeByPath(updatedFiles, nodePath);
+      if (
+        updatedNode &&
+        updatedNode.type === 'directory' &&
+        updatedNode.children
+      ) {
+        let finalFiles = updatedFiles;
+        for (const child of updatedNode.children) {
+          if (
+            child.type === 'directory' &&
+            currentExpandedPaths.has(child.path)
+          ) {
+            // Recursively load children for expanded nested directories
+            finalFiles = await loadChildrenRecursively(
+              child.path,
+              currentExpandedPaths,
+              finalFiles
+            );
+          }
+        }
+        return finalFiles;
+      }
+      return updatedFiles;
+    };
+
     const handleToggleExpand = async (node: FileNode) => {
       if (node.type !== 'directory') return;
 
@@ -182,26 +242,14 @@ export const WorkingDirectoryBrowser = forwardRef<WorkingDirectoryBrowserRef>(
         return;
       }
 
-      setExpandedPaths((prev) => new Set(prev).add(node.path));
+      // Add to expanded paths first
+      const newExpandedPaths = new Set(expandedPaths);
+      newExpandedPaths.add(node.path);
+      setExpandedPaths(newExpandedPaths);
 
-      const currentNode = findNodeByPath(files, node.path) ?? node;
-      if (currentNode.children !== undefined) {
-        return; // already loaded
-      }
-
-      setLoadingPaths((prev) => new Set(prev).add(node.path));
-      try {
-        const children = await getWorkingDirectoryFilesForPath(node.path, 1);
-        setFiles((prev) => updateNodeChildren(prev, node.path, children));
-      } catch (err) {
-        console.error('Failed to load directory children:', err);
-      } finally {
-        setLoadingPaths((prev) => {
-          const next = new Set(prev);
-          next.delete(node.path);
-          return next;
-        });
-      }
+      // Load children for this node and recursively for any nested expanded directories
+      // Use current files state and update it as we go
+      await loadChildrenRecursively(node.path, newExpandedPaths, files);
     };
 
     // Expose refresh method via ref
