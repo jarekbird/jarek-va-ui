@@ -44,7 +44,8 @@ services:
       # This enables http://3.148.184.96/ (React Router root) while keeping API paths owned by cursor-runner.
       - "traefik.http.routers.jarek-va-ui-ip.priority=10"
       # Path-only router on web entrypoint. Kept lower priority than cursor-runner's http-catchall so domains still redirect to HTTPS.
-      - "traefik.http.routers.jarek-va-ui-ip.rule=PathPrefix(`/`) && !PathPrefix(`/api`) && !PathPrefix(`/conversations/api`) && !PathPrefix(`/agent-conversations/api`) && !PathPrefix(`/cursor/execute`) && !PathPrefix(`/agents`)"
+      # Exclude real domain names (TLD is letters) so domain HTTP requests still get redirected to HTTPS.
+      - "traefik.http.routers.jarek-va-ui-ip.rule=!HostRegexp(`{host:.*\\.[a-zA-Z]{2,}}`) && PathPrefix(`/`) && !PathPrefix(`/api`) && !PathPrefix(`/conversations/api`) && !PathPrefix(`/agent-conversations/api`) && !PathPrefix(`/cursor/execute`) && !PathPrefix(`/agents`)"
       - "traefik.http.routers.jarek-va-ui-ip.entrypoints=web"
       - "traefik.http.routers.jarek-va-ui-ip.service=jarek-va-ui"
       # Apply same middleware behavior as the domain router (strip /conversations and add headers)
@@ -73,7 +74,7 @@ services:
       - "traefik.http.routers.jarek-va-ui-assets-localhost.middlewares=jarek-va-ui-headers"
       # HTTP router for direct IP access - static assets at /assets (no TLS, no redirect)
       - "traefik.http.routers.jarek-va-ui-assets-ip.priority=10"
-      - "traefik.http.routers.jarek-va-ui-assets-ip.rule=(PathPrefix(`/assets`) || Path(`/vite.svg`))"
+      - "traefik.http.routers.jarek-va-ui-assets-ip.rule=!HostRegexp(`{host:.*\\.[a-zA-Z]{2,}}`) && (PathPrefix(`/assets`) || Path(`/vite.svg`))"
       - "traefik.http.routers.jarek-va-ui-assets-ip.entrypoints=web"
       - "traefik.http.routers.jarek-va-ui-assets-ip.service=jarek-va-ui"
       - "traefik.http.routers.jarek-va-ui-assets-ip.middlewares=jarek-va-ui-headers"
