@@ -43,17 +43,14 @@ services:
       # HTTP router for direct IP access - serve UI at root (no TLS, no redirect)
       # This enables http://3.148.184.96/ (React Router root) while keeping API paths owned by cursor-runner.
       - "traefik.http.routers.jarek-va-ui-ip.priority=10"
-      # Allow optional :port in Host header (some clients send Host: 98.81.50.6:80)
-      - "traefik.http.routers.jarek-va-ui-ip.rule=HostRegexp(`{ip:[0-9]{1,3}(\\.[0-9]{1,3}){3}}{port::[0-9]+}?`) && PathPrefix(`/`) && !PathPrefix(`/api`) && !PathPrefix(`/conversations/api`) && !PathPrefix(`/agent-conversations/api`) && !PathPrefix(`/cursor/execute`) && !PathPrefix(`/agents`)"
+      # Match any IPv4 host (optionally with :port)
+      - "traefik.http.routers.jarek-va-ui-ip.rule=HostRegexp(`{host:[0-9]{1,3}(\\.[0-9]{1,3}){3}(:[0-9]+)?}`) && PathPrefix(`/`) && !PathPrefix(`/api`) && !PathPrefix(`/conversations/api`) && !PathPrefix(`/agent-conversations/api`) && !PathPrefix(`/cursor/execute`) && !PathPrefix(`/agents`)"
       - "traefik.http.routers.jarek-va-ui-ip.entrypoints=web"
       - "traefik.http.routers.jarek-va-ui-ip.service=jarek-va-ui"
       # HTTPS router for direct IP access - redirect to HTTP (IPs can't get valid certificates)
-      # This redirects https://98.81.50.6/ to http://98.81.50.6/ since IP addresses can't get Let's Encrypt certificates
       - "traefik.http.routers.jarek-va-ui-ip-https.priority=10"
-      # Allow optional :port in Host header (some clients send Host: 98.81.50.6:443)
-      - "traefik.http.routers.jarek-va-ui-ip-https.rule=HostRegexp(`{ip:[0-9]{1,3}(\\.[0-9]{1,3}){3}}{port::[0-9]+}?`) && PathPrefix(`/`) && !PathPrefix(`/api`) && !PathPrefix(`/conversations/api`) && !PathPrefix(`/agent-conversations/api`) && !PathPrefix(`/cursor/execute`) && !PathPrefix(`/agents`)"
+      - "traefik.http.routers.jarek-va-ui-ip-https.rule=HostRegexp(`{host:[0-9]{1,3}(\\.[0-9]{1,3}){3}(:[0-9]+)?}`) && PathPrefix(`/`) && !PathPrefix(`/api`) && !PathPrefix(`/conversations/api`) && !PathPrefix(`/agent-conversations/api`) && !PathPrefix(`/cursor/execute`) && !PathPrefix(`/agents`)"
       - "traefik.http.routers.jarek-va-ui-ip-https.entrypoints=websecure"
-      # Ensure Traefik actually terminates TLS on :443 for this router (will use Traefik default cert)
       - "traefik.http.routers.jarek-va-ui-ip-https.tls=true"
       - "traefik.http.routers.jarek-va-ui-ip-https.middlewares=jarek-va-ui-ip-https-to-http"
       - "traefik.http.middlewares.jarek-va-ui-ip-https-to-http.redirectscheme.scheme=http"
@@ -74,13 +71,12 @@ services:
       - "traefik.http.routers.jarek-va-ui-assets-localhost.middlewares=jarek-va-ui-headers"
       # HTTP router for direct IP access - static assets at /assets (no TLS, no redirect)
       - "traefik.http.routers.jarek-va-ui-assets-ip.priority=10"
-      - "traefik.http.routers.jarek-va-ui-assets-ip.rule=HostRegexp(`{ip:[0-9]{1,3}(\\.[0-9]{1,3}){3}}`) && (PathPrefix(`/assets`) || Path(`/vite.svg`))"
+      - "traefik.http.routers.jarek-va-ui-assets-ip.rule=HostRegexp(`{host:[0-9]{1,3}(\\.[0-9]{1,3}){3}(:[0-9]+)?}`) && (PathPrefix(`/assets`) || Path(`/vite.svg`))"
       - "traefik.http.routers.jarek-va-ui-assets-ip.entrypoints=web"
       - "traefik.http.routers.jarek-va-ui-assets-ip.service=jarek-va-ui"
       # HTTPS router for direct IP access - redirect to HTTP (IPs can't get valid certificates)
       - "traefik.http.routers.jarek-va-ui-assets-ip-https.priority=10"
-      # Allow optional :port in Host header (some clients send Host: 98.81.50.6:443)
-      - "traefik.http.routers.jarek-va-ui-assets-ip-https.rule=HostRegexp(`{ip:[0-9]{1,3}(\\.[0-9]{1,3}){3}}{port::[0-9]+}?`) && (PathPrefix(`/assets`) || Path(`/vite.svg`))"
+      - "traefik.http.routers.jarek-va-ui-assets-ip-https.rule=HostRegexp(`{host:[0-9]{1,3}(\\.[0-9]{1,3}){3}(:[0-9]+)?}`) && (PathPrefix(`/assets`) || Path(`/vite.svg`))"
       - "traefik.http.routers.jarek-va-ui-assets-ip-https.entrypoints=websecure"
       - "traefik.http.routers.jarek-va-ui-assets-ip-https.tls=true"
       - "traefik.http.routers.jarek-va-ui-assets-ip-https.middlewares=jarek-va-ui-ip-https-to-http"
