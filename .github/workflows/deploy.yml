@@ -5,14 +5,58 @@ on:
     branches:
       - master
       - main
-  workflow_dispatch:  # Allows manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to (or "all" for all environments)'
+        required: true
+        type: choice
+        options:
+          - jarekva
+          - bluetractorva
+          - all
+        default: 'jarekva'
 
 jobs:
-  deploy:
+  # Determine deployment target(s) based on trigger
+  determine-environments:
     runs-on: ubuntu-latest
+    outputs:
+      environments: ${{ steps.set-envs.outputs.environments }}
+    steps:
+      - id: set-envs
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            # Manual trigger: use selected environment
+            ENV="${{ github.event.inputs.environment }}"
+            if [ "$ENV" == "all" ]; then
+              JSON_ARRAY='["jarekva","bluetractorva"]'
+            else
+              JSON_ARRAY="[\"$ENV\"]"
+            fi
+          else
+            # Push to main/master: deploy to both environments
+            JSON_ARRAY='["jarekva","bluetractorva"]'
+          fi
+          echo "environments=$JSON_ARRAY" >> $GITHUB_OUTPUT
+
+  deploy:
+    needs: determine-environments
+    runs-on: ubuntu-latest
+    # Only run if the push is to the main branch
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    # Deploy to each environment in the matrix
+    strategy:
+      matrix:
+        environment: ${{ fromJson(needs.determine-environments.outputs.environments) }}
+      fail-fast: false
+    
+    # Use GitHub Environments for environment-specific secrets and protection rules
+    environment: ${{ matrix.environment }}
     
     steps:
-      - name: Deploy to server
+      - name: Deploy to ${{ matrix.environment }}
         uses: appleboy/ssh-action@v1.0.3
         env:
           DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
@@ -25,7 +69,7 @@ jobs:
             set -e
             
             # Initialize Docker resources (network and volumes) if they don't exist
-            echo "Initializing Docker resources..."
+            echo "Initializing Docker resources for ${{ matrix.environment }}..."
             
             # Create network if it doesn't exist
             if ! docker network ls | grep -q "virtual-assistant-network"; then
@@ -36,50 +80,29 @@ jobs:
             # Navigate to jarek-va-ui directory
             cd jarek-va-ui || { echo "Directory jarek-va-ui not found"; exit 1; }
             
-            echo "Current directory: $(pwd)"
-            echo "Listing files in current directory:"
-            ls -la || true
-            
             # Update code
-            echo "Updating code from git..."
             git fetch origin || { echo "Git fetch failed"; exit 1; }
             BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "main")
-            echo "Current branch: $BRANCH"
             git reset --hard origin/$BRANCH || { echo "Git reset failed"; exit 1; }
             
             # Verify docker-compose.yml exists
-            echo "Checking for docker-compose.yml..."
             if [ ! -f "docker-compose.yml" ]; then
               echo "Error: docker-compose.yml not found in $(pwd)"
               exit 1
             fi
-            echo "✓ docker-compose.yml found"
             
             # DOMAIN_NAME is optional - used for Traefik routing labels
             # Should be just the domain name (e.g., "jarekva.com") without protocol
             # Can be set via GitHub secret DOMAIN_NAME or environment variable
             export DOMAIN_NAME=${DOMAIN_NAME:-jarekva.com}
-            echo "Using DOMAIN_NAME: $DOMAIN_NAME"
             
             # Build the container first
             echo "Building Docker container..."
-            if ! docker compose build jarek-va-ui; then
-              echo "Docker build failed"
-              echo "Docker build logs:"
-              docker compose build jarek-va-ui 2>&1 || true
-              exit 1
-            fi
+            docker compose build jarek-va-ui || { echo "Docker build failed"; exit 1; }
             
             # Force recreate container with DOMAIN_NAME from environment
             echo "Starting Docker container..."
-            if ! docker compose up -d --force-recreate jarek-va-ui; then
-              echo "Docker up failed"
-              echo "Docker compose logs:"
-              docker compose logs jarek-va-ui 2>&1 || true
-              echo "Docker compose ps:"
-              docker compose ps 2>&1 || true
-              exit 1
-            fi
+            docker compose up -d --force-recreate jarek-va-ui || { echo "Docker up failed"; exit 1; }
             
             # Wait a few seconds for the service to start
             echo "Waiting for service to start..."
@@ -93,7 +116,6 @@ jobs:
               docker compose ps jarek-va-ui || true
             fi
             
-            echo "Deployment completed successfully"
+            echo "Deployment to ${{ matrix.environment }} completed successfully"
           script_stop: true
-          debug: true
 

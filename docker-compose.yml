@@ -43,7 +43,7 @@ services:
       # HTTP router for direct IP access - serve UI at root (no TLS, no redirect)
       # This enables http://3.148.184.96/ (React Router root) while keeping API paths owned by cursor-runner.
       - "traefik.http.routers.jarek-va-ui-ip.priority=10"
-      - "traefik.http.routers.jarek-va-ui-ip.rule=Host(`3.148.184.96`) && PathPrefix(`/`) && !PathPrefix(`/api`) && !PathPrefix(`/conversations/api`) && !PathPrefix(`/agent-conversations/api`) && !PathPrefix(`/cursor/execute`) && !PathPrefix(`/agents`)"
+      - "traefik.http.routers.jarek-va-ui-ip.rule=HostRegexp(`{ip:[0-9]{1,3}(\\.[0-9]{1,3}){3}}`) && PathPrefix(`/`) && !PathPrefix(`/api`) && !PathPrefix(`/conversations/api`) && !PathPrefix(`/agent-conversations/api`) && !PathPrefix(`/cursor/execute`) && !PathPrefix(`/agents`)"
       - "traefik.http.routers.jarek-va-ui-ip.entrypoints=web"
       - "traefik.http.routers.jarek-va-ui-ip.service=jarek-va-ui"
       # Static assets router (Vite build outputs under /assets and root-level files like /vite.svg)
@@ -62,7 +62,7 @@ services:
       - "traefik.http.routers.jarek-va-ui-assets-localhost.middlewares=jarek-va-ui-headers"
       # HTTP router for direct IP access - static assets at /assets (no TLS, no redirect)
       - "traefik.http.routers.jarek-va-ui-assets-ip.priority=10"
-      - "traefik.http.routers.jarek-va-ui-assets-ip.rule=Host(`3.148.184.96`) && (PathPrefix(`/assets`) || Path(`/vite.svg`))"
+      - "traefik.http.routers.jarek-va-ui-assets-ip.rule=HostRegexp(`{ip:[0-9]{1,3}(\\.[0-9]{1,3}){3}}`) && (PathPrefix(`/assets`) || Path(`/vite.svg`))"
       - "traefik.http.routers.jarek-va-ui-assets-ip.entrypoints=web"
       - "traefik.http.routers.jarek-va-ui-assets-ip.service=jarek-va-ui"
       # Reuse security headers for assets, no prefix stripping
