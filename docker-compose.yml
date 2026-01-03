@@ -46,13 +46,14 @@ services:
       - "traefik.http.routers.jarek-va-ui-ip.rule=HostRegexp(`{ip:[0-9]{1,3}(\\.[0-9]{1,3}){3}}`) && PathPrefix(`/`) && !PathPrefix(`/api`) && !PathPrefix(`/conversations/api`) && !PathPrefix(`/agent-conversations/api`) && !PathPrefix(`/cursor/execute`) && !PathPrefix(`/agents`)"
       - "traefik.http.routers.jarek-va-ui-ip.entrypoints=web"
       - "traefik.http.routers.jarek-va-ui-ip.service=jarek-va-ui"
-      # HTTPS router for direct IP access - serve UI at root (uses self-signed certificate)
-      # This enables https://98.81.50.6/ (React Router root) with a self-signed certificate
-      # Users will see a browser security warning but can proceed
+      # HTTPS router for direct IP access - redirect to HTTP (IPs can't get valid certificates)
+      # This redirects https://98.81.50.6/ to http://98.81.50.6/ since IP addresses can't get Let's Encrypt certificates
       - "traefik.http.routers.jarek-va-ui-ip-https.priority=10"
       - "traefik.http.routers.jarek-va-ui-ip-https.rule=HostRegexp(`{ip:[0-9]{1,3}(\\.[0-9]{1,3}){3}}`) && PathPrefix(`/`) && !PathPrefix(`/api`) && !PathPrefix(`/conversations/api`) && !PathPrefix(`/agent-conversations/api`) && !PathPrefix(`/cursor/execute`) && !PathPrefix(`/agents`)"
       - "traefik.http.routers.jarek-va-ui-ip-https.entrypoints=websecure"
-      - "traefik.http.routers.jarek-va-ui-ip-https.service=jarek-va-ui"
+      - "traefik.http.routers.jarek-va-ui-ip-https.middlewares=jarek-va-ui-ip-https-to-http"
+      - "traefik.http.middlewares.jarek-va-ui-ip-https-to-http.redirectscheme.scheme=http"
+      - "traefik.http.middlewares.jarek-va-ui-ip-https-to-http.redirectscheme.permanent=false"
       # Static assets router (Vite build outputs under /assets and root-level files like /vite.svg)
       # HTTPS router (for production domains only - exclude localhost)
       # Only create HTTPS router when DOMAIN_NAME is set and contains a dot (real domain, not localhost)
@@ -72,11 +73,11 @@ services:
       - "traefik.http.routers.jarek-va-ui-assets-ip.rule=HostRegexp(`{ip:[0-9]{1,3}(\\.[0-9]{1,3}){3}}`) && (PathPrefix(`/assets`) || Path(`/vite.svg`))"
       - "traefik.http.routers.jarek-va-ui-assets-ip.entrypoints=web"
       - "traefik.http.routers.jarek-va-ui-assets-ip.service=jarek-va-ui"
-      # HTTPS router for direct IP access - static assets at /assets (uses self-signed certificate)
+      # HTTPS router for direct IP access - redirect to HTTP (IPs can't get valid certificates)
       - "traefik.http.routers.jarek-va-ui-assets-ip-https.priority=10"
       - "traefik.http.routers.jarek-va-ui-assets-ip-https.rule=HostRegexp(`{ip:[0-9]{1,3}(\\.[0-9]{1,3}){3}}`) && (PathPrefix(`/assets`) || Path(`/vite.svg`))"
       - "traefik.http.routers.jarek-va-ui-assets-ip-https.entrypoints=websecure"
-      - "traefik.http.routers.jarek-va-ui-assets-ip-https.service=jarek-va-ui"
+      - "traefik.http.routers.jarek-va-ui-assets-ip-https.middlewares=jarek-va-ui-ip-https-to-http"
       # Reuse security headers for assets, no prefix stripping
       - "traefik.http.routers.jarek-va-ui-assets.middlewares=jarek-va-ui-headers"
       # HTTP router for /conversations* that redirects to HTTPS
